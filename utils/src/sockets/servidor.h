@@ -1,5 +1,5 @@
-#ifndef UTILS_HELLO_H_
-#define UTILS_HELLO_H_
+#ifndef UTILS_SERVER_H_
+#define UTILS_SERVER_H_
 #include<stdio.h>
 #include<stdlib.h>
 #include<sys/socket.h>
