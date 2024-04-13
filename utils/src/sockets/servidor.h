@@ -34,7 +34,7 @@ int iniciar_servidor(void);
 * @param   Socket del Servidor
 * @return Socket del Cliente
 */
-int esperar_cliente(int)
+int esperar_cliente(int);
 
 /**
 * @fn    recibir_paquete
