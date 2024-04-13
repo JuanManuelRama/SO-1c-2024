@@ -1,4 +1,4 @@
-#include"servidor.h"
+#include <sockets/servidor.h>
 
 t_log* logger;
 
@@ -28,7 +28,7 @@ int iniciar_servidor(void)
 
 	freeaddrinfo(servinfo);
 
-	log_trace(logger, "Listo para escuchar a mi cliente");
+	//log_trace(logger, "Listo para escuchar a mi cliente");
 
 	return socket_servidor;
 }
@@ -37,7 +37,7 @@ int esperar_cliente(int socket_servidor)
 {
     // Aceptamos un nuevo cliente
 	int socket_cliente = accept(socket_servidor, NULL, NULL);
-	log_info(logger, "Se conecto un cliente!");
+	//log_info(logger, "Se conecto un cliente!");
 
 	return socket_cliente;
 }
