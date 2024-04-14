@@ -4,12 +4,12 @@ int32_t handshake_cliente (int socket_cliente){
     size_t bytes;
 
     int32_t handshake = 1;
-    int32_t resultado
+    int32_t resultado;
 
-    bytes = send(socket_cliente, &handshake, sizeof(int32_t), 0)
-    bytes = recv(socket_cliente, &resultado, sizeof(int32_t), MSG_WAITALL)
+    bytes = send(socket_cliente, &handshake, sizeof(int32_t), 0);
+    bytes = recv(socket_cliente, &resultado, sizeof(int32_t), MSG_WAITALL);
 
-    if (result == 0) {
+    if (resultado == 0) {
     // Handshake OK
     return 0;
     } else {
