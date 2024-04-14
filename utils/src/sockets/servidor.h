@@ -1,5 +1,6 @@
-#ifndef UTILS_SERVER_H_
-#define UTILS_SERVER_H_
+#ifndef UTILS_SERVIDOR_H_
+#define UTILS_SERVIDOR_H_
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<sys/socket.h>
@@ -17,24 +18,25 @@ typedef enum
 	PAQUETE
 }op_code;
 
-extern t_log* logger;
 
 
 /**
 * @fn    iniciar_servidor
-* @brief Inicializa el servidor
-* @param   Ninguno
+* @brief Inicializa el Servidor
+* @param   logger Log del Servidor
 * @return  Socket del Servidor
 */
-int iniciar_servidor(void);
+int iniciar_servidor(t_log*);
 
 /**
 * @fn    esperar_cliente
-* @brief Espera al cliente
+* @brief Espera al Cliente
+* @param logger Log del Servidor
+* @param cliente Cliente del Servidor
 * @param   Socket del Servidor
 * @return Socket del Cliente
 */
-int esperar_cliente(int);
+int esperar_cliente(t_log*,char*, int);
 
 /**
 * @fn    recibir_paquete

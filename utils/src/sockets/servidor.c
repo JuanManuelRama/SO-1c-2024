@@ -1,8 +1,6 @@
 #include <sockets/servidor.h>
 
-t_log* logger;
-
-int iniciar_servidor(void)
+int iniciar_servidor(t_log* logger)
 {
     int socket_servidor;
 
@@ -28,16 +26,17 @@ int iniciar_servidor(void)
 
 	freeaddrinfo(servinfo);
 
-	//log_trace(logger, "Listo para escuchar a mi cliente");
+	log_info(logger, "Servidor inicializado");
 
 	return socket_servidor;
 }
 
-int esperar_cliente(int socket_servidor)
+int esperar_cliente(t_log* logger,char* cliente, int socket_servidor)
 {
     // Aceptamos un nuevo cliente
+	log_info(logger, "Esperando a %s", cliente);
 	int socket_cliente = accept(socket_servidor, NULL, NULL);
-	//log_info(logger, "Se conecto un cliente!");
+	log_info(logger, "Se conecto %s", cliente);
 
 	return socket_cliente;
 }
@@ -69,7 +68,7 @@ void recibir_mensaje(int socket_cliente)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje %s", buffer);
+	//log_info(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
 
