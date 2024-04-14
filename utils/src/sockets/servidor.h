@@ -7,6 +7,7 @@
 #include<unistd.h>
 #include<netdb.h>
 #include<commons/log.h>
+#include<commons/config.h>
 #include<commons/collections/list.h>
 #include<string.h>
 #include<assert.h>
