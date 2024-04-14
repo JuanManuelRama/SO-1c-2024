@@ -11,7 +11,7 @@ int iniciar_servidor(t_log* logger)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo("127.0.0.1", "4444", &hints, &servinfo);
+	getaddrinfo("127.0.0.1", "8002", &hints, &servinfo);
 
 	// Creamos el socket de escucha del servidor
 	socket_servidor = socket(servinfo->ai_family,
