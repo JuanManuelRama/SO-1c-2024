@@ -4,21 +4,23 @@
 #include <sockets/servidor.h>
 #include <sockets/servidor.c>
 
-void conectCliente(t_log* logger, int socket_servidor, char* cliente, int socket_cliente)
+int conectCliente(t_log* logger, int socket_servidor, char* cliente)
 {
-	log_info(logger, "Esperando a %s\n", cliente); //No se como concatenar el mensaje al nombre del cliente 
-	socket_cliente = esperar_cliente(socket_servidor); //No se como pasar el socket del cliente por referencia
+	int socket_cliente;
+	log_info(logger, "Esperando a %s\n", cliente);
+	socket_cliente = esperar_cliente(socket_servidor);
+	return socket_cliente;
 }
 
 int main(void){
 	t_log* logger;
 	int socket_servidor;
-	int socket_cpu=0;
+	int socket_cpu;
 
 	logger = log_create ("logM.log", "Crear log",1, LOG_LEVEL_INFO);
 	socket_servidor = iniciar_servidor();
 	log_info(logger, "Memoria inicializada");
-	conectCliente(logger, socket_servidor, "CPU", socket_cpu);
+	socket_cpu = conectCliente(logger, socket_servidor, "CPU");
 	log_destroy(logger);
     return 0;
 }
