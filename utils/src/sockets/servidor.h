@@ -26,9 +26,10 @@ typedef enum
 * @brief   Inicializa el Servidor
 * @param   logger Log del Servidor
 * @param   puerto Puerto del Servidor
+* @param   modulo que es inicializado como servidor
 * @return  Socket del Servidor
 */
-int iniciar_servidor(t_log*, char*);
+int iniciar_servidor(t_log*, char*, char*);
 
 /**
 * @fn      esperar_cliente
@@ -52,9 +53,10 @@ t_list* recibir_paquete(int);
 * @fn     recibir_mensaje
 * @brief  Recibe el Mensaje
 * @param  Socket del Cliente
+* @param  logger del Cliente
 * @return Nada
 */
-void recibir_mensaje(int);
+void recibir_mensaje(int, t_log*);
 
 /**
 * @fn    recibir_operacion

@@ -1,6 +1,6 @@
 #include <sockets/servidor.h>
 
-int iniciar_servidor(t_log* logger, char* puerto)
+int iniciar_servidor(t_log* logger, char* puerto, char* modulo)
 {
     int socket_servidor;
 
@@ -26,7 +26,7 @@ int iniciar_servidor(t_log* logger, char* puerto)
 
 	freeaddrinfo(servinfo);
 
-	log_info(logger, "Servidor inicializado");
+	log_info(logger, "%s inicializado como servidor", modulo);
 
 	return socket_servidor;
 }
@@ -64,11 +64,11 @@ void* recibir_buffer(int* size, int socket_cliente)
 	return buffer;
 }
 
-void recibir_mensaje(int socket_cliente)
+void recibir_mensaje(int socket_cliente, t_log* logger)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	//log_info(logger, "Me llego el mensaje %s", buffer);
+	log_info(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
 
