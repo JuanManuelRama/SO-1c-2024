@@ -1,34 +1,31 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/hello.h>
-#include <sockets/cliente.c>
+#include <sockets/cliente.h>
 #include <utils/varias.h>
 
-int main(int argc, char* argv[]) {
+t_log* logger;
+t_config* config;
 
+int main(int argc, char* argv[]) {
     int conexion;
 	int socket_servidor;
 	int socket_kernel;
 	char* ip;
 	char* puerto;
 	char* valor;
-	t_log* logger;
-	t_config* config;
 
-    logger = log_create("logCpu.log", "LOGS CPU", 1, LOG_LEVEL_INFO);
-    log_info(logger, "TEST", "INFO");
-    
-    config = config_create("cpu.config");
-	
+	logger = log_create("logCpu.log", "LOGS CPU", 1, LOG_LEVEL_INFO);
+	config = config_create("cpu.config");
+
+	// buscamos datos en config y conectamos con memoria
 	ip = buscar(logger, config, "IP_MEMORIA");
-
 	puerto = buscar(logger, config, "PUERTO_MEMORIA");
+	conexion = crear_conexion(ip, puerto); 
 
-    log_info(logger, ip, "INFO");
-	log_info(logger, puerto, "INFO");
-
-	conexion = crear_conexion(ip, puerto);
-	socket_servidor = iniciar_servidor(logger, "8006");
+	// tambien sera servidor, con el kernel como cliente
+	puerto = buscar(logger, config, "PUERTO_ESCUCHA_DISPATCH");
+	socket_servidor = iniciar_servidor(logger, puerto, "CPU");
 	socket_kernel = esperar_cliente(logger, "Kernel", socket_servidor);
 
     liberar_conexion(conexion);
