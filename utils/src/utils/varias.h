@@ -1,6 +1,5 @@
 #include <commons/config.h>
 #include <commons/log.h>
-#include <commons/config.h>
 
 /**
 	* @fn     buscar
