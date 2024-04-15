@@ -1,3 +1,4 @@
+/*
 #include "handshake.h"
 
 int32_t handshake_cliente (int socket_cliente){
@@ -33,3 +34,4 @@ void handshake_servidor (int socket_servidor){
     }
 
 }
+*/
