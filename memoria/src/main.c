@@ -21,8 +21,13 @@ int main(void){
 	socket_servidor = iniciar_servidor(logger, puerto, "Memoria");
 	socket_cpu = esperar_cliente(logger, "CPU", socket_servidor);
 	socket_kernel = esperar_cliente(logger, "Kernel", socket_servidor);
-    
-
+	while (1){
+		int cod_op = recibir_operacion(socket_cpu);
+		if(cod_op==MENSAJE){
+			recibir_mensaje(socket_cpu, logger);
+			break;
+		}
+	}
 	log_destroy(logger);
 	config_destroy(config);
     return 0;

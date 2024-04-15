@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
 	ip = buscar(logger, config, "IP_CPU");
 	puerto = buscar(logger, config, "PUERTO_CPU_DISPATCH");
 	conexion_cpu = crear_conexion(ip, puerto);
-
+	enviar_mensaje("Saludos desde el Kernel",conexion_cpu);
 	log_destroy(logger);
 	config_destroy(config);
 	liberar_conexion(conexion_memoria);
