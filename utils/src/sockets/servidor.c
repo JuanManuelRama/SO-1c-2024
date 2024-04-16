@@ -1,6 +1,6 @@
 #include <sockets/servidor.h>
 
-int iniciar_servidor(t_log* logger, char* puerto, char* modulo)
+int iniciar_servidor(char* puerto, char* modulo)
 {
     int socket_servidor;
 
@@ -31,7 +31,7 @@ int iniciar_servidor(t_log* logger, char* puerto, char* modulo)
 	return socket_servidor;
 }
 
-int esperar_cliente(t_log* logger,char* cliente, int socket_servidor)
+int esperar_cliente(char* cliente, int socket_servidor)
 {
     // Aceptamos un nuevo cliente
 	log_info(logger, "Esperando a %s", cliente);
@@ -64,11 +64,11 @@ void* recibir_buffer(int* size, int socket_cliente)
 	return buffer;
 }
 
-void recibir_mensaje(int socket_cliente, t_log* logger)
+void recibir_mensaje(int socket_cliente)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje %s", buffer);
+	log_info(logger, "Me llego el mensaje: %s", buffer);
 	free(buffer);
 }
 
@@ -92,4 +92,137 @@ t_list* recibir_paquete(int socket_cliente)
 	}
 	free(buffer);
 	return valores;
+}
+void* serializar_paquete(t_paquete* paquete, int bytes)
+{
+	void * magic = malloc(bytes);
+	int desplazamiento = 0;
+
+	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(int));
+	desplazamiento+= sizeof(int);
+	memcpy(magic + desplazamiento, &(paquete->buffer->size), sizeof(int));
+	desplazamiento+= sizeof(int);
+	memcpy(magic + desplazamiento, paquete->buffer->stream, paquete->buffer->size);
+	desplazamiento+= paquete->buffer->size;
+
+	return magic;
+}
+
+int crear_conexion(char *ip, char* puerto, char* servidor)
+{
+	struct addrinfo hints;
+	struct addrinfo *server_info;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+
+	getaddrinfo(ip, puerto, &hints, &server_info);
+
+	// Ahora vamos a crear el socket.
+	int socket_cliente =  socket(server_info->ai_family,
+                         server_info->ai_socktype,
+                         server_info->ai_protocol);
+
+	// Ahora que tenemos el socket, vamos a conectarlo
+	connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
+
+	freeaddrinfo(server_info);
+	log_info(logger, "Conexión establecida con %s", servidor);
+
+	return socket_cliente;
+}
+
+void enviar_mensaje(char* mensaje, int socket_cliente)
+{
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = MENSAJE;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = strlen(mensaje) + 1;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
+
+	int bytes = paquete->buffer->size + 2*sizeof(int);
+
+	void* a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+
+	free(a_enviar);
+	eliminar_paquete(paquete);
+}
+
+
+void crear_buffer(t_paquete* paquete)
+{
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = 0;
+	paquete->buffer->stream = NULL;
+}
+
+t_paquete* crear_paquete(void)
+{
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+	paquete->codigo_operacion = PAQUETE;
+	crear_buffer(paquete);
+	return paquete;
+}
+
+void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio)
+{
+	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio + sizeof(int));
+
+	memcpy(paquete->buffer->stream + paquete->buffer->size, &tamanio, sizeof(int));
+	memcpy(paquete->buffer->stream + paquete->buffer->size + sizeof(int), valor, tamanio);
+
+	paquete->buffer->size += tamanio + sizeof(int);
+}
+
+void enviar_paquete(t_paquete* paquete, int socket_cliente)
+{
+	int bytes = paquete->buffer->size + 2*sizeof(int);
+	void* a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+
+	free(a_enviar);
+}
+
+void eliminar_paquete(t_paquete* paquete)
+{
+	free(paquete->buffer->stream);
+	free(paquete->buffer);
+	free(paquete);
+}
+
+void liberar_conexion(int socket_cliente)
+{
+	close(socket_cliente);
+}
+
+char* buscar(char* clave){
+    if(config_has_property(config, clave))
+		return config_get_string_value(config, clave);
+	else
+	    log_error(logger, "No se ha encontrado %s", clave);
+		return NULL;
+}
+
+void* interactuar(int socket_cliente){
+		while (1) {
+		int cod_op = recibir_operacion(socket_cliente);
+		switch (cod_op) {
+		case MENSAJE:
+			recibir_mensaje(socket_cliente);
+			break;
+		case -1:
+			log_error(logger, "el cliente se desconecto. Terminando servidor");
+			return EXIT_FAILURE;
+		default:
+			log_warning(logger,"Operacion desconocida. No quieras meter la pata");
+			break;
+		}
+	}
 }

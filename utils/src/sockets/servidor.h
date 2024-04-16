@@ -1,8 +1,6 @@
-#ifndef UTILS_SERVIDOR_H_
-#define UTILS_SERVIDOR_H_
-
 #include<stdio.h>
 #include<stdlib.h>
+#include<signal.h>
 #include<sys/socket.h>
 #include<unistd.h>
 #include<netdb.h>
@@ -12,34 +10,43 @@
 #include<string.h>
 #include<assert.h>
 
-
+extern t_log* logger;
+extern t_config* config;
 typedef enum
 {
 	MENSAJE,
 	PAQUETE
 }op_code;
 
+typedef struct
+{
+	int size;
+	void* stream;
+} t_buffer;
 
+typedef struct
+{
+	op_code codigo_operacion;
+	t_buffer* buffer;
+} t_paquete;
 
 /**
 * @fn      iniciar_servidor
 * @brief   Inicializa el Servidor
-* @param   logger Log del Servidor
 * @param   puerto Puerto del Servidor
 * @param   modulo que es inicializado como servidor
 * @return  Socket del Servidor
 */
-int iniciar_servidor(t_log*, char*, char*);
+int iniciar_servidor(char*, char*);
 
 /**
 * @fn      esperar_cliente
 * @brief   Espera al Cliente
-* @param   logger Log del Servidor
 * @param   cliente Cliente del Servidor
 * @param   Socket del Servidor
 * @return  Socket del Cliente
 */
-int esperar_cliente(t_log*,char*, int);
+int esperar_cliente(char*, int);
 
 /**
 * @fn     recibir_paquete
@@ -53,10 +60,9 @@ t_list* recibir_paquete(int);
 * @fn     recibir_mensaje
 * @brief  Recibe el Mensaje
 * @param  Socket del Cliente
-* @param  logger del Cliente
 * @return Nada
 */
-void recibir_mensaje(int, t_log*);
+void recibir_mensaje(int);
 
 /**
 * @fn    recibir_operacion
@@ -66,4 +72,82 @@ void recibir_mensaje(int, t_log*);
 */
 int recibir_operacion(int);
 
-#endif
+
+
+/**
+* @fn       crear_conexion
+* @brief    Crea la conexión
+* @param    ip
+* @param    puerto
+* @param	servidor Nombre del servidor
+* @return   Socket del Cliente
+*/
+int crear_conexion(char*, char*, char*);
+
+/**
+* @fn       enviar_mensaje
+* @brief    Envía un mensaje
+* @param    mensaje
+* @param    Socket del Cliente
+* @return   Socket del Servidor
+*/
+void enviar_mensaje(char*, int);
+
+/**
+* @fn       crear_paquete
+* @brief    Crea un paquete
+* @param    Ninguno
+* @return   Paquete
+*/
+t_paquete* crear_paquete(void);
+
+/**
+* @fn       agregar_a_paquete
+* @brief    Agrega al paquete
+* @param    paquete
+* @param    valor a agregar
+* @param    tamaño del valor
+* @return   nada
+*/
+void agregar_a_paquete(t_paquete*, void*, int);
+
+/**
+* @fn       enviar_paquete
+* @brief    Envía el paquete
+* @param    paquete
+* @param    socket_cliente
+* @return   nada
+*/
+void enviar_paquete(t_paquete*, int);
+
+/**
+* @fn      liberar_conexion
+* @brief   Libera la conexión
+* @param   socket_cliente
+* @return  nada
+*/
+void liberar_conexion(int);
+
+/**
+* @fn      eliminar_paquete
+* @brief   Elimina el Paquete
+* @param   paquete Paquete a elminar
+* @return  Socket del Servidor
+*/
+void eliminar_paquete(t_paquete*);
+
+/**
+	* @fn       buscar
+	* @brief    Busca en config, loggea error de no encontrarlo
+    * @param    key Palabra a buscar
+    * @return   Resultado de la búsqueda
+	*/
+char* buscar (char*);
+
+/**
+	* @fn       interactuar
+	* @brief    Interactua con el cliente
+    * @param    socket_servidor Palabra a buscar
+    * @return   Dios sabrá
+	*/
+void* interactuar (int);
