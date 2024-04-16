@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/hello.h>
-#include <sockets/cliente.h>
-#include <utils/varias.h>
+#include <sockets/servidor.h>
 
 t_log* logger;
 t_config* config;
@@ -18,14 +17,15 @@ int main(int argc, char* argv[]) {
 	config = config_create("kernel.config");
     
 	// buscamos datos en config y conectamos a memoria
-	ip = buscar(logger, config, "IP_MEMORIA");
-	puerto = buscar (logger, config, "PUERTO_MEMORIA");
-	conexion_memoria = crear_conexion(ip, puerto); 
+	ip = buscar("IP_MEMORIA");
+	puerto = buscar ("PUERTO_MEMORIA");
+	conexion_memoria = crear_conexion(ip, puerto, "Memoria"); 
 
 	// buscamos datos en config y conectamos a cpu
-	ip = buscar(logger, config, "IP_CPU");
-	puerto = buscar(logger, config, "PUERTO_CPU_DISPATCH");
-	conexion_cpu = crear_conexion(ip, puerto);
+	ip = buscar("IP_CPU");
+	puerto = buscar("PUERTO_CPU_DISPATCH");
+	conexion_cpu = crear_conexion(ip, puerto, "CPU");
+	
 	enviar_mensaje("Saludos desde el Kernel",conexion_cpu);
 	log_destroy(logger);
 	config_destroy(config);

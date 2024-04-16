@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/hello.h>
-#include <sockets/cliente.h>
-#include <utils/varias.h>
+#include <sockets/servidor.h>
+#include <pthread.h>
 
 t_log* logger;
 t_config* config;
@@ -14,28 +14,23 @@ int main(int argc, char* argv[]) {
 	char* ip;
 	char* puerto;
 	char* valor;
+	pthread_t hilo_kernel;
 
 	logger = log_create("logCpu.log", "LOGS CPU", 1, LOG_LEVEL_INFO);
 	config = config_create("cpu.config");
 	
 	// buscamos datos en config y conectamos con memoria
-	ip = buscar(logger, config, "IP_MEMORIA");
-	puerto = buscar(logger, config, "PUERTO_MEMORIA");
-	conexion = crear_conexion(ip, puerto); 
-	enviar_mensaje("Saludos desde la cpu",conexion);
+	ip = buscar("IP_MEMORIA");
+	puerto = buscar("PUERTO_MEMORIA");
+	conexion = crear_conexion(ip, puerto, "Memoria"); 
 
 	//tambien sera servidor, con el kernel como cliente
-	puerto = buscar(logger, config, "PUERTO_ESCUCHA_DISPATCH");
-	socket_servidor = iniciar_servidor(logger, puerto, "CPU");
-	socket_kernel = esperar_cliente(logger, "Kernel", socket_servidor);
-	enviar_mensaje("Saludos desde la cpu",conexion);
-	while (1){
-		int cod_op = recibir_operacion(socket_kernel);
-		if(cod_op==MENSAJE){
-			recibir_mensaje(socket_kernel, logger);
-			break;
-		}
-	}
+	puerto = buscar("PUERTO_ESCUCHA_DISPATCH");
+	socket_servidor = iniciar_servidor(puerto, "CPU");
+	socket_kernel = esperar_cliente("Kernel", socket_servidor);
+	enviar_mensaje("Saludos desde la cpu", conexion);
+	pthread_create(&hilo_kernel, NULL, interactuar, (void*)socket_kernel);
+	pthread_join(hilo_kernel, NULL);
     liberar_conexion(conexion);
     log_destroy(logger);
     config_destroy(config);
