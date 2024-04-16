@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/hello.h>
-#include <sockets/servidor.h>
+#include <sockets/sockets.h>
 #include <pthread.h>
 
 t_log*  logger; 
