@@ -27,5 +27,9 @@ int main(int argc, char* argv[]) {
 	conexion_kernel = crear_conexion(ip, puerto, "Kernel"); 
 	enviar_mensaje("Saludos desde la interfaz IO", conexion_kernel);
 
+    log_destroy(logger);
+	config_destroy(config);
+	liberar_conexion(conexion_memoria);
+	liberar_conexion(conexion_kernel);
     return 0;
 }
