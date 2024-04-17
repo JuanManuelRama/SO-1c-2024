@@ -13,7 +13,6 @@ int main(int argc, char* argv[]) {
 	int socket_kernel;
 	char* ip;
 	char* puerto;
-	char* valor;
 	pthread_t hilo_kernel;
 
 	logger = log_create("logCpu.log", "LOGS CPU", 1, LOG_LEVEL_INFO);
@@ -23,14 +22,16 @@ int main(int argc, char* argv[]) {
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar("PUERTO_MEMORIA");
 	conexion = crear_conexion(ip, puerto, "Memoria"); 
+	enviar_mensaje("Saludos desde la cpu", conexion);
 
 	//tambien sera servidor, con el kernel como cliente
 	puerto = buscar("PUERTO_ESCUCHA_DISPATCH");
 	socket_servidor = iniciar_servidor(puerto, "CPU");
 	socket_kernel = esperar_cliente("Kernel", socket_servidor);
-	enviar_mensaje("Saludos desde la cpu", conexion);
+
 	pthread_create(&hilo_kernel, NULL, interactuar, (void*)socket_kernel);
 	pthread_join(hilo_kernel, NULL);
+
     liberar_conexion(conexion);
     log_destroy(logger);
     config_destroy(config);
