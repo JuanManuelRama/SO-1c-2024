@@ -28,8 +28,8 @@ int main(int argc, char* argv[]) {
 	puerto = buscar("PUERTO_ESCUCHA_DISPATCH");
 	socket_servidor = iniciar_servidor(puerto, "CPU");
 	socket_kernel = esperar_cliente("Kernel", socket_servidor);
-
 	pthread_create(&hilo_kernel, NULL, interactuar, (void*)socket_kernel);
+	
 	pthread_join(hilo_kernel, NULL);
 
     liberar_conexion(conexion);

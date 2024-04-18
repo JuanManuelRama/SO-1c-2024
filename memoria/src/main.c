@@ -23,12 +23,14 @@ int main(void){
 	socket_servidor = iniciar_servidor(puerto, "Memoria");
 
 	socket_cpu = esperar_cliente("CPU", socket_servidor);
-	socket_kernel = esperar_cliente("Kernel", socket_servidor);
-	socket_IO = esperar_cliente("IO", socket_servidor);
-
 	pthread_create(&hilo_cpu, NULL, interactuar, (void*)socket_cpu);
+
+	socket_kernel = esperar_cliente("Kernel", socket_servidor);
 	pthread_create(&hilo_kernel, NULL, interactuar, (void*)socket_kernel);
+
+	socket_IO = esperar_cliente("IO", socket_servidor);
 	pthread_create(&hilo_IO, NULL, interactuar, (void*)socket_IO);
+	
 	pthread_join(hilo_cpu, NULL);
 	pthread_join(hilo_kernel, NULL);
 	pthread_join(hilo_IO, NULL);

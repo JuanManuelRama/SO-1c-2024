@@ -37,6 +37,7 @@ int main(int argc, char* argv[]) {
 
 	socket_IO = esperar_cliente("I/O", kernel_servidor);
 	pthread_create(&hilo_IO, NULL, interactuar, (void*)socket_IO);
+	
 	pthread_join(hilo_IO, NULL);
 
 	log_destroy(logger);
