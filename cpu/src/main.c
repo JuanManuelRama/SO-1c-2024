@@ -4,7 +4,7 @@
 #include <sockets/sockets.h>
 #include <pthread.h>
 
-struct t_registros
+typedef struct 
 {
 	uint32_t PC;
 	uint8_t AX;
@@ -17,16 +17,16 @@ struct t_registros
 	uint32_t EDX;
 	uint32_t SI;
 	uint32_t DI;
-};
+} t_registros;
 
-struct t_pcb
+typedef struct 
 {
 	int pid;
 	int pc;
 	int quantum;
 	t_registros registros;
 	char* estado;
-};
+} t_pcb;
 
 t_log* logger;
 t_config* config;
