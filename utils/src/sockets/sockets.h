@@ -15,7 +15,8 @@ extern t_config* config;
 typedef enum
 {
 	MENSAJE,
-	PAQUETE
+	PAQUETE,
+	NUEVO_PROCESO
 }op_code;
 
 typedef struct
@@ -151,3 +152,5 @@ char* buscar (char*);
     * @return   Dios sabrá
 	*/
 void* interactuar (int);
+
+void* recibir_buffer(int* size, int socket_cliente);

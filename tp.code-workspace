@@ -19,7 +19,8 @@
 			"initializer_list": "c",
 			"numeric": "c",
 			"socket": "c",
-			"functional": "c"
+			"functional": "c",
+			"buffer": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},

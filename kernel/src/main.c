@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/hello.h>
-#include <sockets/sockets.h>
+#include <sockets/sockets.c>
 #include <pthread.h>
 
 typedef struct
@@ -31,6 +31,27 @@ typedef struct
 t_log* logger;
 t_config* config;
 
+void enviar_Proceso(int socket_cliente)
+{
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = NUEVO_PROCESO;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = strlen("instru.txt") + 1;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	memcpy(paquete->buffer->stream, "instru.txt", paquete->buffer->size);
+
+	int bytes = paquete->buffer->size + 2*sizeof(int);
+
+	void* a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+
+	free(a_enviar);
+	eliminar_paquete(paquete);
+}
+
+
 int main(int argc, char* argv[]) {
     int conexion_memoria;
     int conexion_cpu;
@@ -51,7 +72,7 @@ int main(int argc, char* argv[]) {
 	enviar_mensaje("Saludos desde el Kernel",conexion_memoria);
 
 	// buscamos datos en config y conectamos a cpu
-	ip = buscar("IP_CPU");
+	/*ip = buscar("IP_CPU");
 	puerto = buscar("PUERTO_CPU_DISPATCH");
 	conexion_cpu = crear_conexion(ip, puerto, "CPU");
 	enviar_mensaje("Saludos desde el Kernel",conexion_cpu);
@@ -64,10 +85,11 @@ int main(int argc, char* argv[]) {
 	pthread_create(&hilo_IO, NULL, interactuar, (void*)socket_IO);
 
 	pthread_join(hilo_IO, NULL);
-
+	*/
+	enviar_Proceso(conexion_memoria);
 	log_destroy(logger);
 	config_destroy(config);
 	liberar_conexion(conexion_memoria);
-	liberar_conexion(conexion_cpu);
+	//liberar_conexion(conexion_cpu);
     return 0;
 }

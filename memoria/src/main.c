@@ -13,6 +13,37 @@ t_config* config;
 t_list* lProcesos;
 t_tablaMemoria (*tablaMemoria);
 
+
+void recibir_proceso(int socket_cliente){
+		int size;
+		char* proceso = recibir_buffer (&size, socket_cliente);
+		log_info(logger, proceso);
+		cargar_proceso(proceso);
+}
+
+
+void interactuar_Kernel(int socket_cliente){
+		while (1) {
+		int cod_op = recibir_operacion(socket_cliente);
+		switch (cod_op) {
+		case MENSAJE:
+			recibir_mensaje(socket_cliente);
+			break;
+		case NUEVO_PROCESO:
+			recibir_proceso(socket_cliente);
+			break;
+		case -1:
+			log_error(logger, "el cliente se desconecto");
+			return EXIT_FAILURE;
+		default:
+			log_warning(logger,"Operacion no esperada por parte de este cliente");
+			break;
+		}
+	}
+}
+
+
+
 int main (){
 	char* puerto;
 	int socket_servidor;
@@ -27,26 +58,27 @@ int main (){
 	puerto = buscar("PUERTO_ESCUCHA");
 	socket_servidor = iniciar_servidor(puerto, "Memoria");
 
-	socket_cpu = esperar_cliente("CPU", socket_servidor);
-	pthread_create(&hilo_cpu, NULL, interactuar, (void*)socket_cpu);
+	//socket_cpu = esperar_cliente("CPU", socket_servidor);
+	//pthread_create(&hilo_cpu, NULL, interactuar, (void*)socket_cpu);
 
 	socket_kernel = esperar_cliente("Kernel", socket_servidor);
-	pthread_create(&hilo_kernel, NULL, interactuar, (void*)socket_kernel);
+	pthread_create(&hilo_kernel, NULL, interactuar_Kernel, (void*)socket_kernel);
 
-	socket_IO = esperar_cliente("IO", socket_servidor);
-	pthread_create(&hilo_IO, NULL, interactuar, (void*)socket_IO);
+	//socket_IO = esperar_cliente("IO", socket_servidor);
+	//pthread_create(&hilo_IO, NULL, interactuar, (void*)socket_IO);
 
 
-	cargar_proceso("instru.txt");
+	//cargar_proceso("instru.txt");
 	//Enviar la lProcesos al Kernel para que la añada al PCB
-	t_instruccion *t_instruccion = list_get(lProcesos, 0);
+	pthread_join(hilo_kernel, NULL);
+	t_instruccion *t_instruccion = list_get(lProcesos, 4);
 	log_info(logger, "%s", t_instruccion->instruccion);
 
 
 
-	pthread_join(hilo_cpu, NULL);
-	pthread_join(hilo_kernel, NULL);
-	pthread_join(hilo_IO, NULL);
+	//pthread_join(hilo_cpu, NULL);
+
+	//pthread_join(hilo_IO, NULL);
 
 	finalizar();
 	return 0;
