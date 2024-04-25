@@ -1,37 +1,17 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <sockets/sockets.h>
-#include <commons/collections/list.h>
-#include <pthread.h>
-
-#define MAX_LINEA 15
-typedef struct {
-	bool ocupado;
-	int espacio_libre;
-} t_tablaMemoria;
-
-typedef struct {
-	short longitud;
-	char instruccion [MAX_LINEA];
-} t_instruccion;
+#include "main.h"
 
 int TAM_MEMORIA;
 short CANT_PAG;
 short TAM_PAG;
 char* PATH_INSTRUCCIONES;
 
-void* memoria;
+void* memoria_contigua;
 
 t_log* logger;
 t_config* config;
+
 t_list* lProcesos;
 t_tablaMemoria (*tablaMemoria);
-
-void inicializar_tabla_de_memoria();
-void inicializar();
-void cargar_proceso(char *);
-void finalizar();
 
 int main (){
 	char* puerto;
@@ -94,7 +74,7 @@ void inicializar(){
 	}
 
 	CANT_PAG = TAM_MEMORIA/TAM_PAG;
-	memoria = malloc(TAM_MEMORIA);
+	memoria_contigua = malloc(TAM_MEMORIA);
 	tablaMemoria = malloc(CANT_PAG*sizeof(t_tablaMemoria));
 	inicializar_tabla_de_memoria();
 }
@@ -122,7 +102,7 @@ void cargar_proceso(char* nombreArchivo){
 }
 
 void finalizar(){
-	free(memoria);
+	free(memoria_contigua);
 	free(tablaMemoria);
 	list_destroy(lProcesos);
 	log_destroy(logger);
