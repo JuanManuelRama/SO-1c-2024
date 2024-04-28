@@ -153,4 +153,22 @@ char* buscar (char*);
 	*/
 void* interactuar (int);
 
-void* recibir_buffer(int* size, int socket_cliente);
+
+/**
+	* @fn       recibir_buffer
+	* @brief    Recibe un buffer
+    * @param    size Tamaño del buffer
+	* @param	socket_cliente
+    * @return   buffer
+	*/
+void* recibir_buffer(int*, int);
+
+
+/**
+	* @fn       serializar_paquete
+	* @brief    Serializa un paquete
+    * @param    paquete P
+	* @param	bytes Cantidad de bytes del paquete
+    * @return   magia (literalmente)!
+	*/
+void* serializar_paquete(t_paquete*, int);
