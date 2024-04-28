@@ -6,6 +6,8 @@ t_config* config;
 int conexion_memoria;
 int conexion_cpu;
 
+// de prueba, despues se borra.
+void prueba_IO_GEN(int socket);
 
 int main(int argc, char* argv[]) {
 	int kernel_servidor;
@@ -20,6 +22,7 @@ int main(int argc, char* argv[]) {
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar ("PUERTO_MEMORIA");
 	conexion_memoria = crear_conexion(ip, puerto, "Memoria"); 
+	sleep(2);
 	enviar_mensaje("Saludos desde el Kernel",conexion_memoria);
 
 	// buscamos datos en config y conectamos a cpu
@@ -29,12 +32,11 @@ int main(int argc, char* argv[]) {
 	//enviar_mensaje("Saludos desde el Kernel",conexion_cpu);
 
 	//tambien sera servidor, con el I/O como cliente
-	//puerto = buscar("PUERTO_ESCUCHA");
-	//kernel_servidor = iniciar_servidor(puerto, "Kernel");
+	puerto = buscar("PUERTO_ESCUCHA");
+	kernel_servidor = iniciar_servidor(puerto, "Kernel");
 
-	//socket_IO = esperar_cliente("I/O", kernel_servidor);
-	//pthread_create(&hilo_IO, NULL, interactuar, (void*)socket_IO);
-
+	socket_IO = esperar_cliente("I/O", kernel_servidor);
+	pthread_create(&hilo_IO, NULL, prueba_IO_GEN, (void*)socket_IO);
 
 	char* buffer;
 	char** mensaje;
@@ -76,4 +78,11 @@ int main(int argc, char* argv[]) {
 
 	
     return 0;
+}
+
+void prueba_IO_GEN(int socket) {
+	for (int i = 0; i<5; i++) {
+		syscall_IO_GEN_SLEEP(socket, "10");
+		sleep(15);
+	}
 }
