@@ -64,3 +64,14 @@ void finalizar();
 *@return	puntero a la lista de instrucciones (aun no está programado)	
 */
 void enviar_proceso(char*);
+
+
+/**
+*@fn 		syscall_IO_GEN
+*@brief		realiza llamado a IO generica, la hace dormir y espera un mensaje de vuelta
+*@param 	socket de IO
+*@param     tiempo que queremos que duerma
+*@return	nada
+*/
+
+void syscall_IO_GEN_SLEEP(int, char*);

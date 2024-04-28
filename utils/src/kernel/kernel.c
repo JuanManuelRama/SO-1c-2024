@@ -15,20 +15,15 @@ void finalizar(){
 
 void enviar_proceso(char* path)
 {
-	t_paquete* paquete = malloc(sizeof(t_paquete));
+	enviar_string(path, conexion_memoria, NUEVO_PROCESO);
+}
 
-	paquete->codigo_operacion = NUEVO_PROCESO;
-	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->size = strlen(path) + 1;
-	paquete->buffer->stream = malloc(paquete->buffer->size);
-	memcpy(paquete->buffer->stream, path, paquete->buffer->size);
+void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
+	// aca se podria de ver como mandar el tiempo como int/float
+	enviar_string(tiempo, socket, IO_GEN_SLEEP);
 
-	int bytes = paquete->buffer->size + 2*sizeof(int);
-
-	void* a_enviar = serializar_paquete(paquete, bytes);
-
-	send(conexion_memoria, a_enviar, bytes, 0);
-
-	free(a_enviar);
-	eliminar_paquete(paquete);
+	//se asume que tras sleepear el IO devuelve un mensaje de exito
+	int operacion = recibir_operacion(socket);
+	if (operacion == MENSAJE)
+		recibir_mensaje(socket);
 }
