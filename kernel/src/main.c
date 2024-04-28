@@ -9,20 +9,19 @@ int conexion_cpu;
 // de prueba, despues se borra.
 void prueba_IO_GEN(int socket);
 
-int main(int argc, char* argv[]) {
+int main() {
 	int kernel_servidor;
 	int socket_IO;
 	char* ip;
 	char* puerto;
 	pthread_t hilo_IO;
 
-	inicializar();
+	inicializar_kernel();
     
 	// buscamos datos en config y conectamos a memoria
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar ("PUERTO_MEMORIA");
 	conexion_memoria = crear_conexion(ip, puerto, "Memoria"); 
-	sleep(2);
 	enviar_mensaje("Saludos desde el Kernel",conexion_memoria);
 
 	// buscamos datos en config y conectamos a cpu
@@ -32,16 +31,15 @@ int main(int argc, char* argv[]) {
 	//enviar_mensaje("Saludos desde el Kernel",conexion_cpu);
 
 	//tambien sera servidor, con el I/O como cliente
-	puerto = buscar("PUERTO_ESCUCHA");
-	kernel_servidor = iniciar_servidor(puerto, "Kernel");
+	//puerto = buscar("PUERTO_ESCUCHA");
+	//kernel_servidor = iniciar_servidor(puerto, "Kernel");
 
-	socket_IO = esperar_cliente("I/O", kernel_servidor);
-	pthread_create(&hilo_IO, NULL, prueba_IO_GEN, (void*)socket_IO);
+	//socket_IO = esperar_cliente("I/O", kernel_servidor);
+	//pthread_create(&hilo_IO, NULL, prueba_IO_GEN, (void*)socket_IO);
 
 	char* buffer;
 	char** mensaje;
 	int consola;
-	logger = log_create("logKernel.log", "LOGS Kernel", 1, LOG_LEVEL_INFO);
 	string_new(buffer);
 	while(1){
 		buffer  = readline(">");
@@ -70,11 +68,10 @@ int main(int argc, char* argv[]) {
 				log_info(logger, "Código invalido");
 				break;
 		}
-
 	}
 
 	pthread_join(hilo_IO, NULL);
-	finalizar();
+	finalizar_kernel();
 
 	
     return 0;

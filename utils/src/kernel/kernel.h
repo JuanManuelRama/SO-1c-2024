@@ -49,13 +49,13 @@ extern int conexion_cpu;
 *@fn 		inicializar
 *@brief		Inicializa logger, config, (posiblemente agreguemos más)	
 */
-void inicializar();
+void inicializar_kernel();
 
 /**
 *@fn 		finalizar
 *@brief		Finaliza logger, config, y conexiones
 */
-void finalizar();
+void finalizar_kernel();
 
 /**
 *@fn 		enviar_proceso
