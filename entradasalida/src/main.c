@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <utils/hello.h>
 #include <sockets/sockets.h>
-#include <unistd.h>
 
 t_log* logger;
 t_config* config;
