@@ -16,7 +16,8 @@ typedef enum
 {
 	MENSAJE,
 	PAQUETE,
-	NUEVO_PROCESO
+	NUEVO_PROCESO,
+	IO_GEN_SLEEP
 }op_code;
 
 typedef struct
@@ -90,9 +91,20 @@ int crear_conexion(char*, char*, char*);
 * @brief    Envía un mensaje
 * @param    mensaje
 * @param    Socket del Cliente
-* @return   Socket del Servidor
+* @return   nada
 */
 void enviar_mensaje(char*, int);
+
+/**
+* @fn       enviar_string
+* @brief    Envía la string a traves del socket con el codigo dado
+* @param    string
+* @param    Socket del Cliente
+* @param    codigo de operacion a enviar
+* @return   nada
+*/
+void enviar_string(char*, int, int);
+
 
 /**
 * @fn       crear_paquete

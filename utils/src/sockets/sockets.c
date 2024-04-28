@@ -136,13 +136,19 @@ int crear_conexion(char *ip, char* puerto, char* servidor)
 
 void enviar_mensaje(char* mensaje, int socket_cliente)
 {
+	enviar_string(mensaje, socket_cliente, MENSAJE);
+}
+
+
+void enviar_string(char* string, int socket_cliente, int codigo_op)
+{
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 
-	paquete->codigo_operacion = MENSAJE;
+	paquete->codigo_operacion = codigo_op;
 	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->size = strlen(mensaje) + 1;
+	paquete->buffer->size = strlen(string) + 1;
 	paquete->buffer->stream = malloc(paquete->buffer->size);
-	memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
+	memcpy(paquete->buffer->stream, string, paquete->buffer->size);
 
 	int bytes = paquete->buffer->size + 2*sizeof(int);
 
