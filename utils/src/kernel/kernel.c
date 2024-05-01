@@ -5,7 +5,7 @@ void inicializar_kernel(){
 	logger = log_create("logKernel.log", "LOGS Kernel", 1, LOG_LEVEL_INFO);
 	config = config_create("kernel.config");
 	cProcesos = queue_create();
-	idPCB=1;
+	idPCB = 1;
 }
 
 void finalizar_kernel(){

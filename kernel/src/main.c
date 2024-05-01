@@ -3,8 +3,10 @@
 //Variables globales
 t_log* logger;
 t_config* config;
+t_queue* cProcesos;
 int conexion_memoria;
 int conexion_cpu;
+int idPCB;
 
 // de prueba, despues se borra.
 void prueba_IO_GEN(int socket);
