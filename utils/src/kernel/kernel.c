@@ -44,6 +44,10 @@ void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
 
 void planificadorCP(int cpu){
 	while (1){
-
+		// WAIT () ESPERA A QUE HAYA ALGO ENCOLADO
+		t_pcb* proceso = queue_pop(cProcesos); 
+		//enviar_pcb(conexion_cpu, *proceso) AUN NO ESTÁ PROGRAMADA
+		if(cProcesos->elements->elements_count)
+			//SIGNAL 		SI HAY ALGO, ENVIA SEÑAL PARA PODER CONTINUIAR, SINO SE FRENA
 	}
 }
