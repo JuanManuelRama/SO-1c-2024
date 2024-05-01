@@ -15,6 +15,13 @@ typedef enum{
 	INICIAR_PLANIFICACION,
 	PROCESO_ESTADO=-7
 }fConsola;
+typedef enum{
+	NEW,
+	READY,
+	RUNNING,
+	BLOCKED,
+	FINISHED
+}estados;
 
 typedef struct
 {
@@ -37,7 +44,7 @@ typedef struct
 	int pc;
 	int quantum;
 	t_registros registros;
-	char* estado;
+	int estado;
 	char** instrucciones;
 } t_pcb;
 
@@ -67,7 +74,7 @@ void finalizar_kernel();
 *@param 	path path del proceso relativo a la memoria
 *@return	puntero a la lista de instrucciones (aun no está programado)	
 */
-void enviar_proceso(char*);
+char** enviar_proceso(char*);
 
 
 /**

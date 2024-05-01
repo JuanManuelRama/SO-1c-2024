@@ -16,20 +16,20 @@ void finalizar_kernel(){
 }
 
 void crear_proceso (char* path){
-	t_pcb* prcoeso = malloc(sizeof t_pcb);
-	strcpy(proceso->estado, "NEW");
-	prcoeso->pc=0;
-	prcoeso->pid=idPCB;
+	t_pcb* proceso = malloc(sizeof (t_pcb));
+	proceso->estado=NEW;
+	proceso->pc=0;
+	proceso->pid=idPCB;
 	idPCB++;
-	//prcoeso->quantum=quantum AÚN NO ESTÁ DEFINIDO
+	//proceso->quantum=quantum AÚN NO ESTÁ DEFINIDO
 	//VERIFICAR GRADO DE MULTIPROGRAMACION
-	enviar_proceso(path);
+	proceso->instrucciones = enviar_proceso(path);
 }
 
-void enviar_proceso(char* path){	
+char** enviar_proceso(char* path){	
 	enviar_string(path, conexion_memoria, NUEVO_PROCESO);
-	//RECIBIR PUNTERO A LA LISTA
-	//AGREGARL A LA COLA
+	int size;
+	return recibir_buffer (&size, conexion_memoria);
 }
 
 void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {

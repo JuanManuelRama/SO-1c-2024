@@ -2,6 +2,14 @@
 #include <stdint.h>
 
 // TODO: Repetido con kernel.h, generalizar en una sola biblioteca para todos los modulos 
+
+typedef enum{
+	NEW,
+	READY,
+	RUNNING,
+	BLOCKED,
+	FINISHED
+}estados;
 typedef struct
 {
 	uint32_t PC;
@@ -23,7 +31,7 @@ typedef struct
 	int pc;
 	int quantum;
 	t_registros registros;
-	char* estado;
+	int estado;
 	char** instrucciones;
 } t_pcb;
 
