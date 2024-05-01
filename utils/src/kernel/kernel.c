@@ -4,6 +4,8 @@
 void inicializar_kernel(){
 	logger = log_create("logKernel.log", "LOGS Kernel", 1, LOG_LEVEL_INFO);
 	config = config_create("kernel.config");
+	cProcesos = queue_create();
+	idPCB=1;
 }
 
 void finalizar_kernel(){
@@ -13,9 +15,18 @@ void finalizar_kernel(){
 	liberar_conexion(conexion_cpu);
 }
 
-void enviar_proceso(char* path)
-{	//CREAR PCB
+void crear_proceso (char* path){
+	t_pcb* prcoeso = malloc(sizeof t_pcb);
+	strcpy(proceso->estado, "NEW");
+	prcoeso->pc=0;
+	prcoeso->pid=idPCB;
+	idPCB++;
+	//prcoeso->quantum=quantum AÚN NO ESTÁ DEFINIDO
 	//VERIFICAR GRADO DE MULTIPROGRAMACION
+	enviar_proceso(path);
+}
+
+void enviar_proceso(char* path){	
 	enviar_string(path, conexion_memoria, NUEVO_PROCESO);
 	//RECIBIR PUNTERO A LA LISTA
 	//AGREGARL A LA COLA
@@ -29,4 +40,10 @@ void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
 	int operacion = recibir_operacion(socket);
 	if (operacion == MENSAJE)
 		recibir_mensaje(socket);
+}
+
+void planificadorCP(int cpu){
+	while (1){
+
+	}
 }

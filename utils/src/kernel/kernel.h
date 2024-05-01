@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include <commons/string.h>
 #include <readline/readline.h>
-
+#include <commons/collections/queue.h>
 
 typedef enum{
 	INICIAR_PROCESO,
@@ -38,12 +38,16 @@ typedef struct
 	int quantum;
 	t_registros registros;
 	char* estado;
+	char** instrucciones;
 } t_pcb;
 
 extern t_log* logger;
 extern t_config* config;
+extern t_queue* cProcesos;
 extern int conexion_memoria;
 extern int conexion_cpu;
+extern int idPCB;
+
 
 /**
 *@fn 		inicializar

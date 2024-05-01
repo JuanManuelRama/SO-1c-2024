@@ -24,6 +24,7 @@ typedef struct
 	int quantum;
 	t_registros registros;
 	char* estado;
+	char** instrucciones;
 } t_pcb;
 
 /**
