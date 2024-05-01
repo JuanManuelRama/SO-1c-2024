@@ -3,9 +3,8 @@
 void recibir_proceso(int socket_cliente){
 		int size;
 		char* proceso = recibir_buffer (&size, socket_cliente);
-		t_list* lProceso = cargar_proceso(proceso);
-		t_instruccion *t_instruccion = list_get(lProceso, 4);
-		log_info(logger, "%s", t_instruccion->instruccion); //Para procesos netamente de testeos, en realidad habrá que pasarle el puntero a lista el kernel
+		char** aProceso = cargar_proceso(proceso);
+		log_info(logger, "%s", aProceso[4]); //Para procesos netamente de testeos, en realidad habrá que pasarle el puntero a lista el kernel
 }
 
 void interactuar_Kernel(int socket_cliente){
@@ -55,28 +54,43 @@ void inicializar_memoria(){
 	inicializar_tabla_de_memoria();
 }
 
-t_list* cargar_proceso(char* nombreArchivo){
+char** cargar_proceso(char* nombreArchivo){
 	// aca se podria agregar el uso de PATH_INSTRUCCIONES
 	FILE* archivoProceso = fopen(nombreArchivo, "r");
 
-	t_list* lProceso = list_create();
-	t_instruccion *tInstruccion;
+	t_queue* qProceso = queue_create();
+	char* instruccion;
 	char* buffer;
 	buffer=malloc(MAX_LINEA);
+	short tam_instruccion;
 
 	// recorre archivo cargando linea por linea en la lista
 	while (!feof(archivoProceso)){
-		tInstruccion=malloc(sizeof(t_instruccion));
 		fgets(buffer, MAX_LINEA, archivoProceso);
-		tInstruccion->longitud=strlen(buffer)-1;
-		strncpy(tInstruccion->instruccion, buffer, tInstruccion->longitud);
-		list_add(lProceso, tInstruccion);
+		tam_instruccion=strlen(buffer)-1;
+		instruccion = malloc(tam_instruccion);
+		strncpy(instruccion, buffer, tam_instruccion);
+		queue_push(qProceso, instruccion);
 	}
-
 	free (buffer);
 	fclose(archivoProceso);
-	return lProceso;
+	return queue_a_array(qProceso);;
 }
+
+
+char** queue_a_array(t_queue* cola){
+	short elem = queue_size(cola);
+	char** array = malloc(sizeof (char*)*elem);
+	short i=0;
+	while(cola->elements->elements_count){
+		array[i] = queue_pop(cola);
+		i++;
+	}
+	queue_destroy(cola);
+	return array;
+}
+
+
 
 void finalizar_memoria(){
 	free(memoria_contigua);

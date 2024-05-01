@@ -3,9 +3,10 @@
 #include <stdbool.h>
 #include <sockets/sockets.h>
 #include <commons/collections/list.h>
+#include <commons/collections/queue.h>
 #include <pthread.h>
 
-#define MAX_LINEA 15
+#define MAX_LINEA 50
 
 
 
@@ -41,11 +42,11 @@ void interactuar_Kernel (int socket_cliente);
 
 /**
 *@fn 		cargar_proceso
-*@brief		Vuelca un proceso en una lista
+*@brief		Vuelca un proceso en un array
 *@param 	nombreArchivo Direccion al archivo
-*@return	Puntero a la lista de instrucciones 
+*@return	Puntero al array de instrucciones 
 */
-t_list* cargar_proceso(char *);
+char** cargar_proceso(char *);
 
 
 /**
@@ -54,5 +55,13 @@ t_list* cargar_proceso(char *);
 *@param 	socket_cliente
 */
 void recibir_proceso(int);
+
+/**
+*@fn 		queue_a_array
+*@brief		Vuelca la cola en un array
+*@param 	cola
+*@returns 	Puntero al array 
+*/
+char** queue_a_array(t_queue*);
 
 void finalizar_memoria();
