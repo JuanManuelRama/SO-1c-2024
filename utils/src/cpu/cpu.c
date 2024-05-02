@@ -1,6 +1,6 @@
 #include "cpu.h"
 
-int set_registro(t_pcb pcb, char* registro, int valor) {
+int set_registro(char* registro, int valor) {
     if(!strcmp(registro, "PC")){
         pcb.registros.PC = valor;
         return pcb.registros.PC;
@@ -39,7 +39,7 @@ int set_registro(t_pcb pcb, char* registro, int valor) {
     }
 }
 
-int get_registro(t_pcb pcb, char* registro) {
+int get_registro(char* registro) {
     if(!strcmp(registro, "PC")){
         return pcb.registros.PC;
     } else if(!strcmp(registro, "AX")){
@@ -65,4 +65,52 @@ int get_registro(t_pcb pcb, char* registro) {
     }else{
         return -1;
     }
+}
+
+char* fetch(){
+    return readline(">");
+}
+
+sInstruccion decode(char* buffer){
+	sInstruccion instruccion;
+	char** array;
+	array = string_split (buffer, " ");
+    buffer=buffer+strlen(array[0]);
+    log_info(logger, "PID: %d - Ejecutando: %s - %s", pcb.pid, array[0], buffer); //Log obligatorio
+	instruccion.cod_instruccion = get_cod_instruccion(array[0]);
+	instruccion.componentes=array;
+	return instruccion;
+}
+void execute(sInstruccion instruccion){
+	switch(instruccion.cod_instruccion){
+		case SET:
+            set(instruccion.componentes[1], instruccion.componentes[2]);
+            break;
+        case SUM:
+            sum(instruccion.componentes[1], instruccion.componentes[2]);
+            break;
+			}
+}
+
+
+int get_cod_instruccion(char* instruccion){
+     if(!strcmp(instruccion, "SUM"))
+        return SUM;
+     else if(!strcmp(instruccion, "SET"))  //FALTAN CASI TODOS 
+        return SET;
+     else 
+    return -1;
+}
+
+//INSTRUCCIONES
+void set (char* registro, char* valor){
+  int x = atoi(valor);
+  set_registro(registro, x);
+}
+
+void sum (char* reg1, char* reg2){
+    int x=get_registro(reg1);
+    int y=get_registro(reg2);
+    x=x+y;
+    set_registro(reg1, x);
 }

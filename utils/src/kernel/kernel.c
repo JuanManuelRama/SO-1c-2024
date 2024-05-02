@@ -28,6 +28,7 @@ void crear_proceso (char* path){
 	//proceso->quantum=quantum AÚN NO ESTÁ DEFINIDO
 	sem_wait(&sMultiprogramacion);
 	proceso->instrucciones = enviar_proceso(path);
+	proceso->estado=READY;
 	queue_push(cProcesos, "hOLA");
 	if(cProcesos->elements->elements_count==1)
 		pthread_mutex_unlock(&scProceso);

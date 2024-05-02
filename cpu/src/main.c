@@ -1,15 +1,14 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <utils/hello.h>
-#include <sockets/sockets.h>
-#include <pthread.h>
 #include <cpu/cpu.h>
+
 
 t_log* logger;
 t_config* config;
+t_pcb pcb;
 
-int main(int argc, char* argv[]) {
-    int conexion;
+int main() {
+	logger = log_create("logCpu.log", "LOGS CPU", 1, LOG_LEVEL_INFO);
+	config = config_create("cpu.config");
+    /*int conexion;
 	int socket_servidor;
 	int socket_kernel;
 	char* ip;
@@ -35,6 +34,18 @@ int main(int argc, char* argv[]) {
 
     liberar_conexion(conexion);
     log_destroy(logger);
-    config_destroy(config);
+    config_destroy(config);*/
+
+	char* buffer;
+	sInstruccion instruccion;
+	buffer=string_new();
+	pcb.pid=1;
+	while(1){
+		buffer = fetch();
+		instruccion = decode(buffer);
+		execute(instruccion);
+
+	}
     return 0;
+
 }
