@@ -4,9 +4,12 @@
 t_log* logger;
 t_config* config;
 t_queue* cProcesos;
+pthread_mutex_t scProceso;
+sem_t sMultiprogramacion;
 int conexion_memoria;
 int conexion_cpu;
 int idPCB;
+int multiprogramacion;
 
 // de prueba, despues se borra.
 void prueba_IO_GEN(int socket);
@@ -17,6 +20,7 @@ int main() {
 	char* ip;
 	char* puerto;
 	pthread_t hilo_IO;
+	pthread_t hilo_pcp;
 
 	inicializar_kernel();
     
@@ -24,7 +28,7 @@ int main() {
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar ("PUERTO_MEMORIA");
 	conexion_memoria = crear_conexion(ip, puerto, "Memoria"); 
-	enviar_mensaje("Saludos desde el Kernel",conexion_memoria);
+	//enviar_mensaje("Saludos desde el Kernel",conexion_memoria);
 
 	// buscamos datos en config y conectamos a cpu
 	//ip = buscar("IP_CPU");
@@ -39,6 +43,8 @@ int main() {
 	//socket_IO = esperar_cliente("I/O", kernel_servidor);
 	//pthread_create(&hilo_IO, NULL, prueba_IO_GEN, (void*)socket_IO);
 
+	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
+
 	char* buffer;
 	char** mensaje;
 	int consola;
@@ -49,7 +55,7 @@ int main() {
 		consola = strcmp ("INICIAR_PROCESO", mensaje[0]);
 		switch (consola){
 			case INICIAR_PROCESO:
-				enviar_proceso (mensaje[1]);
+				crear_proceso (mensaje[1]);
 				break;
 			case FINALIZAR_PROCESO:
 				log_info(logger, "Proceso finalizado");
@@ -71,7 +77,6 @@ int main() {
 				break;
 		}
 	}
-
 	pthread_join(hilo_IO, NULL);
 	finalizar_kernel();
 

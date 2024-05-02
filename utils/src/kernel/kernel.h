@@ -7,13 +7,17 @@
 #include <commons/string.h>
 #include <readline/readline.h>
 #include <commons/collections/queue.h>
+#include <semaphore.h>
 
 extern t_log* logger;
 extern t_config* config;
 extern t_queue* cProcesos;
+extern pthread_mutex_t scProceso;
+extern sem_t sMultiprogramacion;
 extern int conexion_memoria;
 extern int conexion_cpu;
 extern int idPCB;
+extern int multiprogramacion;
 
 
 /**
@@ -46,3 +50,17 @@ char** enviar_proceso(char*);
 */
 
 void syscall_IO_GEN_SLEEP(int, char*);
+
+/**
+*@fn 		planificadorCP
+*@brief		Envía y recibe procesos de la CPU
+*@return	nada
+*/
+void planificadorCP();
+
+/**
+*@fn 		crear_proceso
+*@brief		Crea un proceso
+*@return	nada
+*/
+void crear_proceso(char* path);

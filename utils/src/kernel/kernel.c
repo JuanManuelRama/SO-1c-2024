@@ -5,7 +5,11 @@ void inicializar_kernel(){
 	logger = log_create("logKernel.log", "LOGS Kernel", 1, LOG_LEVEL_INFO);
 	config = config_create("kernel.config");
 	cProcesos = queue_create();
+	multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
 	idPCB = 1;
+	pthread_mutex_init(&scProceso, NULL);
+	pthread_mutex_lock(&scProceso);
+	sem_init(&sMultiprogramacion, 0, multiprogramacion);
 }
 
 void finalizar_kernel(){
@@ -22,14 +26,17 @@ void crear_proceso (char* path){
 	proceso->pid=idPCB;
 	idPCB++;
 	//proceso->quantum=quantum AÚN NO ESTÁ DEFINIDO
-	//VERIFICAR GRADO DE MULTIPROGRAMACION
+	sem_wait(&sMultiprogramacion);
 	proceso->instrucciones = enviar_proceso(path);
+	queue_push(cProcesos, "hOLA");
+	if(cProcesos->elements->elements_count==1)
+		pthread_mutex_unlock(&scProceso);
 }
 
 char** enviar_proceso(char* path){	
 	enviar_string(path, conexion_memoria, NUEVO_PROCESO);
 	int size;
-	return recibir_buffer (&size, conexion_memoria);
+	return NULL; //recibir_buffer (&size, conexion_memoria);
 }
 
 void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
@@ -44,10 +51,10 @@ void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
 
 void planificadorCP(int cpu){
 	while (1){
-		// WAIT () ESPERA A QUE HAYA ALGO ENCOLADO
+		pthread_mutex_lock(&scProceso);
 		t_pcb* proceso = queue_pop(cProcesos); 
 		//enviar_pcb(conexion_cpu, *proceso) AUN NO ESTÁ PROGRAMADA
-		if(cProcesos->elements->elements_count)
-			//SIGNAL 		SI HAY ALGO, ENVIA SEÑAL PARA PODER CONTINUIAR, SINO SE FRENA
+		if(!queue_is_empty(cProcesos))
+			pthread_mutex_unlock(&scProceso);	//Si no está vacia, desbloquea para seguir
 	}
 }
