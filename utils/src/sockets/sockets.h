@@ -9,6 +9,7 @@
 #include<commons/collections/list.h>
 #include<string.h>
 #include<assert.h>
+#include <utils/structs.h>
 
 extern t_log* logger;
 extern t_config* config;
@@ -17,6 +18,7 @@ typedef enum
 	MENSAJE,
 	PAQUETE,
 	NUEVO_PROCESO,
+	PCB,
 	SLEEP
 }op_code;
 
@@ -184,3 +186,7 @@ void* recibir_buffer(int*, int);
     * @return   magia (literalmente)!
 	*/
 void* serializar_paquete(t_paquete*, int);
+
+void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op);
+
+t_pcb* pcb_deserializar(t_buffer* buffer);

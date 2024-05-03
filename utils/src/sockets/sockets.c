@@ -150,6 +150,7 @@ void enviar_string(char* string, int socket_cliente, int codigo_op)
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	memcpy(paquete->buffer->stream, string, paquete->buffer->size);
 
+	// aca se le suma 2 veces el tamaño de un int, entiendo que es por el op_code y el int size del paquete
 	int bytes = paquete->buffer->size + 2*sizeof(int);
 
 	void* a_enviar = serializar_paquete(paquete, bytes);
@@ -231,4 +232,68 @@ void* interactuar(int socket_cliente){
 			break;
 		}
 	}
+}
+
+
+void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op)
+{
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+	int corrimiento = 0;
+
+	paquete->codigo_operacion = codigo_op; // Codigo de operacion a enviar
+	paquete->buffer = malloc(sizeof(t_buffer)); 
+	paquete->buffer->size = sizeof(int) * 5 + sizeof(t_registros) + sizeof(void *); // Tañano del stream de datos a enviar
+	corrimiento = 0; // Seteamos cuanto nos moveremos
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	
+	memcpy(paquete->buffer->stream + corrimiento, &pcb.pid, sizeof(int)); // Guardado el PID
+	corrimiento += sizeof(int);
+
+	memcpy(paquete->buffer->stream + corrimiento, &pcb.pc, sizeof(int)); // Guardado el PC
+	corrimiento += sizeof(int);
+
+	memcpy(paquete->buffer->stream + corrimiento, &pcb.quantum, sizeof(int)); // Guardado el Quantum
+	corrimiento += sizeof(int);
+
+	memcpy(paquete->buffer->stream + corrimiento, &pcb.registros, sizeof(t_registros)); // Guardados los Registros
+	corrimiento += sizeof(t_registros);
+
+	memcpy(paquete->buffer->stream + corrimiento, &pcb.estado, sizeof(int)); // Guardado el Estado
+	corrimiento += sizeof(int);
+
+	memcpy(paquete->buffer->stream + corrimiento, &pcb.instrucciones, sizeof(void*)); // Guardada la instruccion
+
+	int bytes = paquete->buffer->size + 2*sizeof(int);
+
+	void* a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+
+	free(a_enviar);
+	free(paquete->buffer->stream);
+	free(paquete->buffer);
+	eliminar_paquete(paquete);
+}
+
+t_pcb* pcb_deserializar(t_buffer* buffer){
+    t_pcb* pcb = malloc(sizeof(t_pcb));
+
+    void* stream = buffer->stream;
+    // Deserializamos los campos que tenemos en el buffer
+    memcpy(&(pcb->pid), stream, sizeof(int));
+    stream += sizeof(int);
+    memcpy(&(pcb->pc), stream, sizeof(int));
+    stream += sizeof(int);
+    memcpy(&(pcb->quantum), stream, sizeof(int));
+    stream += sizeof(int);
+    memcpy(&(pcb->registros), stream, sizeof(t_registros));
+    stream += sizeof(t_registros);
+    memcpy(&(pcb->estado), stream, sizeof(int));
+    stream += sizeof(int);
+
+    // Por último, para obtener la instruccion, primero recibimos el tamaño y luego el texto en sí:
+    memcpy(&(pcb->instrucciones), stream, sizeof(void*));
+
+    free(stream);
+    return pcb;
 }
