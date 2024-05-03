@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/hello.h>
-#include <utils/structs.h>
 #include <sockets/sockets.h>
 #include <pthread.h>
 #include <commons/string.h>
@@ -91,3 +90,17 @@ void log_nuevoProceso (int);
 *@param     eActual Estado actual
 */
 void log_cambioEstado(int, int, int);
+
+/**
+*@fn 		crear_pcb
+*@brief		Crea una PCB en base a los parametros que le pasamos
+*@param     pid que es el process id del proceso
+*@param     pc program counter
+*@param     quantum del proceso 
+*@param     registros asociados al proceso
+*@param     estado del proceso
+*@param     instrucciones del proceso
+*@return	t_pcb
+*/
+t_pcb crear_pcb (int, int, int, t_registros, int, char**);
+

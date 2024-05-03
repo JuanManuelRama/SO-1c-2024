@@ -88,3 +88,14 @@ void log_nuevoProceso (int pid){
 void log_cambioEstado (int pid, int eAnterior, int eActual){
 	log_info(logger, "PID: %d - Estado Anterior: %s - Estado Actual: %s", pid, get_estado(eAnterior), get_estado(eActual));
 }
+
+t_pcb crear_pcb (int pid, int pc, int quantum, t_registros registros, int estado, char** instrucciones){
+	t_pcb pcb;
+	pcb.pid = pid;
+	pcb.pc = pc;
+	pcb.quantum = quantum;
+	pcb.registros = registros;
+	pcb.estado = estado;
+	pcb.instrucciones = instrucciones;
+	return pcb;
+}
