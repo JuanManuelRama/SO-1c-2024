@@ -38,7 +38,6 @@ int main() {
 
 	char* buffer;
 	sInstruccion instruccion;
-	buffer=string_new();
 	pcb.pid=1;
 	while(1){
 		buffer = fetch();

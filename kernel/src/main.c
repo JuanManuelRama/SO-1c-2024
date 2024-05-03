@@ -48,7 +48,6 @@ int main() {
 	char* buffer;
 	char** mensaje;
 	int consola;
-	buffer = string_new();
 	while(1){
 		buffer  = readline(">");
 		mensaje = string_split(buffer, " ");
