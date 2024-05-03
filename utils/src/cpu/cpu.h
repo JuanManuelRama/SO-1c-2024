@@ -1,5 +1,4 @@
 #include <string.h>
-#include <utils/structs.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/hello.h>
