@@ -90,3 +90,13 @@ extern t_pcb pcb;
  * @param reg2 Registro al que se le sumará el primero
  */
 void sum(char*, char*);
+
+//LOGS OBLIGATORIOS
+/**
+*@fn 		log_execute
+*@brief		Loguea la ejecucion de una instruccion
+*@param     pid Id del proceso
+*@param     instruccion Instruccion a ejecutar
+*@param     parametros Parametros de la instruccion
+*/
+void log_execute(int, char*, char*);

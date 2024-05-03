@@ -19,16 +19,35 @@ void finalizar_kernel(){
 	liberar_conexion(conexion_cpu);
 }
 
+char* get_estado(int estado){
+	switch(estado){
+		case NEW:
+			return "NEW";
+		case READY:
+			return "READY";
+		case RUNNING:
+			return "RUNNING";
+		case BLOCKED:
+			return "BLOCKED";
+		case FINISHED:
+			return "FINISHED";
+		default:
+			return "error";
+	}
+}
+
 void crear_proceso (char* path){
 	t_pcb* proceso = malloc(sizeof (t_pcb));
 	proceso->estado=NEW;
 	proceso->pc=0;
 	proceso->pid=idPCB;
 	idPCB++;
+	log_nuevoProceso(proceso->pid);
 	//proceso->quantum=quantum AÚN NO ESTÁ DEFINIDO
 	sem_wait(&sMultiprogramacion);
-	proceso->instrucciones = enviar_proceso(path);
+	//proceso->instrucciones = enviar_proceso(path);
 	proceso->estado=READY;
+	log_cambioEstado(proceso->pid, NEW, READY);
 	queue_push(cProcesos, "hOLA");
 	if(cProcesos->elements->elements_count==1)
 		pthread_mutex_unlock(&scProceso);
@@ -58,4 +77,14 @@ void planificadorCP(int cpu){
 		if(!queue_is_empty(cProcesos))
 			pthread_mutex_unlock(&scProceso);	//Si no está vacia, desbloquea para seguir
 	}
+}
+
+
+//LOGS OBLIGATORIOS
+void log_nuevoProceso (int pid){
+	log_info(logger, "Se creo el proceso %d en NEW", pid);
+}
+
+void log_cambioEstado (int pid, int eAnterior, int eActual){
+	log_info(logger, "PID: %d - Estado Anterior: %s - Estado Actual: %s", pid, get_estado(eAnterior), get_estado(eActual));
 }

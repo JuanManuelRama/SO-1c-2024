@@ -32,12 +32,24 @@ void inicializar_kernel();
 */
 void finalizar_kernel();
 
+
+/**
+*@fn 		get_estado
+*@brief		Transofrma un enum de estado en string
+*@param 	int Enum del estado
+*@return	String de estado
+*/
+
+char* get_estado(int);
+
 /**
 *@fn 		enviar_proceso
 *@brief		Envia la dirreccion del de proceso a la memoria
 *@param 	path path del proceso relativo a la memoria
 *@return	puntero a la lista de instrucciones (aun no está programado)	
 */
+
+
 char** enviar_proceso(char*);
 
 
@@ -46,7 +58,6 @@ char** enviar_proceso(char*);
 *@brief		realiza llamado a IO generica, la hace dormir y espera un mensaje de vuelta
 *@param 	socket de IO
 *@param     tiempo que queremos que duerma
-*@return	nada
 */
 
 void syscall_IO_GEN_SLEEP(int, char*);
@@ -54,13 +65,29 @@ void syscall_IO_GEN_SLEEP(int, char*);
 /**
 *@fn 		planificadorCP
 *@brief		Envía y recibe procesos de la CPU
-*@return	nada
 */
 void planificadorCP();
 
 /**
 *@fn 		crear_proceso
 *@brief		Crea un proceso
-*@return	nada
 */
 void crear_proceso(char* path);
+
+
+//LOGS OBLIGATORIOS
+/**
+*@fn 		log_nuevoProceso
+*@brief		Loguea la id del proceso creado
+*@param     pid Id del proceso creado
+*/
+void log_nuevoProceso (int);
+
+/**
+*@fn 		log_cambioEstado
+*@brief		Loguea la un cambio de estado de un proceso
+*@param     pid Id del proceso creado
+*@param     eAnterior Estado Anterior
+*@param     eActual Estado actual
+*/
+void log_cambioEstado(int, int, int);

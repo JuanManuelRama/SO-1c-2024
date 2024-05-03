@@ -75,8 +75,8 @@ sInstruccion decode(char* buffer){
 	sInstruccion instruccion;
 	char** array;
 	array = string_split (buffer, " ");
-    buffer=buffer+strlen(array[0]);
-    log_info(logger, "PID: %d - Ejecutando: %s - %s", pcb.pid, array[0], buffer); //Log obligatorio
+    log_execute(pcb.pid, array[0], buffer+strlen(array[0]));
+     //Log obligatorio
 	instruccion.cod_instruccion = get_cod_instruccion(array[0]);
 	instruccion.componentes=array;
 	return instruccion;
@@ -113,4 +113,10 @@ void sum (char* reg1, char* reg2){
     int y=get_registro(reg2);
     x=x+y;
     set_registro(reg1, x);
+}
+
+
+//LOGS OBLIGATORIOS
+void log_execute (int pid, char* instruccion, char* parametros){
+    log_info(logger, "PID: %d - Ejecutando: %s - %s", pid, instruccion, parametros);
 }
