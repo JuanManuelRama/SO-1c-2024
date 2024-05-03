@@ -17,7 +17,7 @@ typedef enum
 	MENSAJE,
 	PAQUETE,
 	NUEVO_PROCESO,
-	IO_GEN_SLEEP
+	SLEEP
 }op_code;
 
 typedef struct

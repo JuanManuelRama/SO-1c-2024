@@ -61,7 +61,7 @@ char** enviar_proceso(char* path){
 
 void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
 	// aca se podria de ver como mandar el tiempo como int/float
-	enviar_string(tiempo, socket, IO_GEN_SLEEP);
+	enviar_string(tiempo, socket, SLEEP);
 
 	//se asume que tras sleepear el IO devuelve un mensaje de exito
 	int operacion = recibir_operacion(socket);
