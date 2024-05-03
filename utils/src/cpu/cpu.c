@@ -81,40 +81,60 @@ sInstruccion decode(char* buffer){
 	instruccion.componentes=array;
 	return instruccion;
 }
+
 void execute(sInstruccion instruccion){
 	switch(instruccion.cod_instruccion){
 		case SET:
-            set(instruccion.componentes[1], instruccion.componentes[2]);
+            exe_SET(instruccion.componentes[1], instruccion.componentes[2]);
             break;
         case SUM:
-            sum(instruccion.componentes[1], instruccion.componentes[2]);
+            exe_SUM(instruccion.componentes[1], instruccion.componentes[2]);
             break;
-			}
+        case SUB:
+            exe_SUB(instruccion.componentes[1], instruccion.componentes[2]);
+            break;
+        case JNZ:
+            exe_JNZ(instruccion.componentes[1], instruccion.componentes[2]);
+            break;
+	}
 }
 
 
 int get_cod_instruccion(char* instruccion){
-     if(!strcmp(instruccion, "SUM"))
+    if(!strcmp(instruccion, "SUM"))
         return SUM;
-     else if(!strcmp(instruccion, "SET"))  //FALTAN CASI TODOS 
+    else if(!strcmp(instruccion, "SET"))  //FALTAN CASI TODOS 
         return SET;
-     else 
+    else if (!strcmp(instruccion, "SUB"))
+        return SUB;
+    else if (!strcmp(instruccion, "JNZ"))
+        return JNZ;
     return -1;
 }
 
 //INSTRUCCIONES
-void set (char* registro, char* valor){
-  int x = atoi(valor);
-  set_registro(registro, x);
+void exe_SET(char* registro, char* valor){
+  set_registro(registro, atoi(valor));
 }
 
-void sum (char* reg1, char* reg2){
-    int x=get_registro(reg1);
-    int y=get_registro(reg2);
-    x=x+y;
-    set_registro(reg1, x);
+void exe_SUM(char* reg_destino, char* reg_origen){
+    int valor_destino = get_registro(reg_destino);
+    int valor_origen = get_registro(reg_origen);
+    valor_destino = valor_destino + valor_origen;
+    set_registro(reg_destino, valor_destino);
 }
 
+void exe_SUB(char* reg_destino, char* reg_origen) {
+    int valor_destino = get_registro(reg_destino);
+    int valor_origen = -get_registro(reg_origen);
+    valor_destino = valor_destino - valor_origen;
+    set_registro(reg_destino, valor_destino);
+}
+
+void exe_JNZ(char* registro, char* numero_instruccion) {
+    if (registro != 0)
+        set_registro("PC", atoi(numero_instruccion));
+}
 
 //LOGS OBLIGATORIOS
 void log_execute (int pid, char* instruccion, char* parametros){

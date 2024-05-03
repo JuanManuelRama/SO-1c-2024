@@ -14,7 +14,20 @@ typedef enum{
     MOV_OUT,
     SUM,
     SUB,
-    JNZ //faltan casi todas, otro día lo llenaré
+    JNZ,
+    RESIZE,
+    COPY_STRING,
+    WAIT,
+    SIGNAL,
+    IO_GEN_SLEEP,
+    IO_STDIN_READ,
+    IO_STDOUT_WRITE,
+    IO_FS_CREATE,
+    IO_FS_DELETE,
+    IO_FS_TRUNCATE,
+    IO_FS_WRITE,
+    IO_FS_READ,
+    EXIT
 }instrucciones;
 
 typedef struct{
@@ -66,6 +79,7 @@ extern t_pcb pcb;
  * @return Registro de instruccion
  */
  sInstruccion decode(char*);
+
  /**
  * @fn execute
  * @brief Ejecuta la instrucción
@@ -76,20 +90,37 @@ extern t_pcb pcb;
  //INSTRUCCIONES DE LA CPU
 
  /**
- * @fn set
+ * @fn exe_SET
  * @brief Le asigna un valor a un registro
  * @param registro String con el nombre del registro
  * @param valor String con el valor
  */
- void set(char*, char*);
+ void exe_SET(char*, char*);
 
   /**
- * @fn sum
+ * @fn exe_SUM
  * @brief Suma 2 registros, y lo almacena en el primero
- * @param reg1 Registro en el que se almacenará el resultado
- * @param reg2 Registro al que se le sumará el primero
+ * @param reg_destino Registro en el que se almacenará el resultado
+ * @param reg_origen Registro que sera sumado al primero
  */
-void sum(char*, char*);
+void exe_SUM(char*, char*);
+
+  /**
+ * @fn exe_SUB
+ * @brief Resta al Registro Destino el Registro Origen y deja el resultado en el Registro Destino.
+ * @param reg_destino Registro en el que se almacenará el resultado
+ * @param reg_origen Registro que sera restado del primero
+ */
+void exe_SUB(char*, char*);
+
+  /**
+ * @fn exe_JNZ
+ * @brief Si el valor del registro es distinto de cero, actualiza el program counter al número de instrucción
+ * @param registro Registro en el que se almacenará el resultado
+ * @param numero_instruccion instruccion a la que se salta
+ */
+void exe_JNZ(char*, char*);
+
 
 //LOGS OBLIGATORIOS
 /**
