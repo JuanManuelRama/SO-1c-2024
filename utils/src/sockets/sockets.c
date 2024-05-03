@@ -269,31 +269,13 @@ void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op)
 
 	send(socket_cliente, a_enviar, bytes, 0);
 
-	free(a_enviar);
-	free(paquete->buffer->stream);
-	free(paquete->buffer);
 	eliminar_paquete(paquete);
 }
 
-t_pcb* pcb_deserializar(t_buffer* buffer){
-    t_pcb* pcb = malloc(sizeof(t_pcb));
-
-    void* stream = buffer->stream;
-    // Deserializamos los campos que tenemos en el buffer
-    memcpy(&(pcb->pid), stream, sizeof(int));
-    stream += sizeof(int);
-    memcpy(&(pcb->pc), stream, sizeof(int));
-    stream += sizeof(int);
-    memcpy(&(pcb->quantum), stream, sizeof(int));
-    stream += sizeof(int);
-    memcpy(&(pcb->registros), stream, sizeof(t_registros));
-    stream += sizeof(t_registros);
-    memcpy(&(pcb->estado), stream, sizeof(int));
-    stream += sizeof(int);
-
-    // Por último, para obtener la instruccion, primero recibimos el tamaño y luego el texto en sí:
-    memcpy(&(pcb->instrucciones), stream, sizeof(void*));
-
+t_pcb pcb_deserializar(int socket_cliente){
+    t_pcb pcb;
+	void* stream=recibir_buffer(&pcb, socket_cliente);
+    memcpy(&(pcb),stream, sizeof(t_pcb));
     free(stream);
     return pcb;
 }

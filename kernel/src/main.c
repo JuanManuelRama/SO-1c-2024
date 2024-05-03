@@ -28,7 +28,7 @@ int main() {
 	// buscamos datos en config y conectamos a memoria
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar ("PUERTO_MEMORIA");
-	conexion_memoria = crear_conexion(ip, puerto, "Memoria"); 
+	//conexion_memoria = crear_conexion(ip, puerto, "Memoria"); 
 	//enviar_mensaje("Saludos desde el Kernel",conexion_memoria);
 
 	// buscamos datos en config y conectamos a cpu
@@ -36,7 +36,7 @@ int main() {
 	puerto = buscar("PUERTO_CPU_DISPATCH");
 	conexion_cpu = crear_conexion(ip, puerto, "CPU");
 	t_registros registro;
-	generica = crear_pcb(1, 10, 2, registro, 1, "Alfa");
+	generica = crear_pcb(1, 10, 2, registro, 1, NULL);
 
 	log_info(logger, "Proces ID: %d", generica.pid);
 	log_info(logger, "Program Counter: %d", generica.pc);

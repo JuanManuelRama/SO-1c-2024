@@ -14,11 +14,11 @@ void interactuar_Kernel(int socket_cliente){
 			break;
 		case PCB:
 			log_info(logger, "llego pcb, ahora deserealizo:");
-			t_pcb *generica = pcb_deserializar(socket_cliente);
-			log_info(logger, "Proces ID: %d", generica->pid);
-			log_info(logger, "Program Counter: %d", generica->pc);
-			log_info(logger, "Quantum: %d", generica->quantum);
-			log_info(logger, "Estado: %d", generica->estado);
+			t_pcb generica = pcb_deserializar(socket_cliente);
+			log_info(logger, "Proces ID: %d", generica.pid);
+			log_info(logger, "Program Counter: %d", generica.pc);
+			log_info(logger, "Quantum: %d", generica.quantum);
+			log_info(logger, "Estado: %d", generica.estado);
 			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
@@ -46,8 +46,8 @@ int main() {
 	// buscamos datos en config y conectamos con memoria
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar("PUERTO_MEMORIA");
-	conexion = crear_conexion(ip, puerto, "Memoria"); 
-	enviar_mensaje("Saludos desde la cpu", conexion);
+	//conexion = crear_conexion(ip, puerto, "Memoria"); 
+	//enviar_mensaje("Saludos desde la cpu", conexion);
 
 	//tambien sera servidor, con el kernel como cliente
 	puerto = buscar("PUERTO_ESCUCHA_DISPATCH");
@@ -57,7 +57,7 @@ int main() {
 	
 	pthread_join(hilo_kernel, NULL);
 
-    liberar_conexion(conexion);
+    //liberar_conexion(conexion);
     log_destroy(logger);
     config_destroy(config);
 

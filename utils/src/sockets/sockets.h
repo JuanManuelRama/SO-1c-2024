@@ -189,4 +189,4 @@ void* serializar_paquete(t_paquete*, int);
 
 void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op);
 
-t_pcb* pcb_deserializar(t_buffer* buffer);
+t_pcb pcb_deserializar(int);
