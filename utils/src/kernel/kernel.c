@@ -4,11 +4,14 @@
 void inicializar_kernel(){
 	logger = log_create("logKernel.log", "LOGS Kernel", 1, LOG_LEVEL_INFO);
 	config = config_create("kernel.config");
-	cProcesos = queue_create();
+	cPLP = queue_create();
+	cPCP = queue_create();
 	multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
 	idPCB = 1;
-	pthread_mutex_init(&scProceso, NULL);
-	pthread_mutex_lock(&scProceso);
+	pthread_mutex_init(&mcPCP, NULL);
+	pthread_mutex_init (&mcPLP, NULL);
+	sem_init(&semPCP, 0, 0);
+	sem_init(&semPLP, 0, 0);
 	sem_init(&sMultiprogramacion, 0, multiprogramacion);
 }
 
@@ -17,6 +20,11 @@ void finalizar_kernel(){
 	config_destroy(config);
 	liberar_conexion(conexion_memoria);
 	liberar_conexion(conexion_cpu);
+	pthread_mutex_destroy(&mcPLP);
+	pthread_mutex_destroy(&mcPCP);
+	sem_destroy(&semPLP);
+	sem_destroy(&semPCP);
+	sem_destroy(&sMultiprogramacion);
 }
 
 char* get_estado(int estado){
@@ -37,20 +45,39 @@ char* get_estado(int estado){
 }
 
 void crear_proceso (char* path){
-	t_pcb* proceso = malloc(sizeof (t_pcb));
-	proceso->estado=NEW;
-	proceso->pc=0;
-	proceso->pid=idPCB;
+	sPLP* proceso = malloc(sizeof (semPLP));
+	proceso->pcb = malloc (sizeof(t_pcb));
+	proceso->pcb->estado=NEW;
+	proceso->pcb->pc =0;
+	proceso->pcb->pid=idPCB;
 	idPCB++;
-	log_nuevoProceso(proceso->pid);
+	proceso->path=path;
+	log_nuevoProceso(proceso->pcb->pid);
+	
 	//proceso->quantum=quantum AÚN NO ESTÁ DEFINIDO
-	sem_wait(&sMultiprogramacion);
-	//proceso->instrucciones = enviar_proceso(path);
-	proceso->estado=READY;
-	log_cambioEstado(proceso->pid, NEW, READY);
-	queue_push(cProcesos, "hOLA");
-	if(cProcesos->elements->elements_count==1)
-		pthread_mutex_unlock(&scProceso);
+	pthread_mutex_lock(&mcPLP);
+	queue_push(cPLP, proceso);
+	pthread_mutex_unlock(&mcPLP);
+	sem_post(&semPLP);
+}
+
+void PLP(){
+	sPLP* proceso;
+	while(1){
+		sem_wait(&semPLP);
+		pthread_mutex_lock(&mcPLP);
+		proceso = queue_pop(cPLP);
+		pthread_mutex_unlock(&mcPLP);
+		sem_wait(&sMultiprogramacion);
+		proceso->pcb->instrucciones = enviar_proceso(proceso->path);
+		proceso->pcb->estado=READY;
+		log_cambioEstado(proceso->pcb->pid, NEW, READY);
+		pthread_mutex_lock(&mcPCP);
+		queue_push(cPCP, proceso->pcb);
+		pthread_mutex_unlock(&mcPCP);
+		sem_post(&semPCP);
+	}
+	
 }
 
 char** enviar_proceso(char* path){	
@@ -71,11 +98,11 @@ void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
 
 void planificadorCP(int cpu){
 	while (1){
-		pthread_mutex_lock(&scProceso);
-		t_pcb* proceso = queue_pop(cProcesos); 
-		//enviar_pcb(conexion_cpu, *proceso) AUN NO ESTÁ PROGRAMADA
-		if(!queue_is_empty(cProcesos))
-			pthread_mutex_unlock(&scProceso);	//Si no está vacia, desbloquea para seguir
+		sem_wait(&semPCP);
+		pthread_mutex_lock(&mcPCP);
+		t_pcb* proceso = queue_pop(cPCP); 
+		pthread_mutex_unlock(&mcPCP);
+		enviar_pcb(*proceso, conexion_cpu, PCB); 
 	}
 }
 

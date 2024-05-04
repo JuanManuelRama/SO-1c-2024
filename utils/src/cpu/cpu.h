@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <readline/readline.h>
 #include <commons/string.h>
+#include <semaphore.h>
 
 typedef enum{
     SET,
@@ -35,6 +36,7 @@ typedef struct{
 }sInstruccion;
 
 extern t_pcb pcb;
+extern pthread_mutex_t mProceso;
 
 /**
  * @fn set_registro
@@ -62,6 +64,8 @@ extern t_pcb pcb;
  * @return ENUM de la instrucción
  */
  int get_cod_instruccion(char*);
+
+ void interactuar_dispatch(int);
 
 //CICLO DE INSTRUCCIÓN
  /**

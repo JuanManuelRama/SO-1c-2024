@@ -66,6 +66,31 @@ int get_registro(char* registro) {
         return -1;
     }
 }
+void interactuar_dispatch(int socket_dispatch){
+		while (1) {
+		int cod_op = recibir_operacion(socket_dispatch);
+		switch (cod_op) {
+		case MENSAJE:
+			recibir_mensaje(socket_dispatch);
+			break;
+		case PCB:
+			log_info(logger, "llego pcb, ahora deserealizo:");
+			pcb = pcb_deserializar(socket_dispatch);
+			log_info(logger, "Proces ID: %d", pcb.pid);
+			log_info(logger, "Program Counter: %d", pcb.pc);
+			log_info(logger, "Quantum: %d", pcb.quantum);
+			log_info(logger, "Estado: %d", pcb.estado);
+            pthread_mutex_unlock(&mProceso);
+			break;
+		case -1:
+			log_error(logger, "el cliente se desconecto");
+			return;
+		default:
+			log_warning(logger,"Operacion no esperada por parte de este cliente");
+			break;
+		}
+	}
+}
 
 char* fetch(){
     return readline(">");
@@ -132,7 +157,7 @@ void exe_SUB(char* reg_destino, char* reg_origen) {
 }
 
 void exe_JNZ(char* registro, char* numero_instruccion) {
-    if (registro != 0)
+    if ((get_registro(registro)))
         set_registro("PC", atoi(numero_instruccion));
 }
 

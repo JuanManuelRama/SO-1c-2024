@@ -3,8 +3,12 @@
 //Variables globales
 t_log* logger;
 t_config* config;
-t_queue* cProcesos;
-pthread_mutex_t scProceso;
+t_queue* cPCP;
+t_queue* cPLP;
+pthread_mutex_t mcPCP;
+pthread_mutex_t mcPLP;
+sem_t semPCP;
+sem_t semPLP;
 sem_t sMultiprogramacion;
 t_pcb generica;
 int conexion_memoria;
@@ -35,16 +39,6 @@ int main() {
 	ip = buscar("IP_CPU");
 	puerto = buscar("PUERTO_CPU_DISPATCH");
 	conexion_cpu = crear_conexion(ip, puerto, "CPU");
-	t_registros registro;
-	generica = crear_pcb(1, 10, 2, registro, 1, NULL);
-
-	log_info(logger, "Proces ID: %d", generica.pid);
-	log_info(logger, "Program Counter: %d", generica.pc);
-	log_info(logger, "Quantum: %d", generica.quantum);
-	log_info(logger, "Estado: %d", generica.estado);
-
-	enviar_pcb(generica, conexion_cpu, PCB);
-	enviar_mensaje("Saludos desde el Kernel",conexion_cpu);
 
 	//tambien sera servidor, con el I/O como cliente
 	//puerto = buscar("PUERTO_ESCUCHA");
@@ -52,7 +46,7 @@ int main() {
 
 	//socket_IO = esperar_cliente("I/O", kernel_servidor);
 	//pthread_create(&hilo_IO, NULL, prueba_IO_GEN, (void*)socket_IO);
-
+	pthread_create(&hilo_pcp, NULL, PLP, NULL);
 	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
 
 	char* buffer;

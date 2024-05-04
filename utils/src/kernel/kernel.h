@@ -10,14 +10,22 @@
 
 extern t_log* logger;
 extern t_config* config;
-extern t_queue* cProcesos;
-extern pthread_mutex_t scProceso;
+extern t_queue* cPCP;
+extern t_queue* cPLP;
+extern pthread_mutex_t mcPCP;
+extern pthread_mutex_t mcPLP;
+extern sem_t semPCP;
+extern sem_t semPLP;
 extern sem_t sMultiprogramacion;
 extern int conexion_memoria;
 extern int conexion_cpu;
 extern int idPCB;
 extern int multiprogramacion;
 
+typedef struct{
+    t_pcb* pcb;
+    char* path;
+}sPLP;
 
 /**
 *@fn 		inicializar
@@ -104,3 +112,4 @@ void log_cambioEstado(int, int, int);
 */
 t_pcb crear_pcb (int, int, int, t_registros, int, char**);
 
+void PLP();

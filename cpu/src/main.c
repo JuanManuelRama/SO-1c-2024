@@ -4,38 +4,16 @@
 t_log* logger;
 t_config* config;
 t_pcb pcb;
-
-void interactuar_Kernel(int socket_cliente){
-		while (1) {
-		int cod_op = recibir_operacion(socket_cliente);
-		switch (cod_op) {
-		case MENSAJE:
-			recibir_mensaje(socket_cliente);
-			break;
-		case PCB:
-			log_info(logger, "llego pcb, ahora deserealizo:");
-			t_pcb generica = pcb_deserializar(socket_cliente);
-			log_info(logger, "Proces ID: %d", generica.pid);
-			log_info(logger, "Program Counter: %d", generica.pc);
-			log_info(logger, "Quantum: %d", generica.quantum);
-			log_info(logger, "Estado: %d", generica.estado);
-			break;
-		case -1:
-			log_error(logger, "el cliente se desconecto");
-			return EXIT_FAILURE;
-		default:
-			log_warning(logger,"Operacion no esperada por parte de este cliente");
-			break;
-		}
-	}
-}
+pthread_mutex_t mProceso;
 
 int main() {
 	logger = log_create("logCpu.log", "LOGS CPU", 1, LOG_LEVEL_INFO);
 	config = config_create("cpu.config");
+	pthread_mutex_init(&mProceso, NULL);
+	pthread_mutex_lock(&mProceso);
     int conexion;
 	int socket_servidor;
-	int socket_kernel;
+	int socket_cliente;
 	char* ip;
 	char* puerto;
 	pthread_t hilo_kernel;
@@ -52,24 +30,26 @@ int main() {
 	//tambien sera servidor, con el kernel como cliente
 	puerto = buscar("PUERTO_ESCUCHA_DISPATCH");
 	socket_servidor = iniciar_servidor(puerto, "CPU");
-	socket_kernel = esperar_cliente("Kernel", socket_servidor);
-	pthread_create(&hilo_kernel, NULL, interactuar_Kernel, (void*)socket_kernel);
+	socket_cliente = esperar_cliente("Kernel", socket_servidor);
+	pthread_create(&hilo_kernel, NULL, interactuar_dispatch, (void*)socket_cliente);
 	
-	pthread_join(hilo_kernel, NULL);
 
-    //liberar_conexion(conexion);
-    log_destroy(logger);
-    config_destroy(config);
+
 
 	char* buffer;
 	sInstruccion instruccion;
-	pcb.pid=1;
 	while(1){
+		pthread_mutex_lock(&mProceso);
 		buffer = fetch();
 		instruccion = decode(buffer);
 		execute(instruccion);
+		pthread_mutex_unlock(&mProceso);
 
 	}
+	//liberar_conexion(conexion);
+    log_destroy(logger);
+    config_destroy(config);
+	pthread_join(hilo_kernel, NULL);
     return 0;
 
 }
