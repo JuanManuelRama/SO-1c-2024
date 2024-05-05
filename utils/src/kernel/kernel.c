@@ -4,12 +4,12 @@
 void inicializar_kernel(){
 	logger = log_create("logKernel.log", "LOGS Kernel", 1, LOG_LEVEL_INFO);
 	config = config_create("kernel.config");
-	cPLP = queue_create();
-	cPCP = queue_create();
+	cNEW = queue_create();
+	cREADY = queue_create();
 	multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
 	idPCB = 1;
-	pthread_mutex_init(&mcPCP, NULL);
-	pthread_mutex_init (&mcPLP, NULL);
+	pthread_mutex_init(&mREADY, NULL);
+	pthread_mutex_init (&mNEW, NULL);
 	sem_init(&semPCP, 0, 0);
 	sem_init(&semPLP, 0, 0);
 	sem_init(&sMultiprogramacion, 0, multiprogramacion);
@@ -20,8 +20,8 @@ void finalizar_kernel(){
 	config_destroy(config);
 	liberar_conexion(conexion_memoria);
 	liberar_conexion(conexion_cpu);
-	pthread_mutex_destroy(&mcPLP);
-	pthread_mutex_destroy(&mcPCP);
+	pthread_mutex_destroy(&mNEW);
+	pthread_mutex_destroy(&mREADY);
 	sem_destroy(&semPLP);
 	sem_destroy(&semPCP);
 	sem_destroy(&sMultiprogramacion);
@@ -55,9 +55,9 @@ void crear_proceso (char* path){
 	log_nuevoProceso(proceso->pcb->pid);
 	
 	//proceso->quantum=quantum AÚN NO ESTÁ DEFINIDO
-	pthread_mutex_lock(&mcPLP);
-	queue_push(cPLP, proceso);
-	pthread_mutex_unlock(&mcPLP);
+	pthread_mutex_lock(&mNEW);
+	queue_push(cNEW, proceso);
+	pthread_mutex_unlock(&mNEW);
 	sem_post(&semPLP);
 }
 
@@ -65,16 +65,16 @@ void PLP(){
 	sPLP* proceso;
 	while(1){
 		sem_wait(&semPLP);
-		pthread_mutex_lock(&mcPLP);
-		proceso = queue_pop(cPLP);
-		pthread_mutex_unlock(&mcPLP);
+		pthread_mutex_lock(&mNEW);
+		proceso = queue_pop(cNEW);
+		pthread_mutex_unlock(&mNEW);
 		sem_wait(&sMultiprogramacion);
 		proceso->pcb->instrucciones = enviar_proceso(proceso->path);
 		proceso->pcb->estado=READY;
 		log_cambioEstado(proceso->pcb->pid, NEW, READY);
-		pthread_mutex_lock(&mcPCP);
-		queue_push(cPCP, proceso->pcb);
-		pthread_mutex_unlock(&mcPCP);
+		pthread_mutex_lock(&mREADY);
+		queue_push(cREADY, proceso->pcb);
+		pthread_mutex_unlock(&mREADY);
 		sem_post(&semPCP);
 	}
 	
@@ -99,9 +99,9 @@ void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
 void planificadorCP(int cpu){
 	while (1){
 		sem_wait(&semPCP);
-		pthread_mutex_lock(&mcPCP);
-		t_pcb* proceso = queue_pop(cPCP); 
-		pthread_mutex_unlock(&mcPCP);
+		pthread_mutex_lock(&mREADY);
+		t_pcb* proceso = queue_pop(cREADY); 
+		pthread_mutex_unlock(&mREADY);
 		enviar_pcb(*proceso, conexion_cpu, PCB); 
 	}
 }

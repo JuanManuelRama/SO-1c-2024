@@ -3,10 +3,10 @@
 //Variables globales
 t_log* logger;
 t_config* config;
-t_queue* cPCP;
-t_queue* cPLP;
-pthread_mutex_t mcPCP;
-pthread_mutex_t mcPLP;
+t_queue* cNEW;
+t_queue* cREADY;
+pthread_mutex_t mNEW;
+pthread_mutex_t mREADY;
 sem_t semPCP;
 sem_t semPLP;
 sem_t sMultiprogramacion;

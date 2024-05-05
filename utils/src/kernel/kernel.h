@@ -10,10 +10,10 @@
 
 extern t_log* logger;
 extern t_config* config;
-extern t_queue* cPCP;
-extern t_queue* cPLP;
-extern pthread_mutex_t mcPCP;
-extern pthread_mutex_t mcPLP;
+extern t_queue* cNEW;
+extern t_queue* cREADY;
+extern pthread_mutex_t mNEW;
+extern pthread_mutex_t mREADY;
 extern sem_t semPCP;
 extern sem_t semPLP;
 extern sem_t sMultiprogramacion;
