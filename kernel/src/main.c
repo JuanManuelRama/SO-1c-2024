@@ -5,16 +5,20 @@ t_log* logger;
 t_config* config;
 t_queue* cNEW;
 t_queue* cREADY;
+t_queue* cEXIT;
 pthread_mutex_t mNEW;
 pthread_mutex_t mREADY;
+pthread_mutex_t mEXIT;
 sem_t semPCP;
 sem_t semPLP;
+sem_t semEXIT;
 sem_t sMultiprogramacion;
 t_pcb generica;
 int conexion_memoria;
 int conexion_cpu;
 int idPCB;
 int multiprogramacion;
+int quantum;
 
 // de prueba, despues se borra.
 void prueba_IO_GEN(int socket);
@@ -26,6 +30,7 @@ int main() {
 	char* puerto;
 	pthread_t hilo_IO;
 	pthread_t hilo_pcp;
+	pthread_t hilo_carnicero;
 
 	inicializar_kernel();
     
@@ -48,6 +53,7 @@ int main() {
 	//pthread_create(&hilo_IO, NULL, prueba_IO_GEN, (void*)socket_IO);
 	pthread_create(&hilo_pcp, NULL, PLP, NULL);
 	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
+	pthread_create(&hilo_carnicero, NULL, carnicero, NULL);
 
 	char* buffer;
 	char** mensaje;

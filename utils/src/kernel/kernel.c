@@ -6,12 +6,16 @@ void inicializar_kernel(){
 	config = config_create("kernel.config");
 	cNEW = queue_create();
 	cREADY = queue_create();
+	cEXIT = queue_create();
 	multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+	quantum = config_get_int_value(config, "QUANTUM");
 	idPCB = 1;
-	pthread_mutex_init(&mREADY, NULL);
 	pthread_mutex_init (&mNEW, NULL);
+	pthread_mutex_init(&mREADY, NULL);
+	pthread_mutex_init (&mEXIT, NULL);
 	sem_init(&semPCP, 0, 0);
 	sem_init(&semPLP, 0, 0);
+	sem_init(&semEXIT, 0, 0);
 	sem_init(&sMultiprogramacion, 0, multiprogramacion);
 }
 
@@ -20,10 +24,15 @@ void finalizar_kernel(){
 	config_destroy(config);
 	liberar_conexion(conexion_memoria);
 	liberar_conexion(conexion_cpu);
+	queue_destroy(cNEW);
+	queue_destroy(cREADY);
+	queue_destroy(cEXIT);
 	pthread_mutex_destroy(&mNEW);
 	pthread_mutex_destroy(&mREADY);
+	pthread_mutex_destroy(&mEXIT);
 	sem_destroy(&semPLP);
 	sem_destroy(&semPCP);
+	sem_destroy(&semEXIT);
 	sem_destroy(&sMultiprogramacion);
 }
 
@@ -49,12 +58,11 @@ void crear_proceso (char* path){
 	proceso->pcb = malloc (sizeof(t_pcb));
 	proceso->pcb->estado=NEW;
 	proceso->pcb->pc =0;
+	proceso->pcb->quantum=quantum;
+	proceso->path=path;
 	proceso->pcb->pid=idPCB;
 	idPCB++;
-	proceso->path=path;
 	log_nuevoProceso(proceso->pcb->pid);
-	
-	//proceso->quantum=quantum AÚN NO ESTÁ DEFINIDO
 	pthread_mutex_lock(&mNEW);
 	queue_push(cNEW, proceso);
 	pthread_mutex_unlock(&mNEW);
@@ -81,6 +89,20 @@ void PLP(){
 	
 }
 
+void carnicero(){
+	sEXIT* proceso;
+	sem_wait(&semEXIT);
+	pthread_mutex_lock(&mEXIT);
+	proceso = queue_pop(cEXIT);
+	pthread_mutex_unlock(&mEXIT);
+	//liberar_memoria(proceso->pcb->instrucciones); FALTA PROGRAMAR
+	log_finalizacion(proceso->pcb->pid, proceso->motivo);
+	free (proceso->pcb);
+	free(proceso->motivo);
+	free(proceso);
+	sem_post(&sMultiprogramacion);
+}
+
 char** enviar_proceso(char* path){	
 	enviar_string(path, conexion_memoria, NUEVO_PROCESO);
 	int size;
@@ -101,9 +123,21 @@ void planificadorCP(int cpu){
 	while (1){
 		sem_wait(&semPCP);
 		pthread_mutex_lock(&mREADY);
-		t_pcb* proceso = queue_pop(cREADY); 
+		t_pcb* pcb = queue_pop(cREADY); 
 		pthread_mutex_unlock(&mREADY);
-		enviar_pcb(*proceso, conexion_cpu, PCB); 
+		enviar_pcb(*pcb, conexion_cpu, PCB); 
+		log_cambioEstado(pcb->pid, READY, RUNNING);
+		//*pcb = pcb_deserializar(cpu);
+		log_cambioEstado(pcb->pid, RUNNING, FINISHED);
+		sEXIT* proceso = malloc(sizeof (sEXIT));
+		proceso->pcb=pcb;
+		proceso->motivo = malloc(sizeof (char*));
+		strcpy(proceso->motivo, "FINALIZÓ");
+		pthread_mutex_lock(&mEXIT);
+		queue_push(cEXIT, proceso);
+		pthread_mutex_unlock(&mEXIT);
+		sem_post(&semEXIT);
+
 	}
 }
 
@@ -115,4 +149,7 @@ void log_nuevoProceso (int pid){
 
 void log_cambioEstado (int pid, int eAnterior, int eActual){
 	log_info(logger, "PID: %d - Estado Anterior: %s - Estado Actual: %s", pid, get_estado(eAnterior), get_estado(eActual));
+}
+void log_finalizacion(int pid, char* motivo){
+	log_info(logger, "Finaliza el proceso %d - Motivo: %s", pid, motivo);
 }
