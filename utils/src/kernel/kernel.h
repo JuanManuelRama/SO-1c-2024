@@ -105,6 +105,8 @@ void PLP();
 */
 void carnicero();
 
+
+
 //LOGS OBLIGATORIOS
 /**
 *@fn 		log_nuevoProceso

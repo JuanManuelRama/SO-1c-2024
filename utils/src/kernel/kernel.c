@@ -127,17 +127,25 @@ void planificadorCP(int cpu){
 		pthread_mutex_unlock(&mREADY);
 		enviar_pcb(*pcb, conexion_cpu, PCB); 
 		log_cambioEstado(pcb->pid, READY, RUNNING);
-		//*pcb = pcb_deserializar(cpu);
-		log_cambioEstado(pcb->pid, RUNNING, FINISHED);
-		sEXIT* proceso = malloc(sizeof (sEXIT));
-		proceso->pcb=pcb;
-		proceso->motivo = malloc(sizeof (char*));
-		strcpy(proceso->motivo, "FINALIZÓ");
-		pthread_mutex_lock(&mEXIT);
-		queue_push(cEXIT, proceso);
-		pthread_mutex_unlock(&mEXIT);
-		sem_post(&semEXIT);
-
+		int motivo = recibir_operacion(conexion_cpu);
+		*pcb=pcb_deserializar(conexion_cpu);
+		switch(motivo){
+			case FINALIZACION:
+				log_cambioEstado(pcb->pid, RUNNING, FINISHED);
+				sEXIT* proceso = malloc(sizeof (sEXIT));
+				proceso->pcb=pcb;
+				proceso->motivo = malloc(sizeof (char*));
+				strcpy(proceso->motivo, "Finalizó");
+				pthread_mutex_lock(&mEXIT);
+				queue_push(cEXIT, proceso);
+				pthread_mutex_unlock(&mEXIT);
+				sem_post(&semEXIT);
+				break;
+			//case IO:
+			default:
+				log_error(logger, "Motivo inválido para salir");
+				break;
+		}
 	}
 }
 

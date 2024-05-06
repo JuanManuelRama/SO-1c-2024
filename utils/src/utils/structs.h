@@ -10,6 +10,12 @@ typedef enum{
 }fConsola;
 
 typedef enum{
+	FINALIZACION,
+	QUANTUM,
+	RECURSO,
+	IO
+}codSalida;
+typedef enum{
 	NEW,
 	READY,
 	RUNNING,
