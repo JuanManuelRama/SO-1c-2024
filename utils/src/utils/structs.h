@@ -10,7 +10,7 @@ typedef enum{
 }fConsola;
 
 typedef enum{
-	FINALIZACION,
+	FINALIZACION=1,
 	QUANTUM,
 	RECURSO,
 	IO

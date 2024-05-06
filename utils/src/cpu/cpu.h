@@ -36,7 +36,7 @@ typedef struct{
 }sInstruccion;
 
 extern t_pcb pcb;
-extern pthread_mutex_t mProceso;
+extern int seVa;
 
 /**
  * @fn set_registro
@@ -123,6 +123,12 @@ void exe_SUB(char*, char*);
  * @param numero_instruccion instruccion a la que se salta
  */
 void exe_JNZ(char*, char*);
+
+  /**
+ * @fn exe_EXIT
+ * @brief Finaliza el proceso
+ */
+void exe_EXIT();
 
 
 //LOGS OBLIGATORIOS
