@@ -69,7 +69,7 @@ int get_registro(char* registro) {
 
 char* fetch(){
     /*
-    enviar_int(memoria, pcb.registro.PC);
+    enviar_int(memoria, pcb.registro.PC, FETCH);
     if(recibir_operacion(memoria))
         log_error(logger, "La memoria me envío cualquier cosa...");
     return recibir_buffer(memoria);

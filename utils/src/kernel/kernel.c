@@ -54,7 +54,7 @@ char* get_estado(int estado){
 }
 
 void crear_proceso (char* path){
-	sPLP* proceso = malloc(sizeof (semPLP));
+	sPLP* proceso = malloc(sizeof (sPLP));
 	proceso->pcb = malloc (sizeof(t_pcb));
 	proceso->pcb->estado=NEW;
 	proceso->pcb->pc =0;
@@ -91,6 +91,7 @@ void PLP(){
 
 void carnicero(){
 	sEXIT* proceso;
+	while(1){
 	sem_wait(&semEXIT);
 	pthread_mutex_lock(&mEXIT);
 	proceso = queue_pop(cEXIT);
@@ -101,6 +102,7 @@ void carnicero(){
 	free(proceso->motivo);
 	free(proceso);
 	sem_post(&sMultiprogramacion);
+	}
 }
 
 char** enviar_proceso(char* path){	
@@ -119,15 +121,17 @@ void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
 		recibir_mensaje(socket);
 }
 
-void planificadorCP(int cpu){
+void planificadorCP(){
+	t_pcb* pcb;
+	int motivo;
 	while (1){
 		sem_wait(&semPCP);
 		pthread_mutex_lock(&mREADY);
-		t_pcb* pcb = queue_pop(cREADY); 
+		pcb = queue_pop(cREADY); 
 		pthread_mutex_unlock(&mREADY);
 		enviar_pcb(*pcb, conexion_cpu, PCB); 
 		log_cambioEstado(pcb->pid, READY, RUNNING);
-		int motivo = recibir_operacion(conexion_cpu);
+		motivo = recibir_operacion(conexion_cpu);
 		*pcb=pcb_deserializar(conexion_cpu);
 		switch(motivo){
 			case FINALIZACION:

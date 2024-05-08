@@ -33,11 +33,9 @@ int main() {
 	socket_dispatch = esperar_cliente("Kernel", socket_servidor);
 	
 
-
-
-
 	while(1){
-		recibir_operacion(socket_dispatch);
+		if(recibir_operacion(socket_dispatch)!=PCB)
+			log_error(logger, "El kernel me envío cualquier cosa...");
 		pcb=pcb_deserializar(socket_dispatch);
 		while(!seVa){
 			buffer = fetch();

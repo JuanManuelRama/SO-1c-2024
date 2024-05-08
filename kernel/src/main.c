@@ -52,8 +52,8 @@ int main() {
 	//socket_IO = esperar_cliente("I/O", kernel_servidor);
 	//pthread_create(&hilo_IO, NULL, prueba_IO_GEN, (void*)socket_IO);
 	pthread_create(&hilo_pcp, NULL, PLP, NULL);
-	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
 	pthread_create(&hilo_carnicero, NULL, carnicero, NULL);
+	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
 
 	char* buffer;
 	char** mensaje;

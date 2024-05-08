@@ -19,7 +19,8 @@ typedef enum
 	PAQUETE,
 	NUEVO_PROCESO,
 	PCB,
-	SLEEP
+	SLEEP,
+	FETCH
 }op_code;
 
 typedef struct
