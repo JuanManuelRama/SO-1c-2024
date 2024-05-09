@@ -58,7 +58,8 @@ int main() {
 	char* buffer;
 	char** mensaje;
 	int consola;
-	while(1){
+
+		while(1){
 		buffer  = readline(">");
 		mensaje = string_split(buffer, " ");
 		consola = strcmp ("INICIAR_PROCESO", mensaje[0]);
@@ -85,6 +86,8 @@ int main() {
 				log_info(logger, "Código invalido");
 				break;
 		}
+		free (buffer);
+		string_array_destroy(mensaje);
 	}
 	pthread_join(hilo_IO, NULL);
 	finalizar_kernel();

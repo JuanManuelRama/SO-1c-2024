@@ -42,6 +42,8 @@ int main() {
 			instruccion = decode(buffer);
 			execute(instruccion);
 			pcb.pc++;
+			free (buffer);
+			string_array_destroy(instruccion.componentes);
 		}
 		enviar_pcb(pcb, socket_dispatch, seVa);
 		seVa=false;

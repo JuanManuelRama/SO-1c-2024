@@ -27,14 +27,10 @@ extern int multiprogramacion;
 extern int quantum;
 
 typedef struct{
-    t_pcb* pcb;
-    char* path;
-}sPLP;
+    t_pcb pcb;
+    char* multifuncion;
+}sProceso;
 
-typedef struct{
-    t_pcb* pcb;
-    char* motivo;
-}sEXIT;
 
 /**
 *@fn 		inicializar
