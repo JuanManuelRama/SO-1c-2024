@@ -136,7 +136,6 @@ void log_cambioEstado(int, int, int);
 */
 void log_finalizacion(int, char*);
 
-
+//falta agregar documentacion
 void atender_solicitud_IO(sProceso*);
-bool existe_conexion(t_conexion *conexion, char* nombre);
 void escuchar_conexiones_IO(int socket);
