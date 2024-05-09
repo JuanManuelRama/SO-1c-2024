@@ -85,7 +85,6 @@ void PLP(){
 		pthread_mutex_unlock(&mREADY);
 		sem_post(&semPCP);
 	}
-	
 }
 
 void matadero (sProceso* proceso, char* motivo){

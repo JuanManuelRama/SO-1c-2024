@@ -103,7 +103,6 @@ void planificadorCP();
 */
 void PLP();
 
-
 /**
 *@fn 		matadero
 *@brief		Prepara los procesos para ser eliminados
