@@ -6,6 +6,7 @@ t_config* config;
 t_queue* cNEW;
 t_queue* cREADY;
 t_queue* cEXIT;
+t_list* lBlocked;
 pthread_mutex_t mNEW;
 pthread_mutex_t mREADY;
 pthread_mutex_t mEXIT;
@@ -19,12 +20,14 @@ int conexion_cpu;
 int idPCB;
 int multiprogramacion;
 int quantum;
+int kernel_servidor;
+t_list *lista_conexiones_IO;
 
 // de prueba, despues se borra.
-void prueba_IO_GEN(int socket);
+
 
 int main() {
-	int kernel_servidor;
+
 	int socket_IO;
 	char* ip;
 	char* puerto;
@@ -46,11 +49,12 @@ int main() {
 	conexion_cpu = crear_conexion(ip, puerto, "CPU");
 
 	//tambien sera servidor, con el I/O como cliente
-	//puerto = buscar("PUERTO_ESCUCHA");
-	//kernel_servidor = iniciar_servidor(puerto, "Kernel");
+	puerto = buscar("PUERTO_ESCUCHA");
+	kernel_servidor = iniciar_servidor(puerto, "Kernel");
+	socket_IO = esperar_cliente("I/O", kernel_servidor);
 
-	//socket_IO = esperar_cliente("I/O", kernel_servidor);
-	//pthread_create(&hilo_IO, NULL, prueba_IO_GEN, (void*)socket_IO);
+	pthread_create(&hilo_IO, NULL, escuchar_conexiones_IO, (void*)socket_IO);
+
 	pthread_create(&hilo_pcp, NULL, PLP, NULL);
 	pthread_create(&hilo_carnicero, NULL, carnicero, NULL);
 	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
@@ -96,9 +100,3 @@ int main() {
     return 0;
 }
 
-void prueba_IO_GEN(int socket) {
-	for (int i = 0; i<5; i++) {
-		syscall_IO_GEN_SLEEP(socket, "10");
-		sleep(15);
-	}
-}

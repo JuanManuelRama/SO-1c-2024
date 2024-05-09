@@ -13,6 +13,8 @@ extern t_config* config;
 extern t_queue* cNEW;
 extern t_queue* cREADY;
 extern t_queue* cEXIT;
+extern t_list* lBlocked;
+extern t_list* lista_conexiones_IO;
 extern pthread_mutex_t mNEW;
 extern pthread_mutex_t mREADY;
 extern pthread_mutex_t mEXIT;
@@ -25,11 +27,17 @@ extern int conexion_cpu;
 extern int idPCB;
 extern int multiprogramacion;
 extern int quantum;
+extern int kernel_servidor;
 
 typedef struct{
     t_pcb pcb;
     char* multifuncion;
 }sProceso;
+
+typedef struct{
+    char *nombre;
+    int socket;
+}t_conexion;
 
 
 /**
@@ -128,3 +136,7 @@ void log_cambioEstado(int, int, int);
 */
 void log_finalizacion(int, char*);
 
+
+void atender_solicitud_IO(sProceso*);
+bool existe_conexion(t_conexion *conexion, char* nombre);
+void escuchar_conexiones_IO(int socket);
