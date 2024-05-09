@@ -194,6 +194,12 @@ void escuchar_conexiones_IO(int socket_IO) {
 void atender_solicitud_IO(sProceso* proceso){
 	char** nombre_y_operacion = string_n_split(proceso->multifuncion, 2, " ");
 
+	// funcionalidad propia de gcc, inner function
+	bool existe_conexion(void* elem) {
+		t_conexion *conexion = (t_conexion*)elem;
+		return !strcmp(conexion->nombre, nombre_y_operacion[0]);
+	}
+
 	t_conexion* IO_seleccionada = list_find(lista_conexiones_IO, existe_conexion);
 
 	if (IO_seleccionada == NULL) {
@@ -238,10 +244,6 @@ void atender_solicitud_IO(sProceso* proceso){
 	sem_post(&semPCP); //avisamos al dispatcher q volvio a ready
 }
 
-// habria que ver como funciona bien list_find que es de orden superior para tomar esta funcion como parametro
-bool existe_conexion(t_conexion *conexion, char* nombre) {
-	return !strcmp(conexion->nombre, nombre);
-}
 
 //LOGS OBLIGATORIOS
 void log_nuevoProceso (int pid){
