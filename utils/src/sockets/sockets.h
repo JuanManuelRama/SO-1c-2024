@@ -20,7 +20,9 @@ typedef enum
 	NUEVO_PROCESO,
 	PCB,
 	SLEEP,
-	FETCH
+	FETCH,
+	NUEVA_IO,
+	OPERACION_IO
 }op_code;
 
 typedef struct
