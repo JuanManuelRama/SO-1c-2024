@@ -104,6 +104,14 @@ void planificadorCP();
 void PLP();
 
 /**
+*@fn 		matadero
+*@brief		Prepara los procesos para ser eliminados
+*@param     proceso Proceso a elminiar
+*@param     motivo Motivo para eliminarlo
+*/
+void matadero(sProceso*, char*)
+
+/**
 *@fn 		carnicero
 *@brief		Finaliza los procesos
 */

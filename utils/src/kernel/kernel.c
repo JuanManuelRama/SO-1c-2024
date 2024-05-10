@@ -85,7 +85,15 @@ void PLP(){
 		pthread_mutex_unlock(&mREADY);
 		sem_post(&semPCP);
 	}
-	
+}
+
+void matadero (sProceso* proceso, char* motivo){
+	log_cambioEstado(proceso->pcb.pid, RUNNING, FINISHED);
+	strcpy(proceso->multifuncion, motivo);
+	pthread_mutex_lock(&mEXIT);
+	queue_push(cEXIT, proceso);
+	pthread_mutex_unlock(&mEXIT);
+	sem_post(&semEXIT);
 }
 
 void carnicero(){
@@ -134,12 +142,7 @@ void planificadorCP(){
 		proceso->pcb=pcb_deserializar(conexion_cpu);
 		switch(motivo){
 			case FINALIZACION:
-				log_cambioEstado(proceso->pcb.pid, RUNNING, FINISHED);
-				strcpy(proceso->multifuncion, "Finalizó");
-				pthread_mutex_lock(&mEXIT);
-				queue_push(cEXIT, proceso);
-				pthread_mutex_unlock(&mEXIT);
-				sem_post(&semEXIT);
+				matadero(proceso, "Finalizo");
 				break;
 			case IO:
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
@@ -152,7 +155,7 @@ void planificadorCP(){
 
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
 			default:
-				log_error(logger, "Motivo inválido para salir");
+				matadero(proceso, "Envio codigo de salida no valido");
 				break;
 		}
 	}
@@ -202,14 +205,7 @@ void atender_solicitud_IO(sProceso* proceso){
 	if (IO_seleccionada == NULL) {
 		//mutex
 		list_remove_element(lBlocked, proceso);
-
-		strcpy(proceso->multifuncion, "Intento conectar con IO no conectada");
-		
-		pthread_mutex_lock(&mEXIT);
-		queue_push(cEXIT, proceso);
-		pthread_mutex_unlock(&mEXIT);
-		sem_post(&semEXIT);
-
+		matadero(proceso, "Se intento comunicar con una IO no conectada");
 		return;
 	}
 
