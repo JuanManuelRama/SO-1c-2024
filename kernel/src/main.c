@@ -51,9 +51,7 @@ int main() {
 	//tambien sera servidor, con el I/O como cliente
 	puerto = buscar("PUERTO_ESCUCHA");
 	kernel_servidor = iniciar_servidor(puerto, "Kernel");
-	socket_IO = esperar_cliente("I/O", kernel_servidor);
-
-	pthread_create(&hilo_IO, NULL, escuchar_conexiones_IO, (void*)socket_IO);
+	pthread_create(&hilo_IO, NULL, escuchar_conexiones_IO, (void*)kernel_servidor);
 
 	pthread_create(&hilo_pcp, NULL, PLP, NULL);
 	pthread_create(&hilo_carnicero, NULL, carnicero, NULL);

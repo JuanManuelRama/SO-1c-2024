@@ -165,23 +165,24 @@ En caso de que la interfaz exista y esté conectada, se deberá validar que la i
 admite la operación solicitada, en caso de que no sea así, se deberá enviar el proceso a EXIT.
 */
 
-void escuchar_conexiones_IO(int socket_IO) {
+void escuchar_conexiones_IO(int socket_server) {
 	lista_conexiones_IO = list_create();
 	int socket;
 	while(1){
+		socket = accept(socket_server, NULL, NULL); // aca uso accept en vez de esperar_cliente pq todavia no se el nombre
 		switch (recibir_operacion(socket)) {
 			case NUEVA_IO:
 				int size;
-				char* nombre = recibir_buffer(&size, socket_IO);
-				
-				socket = esperar_cliente(nombre, kernel_servidor);
+				char* nombre = recibir_buffer(&size, socket);
 
 				t_conexion *conexion = malloc(sizeof(t_conexion));
-				conexion->nombre = nombre;
+				conexion->nombre = string_new();
+				strcpy(conexion->nombre, nombre);
 				conexion->socket = socket;
 
 				//FALTA MUTEX
 				list_add(lista_conexiones_IO, conexion);
+				log_info(logger, nombre);
 			// case STDIN, etc.
 		}
 	}
