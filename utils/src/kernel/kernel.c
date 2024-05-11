@@ -185,7 +185,7 @@ void escuchar_conexiones_IO(int socket_server) {
 
 				//FALTA MUTEX
 				list_add(lista_conexiones_IO, conexion);
-				log_info(logger, nombre);
+				log_info(logger, "Se conecto la IO: %s", nombre);
 			// case STDIN, etc.
 		}
 	}

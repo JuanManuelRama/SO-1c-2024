@@ -109,7 +109,7 @@ void PLP();
 *@param     proceso Proceso a elminiar
 *@param     motivo Motivo para eliminarlo
 */
-void matadero(sProceso*, char*)
+void matadero(sProceso*, char*);
 
 /**
 *@fn 		carnicero
