@@ -37,6 +37,10 @@ typedef struct{
 
 extern t_pcb pcb;
 extern int seVa;
+extern int memoria;
+
+void finalizar_cpu();
+
 
 /**
  * @fn set_registro
@@ -132,6 +136,14 @@ void exe_EXIT();
 
 
 //LOGS OBLIGATORIOS
+/**
+ * @fn log_fetch
+ * @brief Loguea la busqueda de una instruccion
+ * @param pid Id del proceso
+ * @param pc Numero de instrucion a buscar
+ */
+void log_fetch (int, int);
+
 /**
 *@fn 		log_execute
 *@brief		Loguea la ejecucion de una instruccion

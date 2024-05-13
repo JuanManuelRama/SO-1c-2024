@@ -1,5 +1,16 @@
 #include "cpu.h"
 
+
+void finalizar_cpu(){
+    log_info(logger, "Kernel desconectado, finalizando CPU");
+    liberar_conexion(memoria);
+    log_destroy(logger);
+    config_destroy(config);
+	exit(0);
+}
+
+
+
 int set_registro(char* registro, int valor) {
     if(!strcmp(registro, "PC")){
         pcb.registros.PC = valor;
@@ -68,13 +79,12 @@ int get_registro(char* registro) {
 }
 
 char* fetch(){
-    /*
-    enviar_int(memoria, pcb.registro.PC, FETCH);
-    if(recibir_operacion(memoria))
+    enviar_int(pcb.registros.PC, memoria, FETCH);
+    int size;
+    log_fetch(pcb.pid, pcb.registros.PC);
+    if(recibir_operacion(memoria)!=FETCH)
         log_error(logger, "La memoria me envío cualquier cosa...");
-    return recibir_buffer(memoria);
-    */
-    return readline(">");
+    return recibir_buffer(&size, memoria);
 }
 
 sInstruccion decode(char* buffer){
@@ -150,6 +160,10 @@ void exe_EXIT(){
 }
 
 //LOGS OBLIGATORIOS
+void log_fetch (int pid, int pc){
+    log_info(logger, "PID: %d - FETCH - Program Counter: %d", pid, pc);
+}
+
 void log_execute (int pid, char* instruccion, char* parametros){
     log_info(logger, "PID: %d - Ejecutando: %s - %s", pid, instruccion, parametros);
 }

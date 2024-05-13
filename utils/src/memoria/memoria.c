@@ -4,18 +4,21 @@ void recibir_proceso(int socket_cliente){
 		int size;
 		char* proceso = recibir_buffer (&size, socket_cliente);
 		char** aProceso = cargar_proceso(proceso);
-		log_info(logger, "%s", aProceso[4]); //Para procesos netamente de testeos, en realidad habrá que pasarle el puntero a lista el kernel
+		enviar_puntero(aProceso, socket_cliente, NUEVO_PROCESO); //Para procesos netamente de testeos, en realidad habrá que pasarle el puntero a lista el kernel
 }
 
-void interactuar_Kernel(int socket_cliente){
+void interactuar_Kernel(int kernel){
 		while (1) {
-		int cod_op = recibir_operacion(socket_cliente);
+		int cod_op = recibir_operacion(kernel);
 		switch (cod_op) {
 		case MENSAJE:
-			recibir_mensaje(socket_cliente);
+			recibir_mensaje(kernel);
 			break;
 		case NUEVO_PROCESO:
-			recibir_proceso(socket_cliente);
+			recibir_proceso(kernel);
+			break;
+		case FINALIZACION:
+			liberar_proceso(kernel);
 			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
@@ -25,6 +28,35 @@ void interactuar_Kernel(int socket_cliente){
 			break;
 		}
 	}
+}
+
+void interactuar_cpu(int cpu){
+		while (1) {
+		int cod_op = recibir_operacion(cpu);
+		switch (cod_op) {
+		case MENSAJE:
+			recibir_mensaje(cpu);
+			break;
+		case PROCESO:
+			instrucciones = recibir_puntero(cpu);
+			break;
+		case FETCH:
+			buscar_instruccion(cpu);
+			break;
+		case -1:
+			log_error(logger, "el cliente se desconecto");
+			return EXIT_FAILURE;
+		default:
+			log_warning(logger,"Operacion no esperada por parte de este cliente");
+			break;
+		}
+	}
+}
+
+void buscar_instruccion(int socket_cliente){
+	int instruccion = recibir_int(socket_cliente);
+	sleep(RETARDO);
+	enviar_string(instrucciones[instruccion], socket_cliente, FETCH);
 }
 
 void inicializar_tabla_de_memoria(){
@@ -40,6 +72,7 @@ void inicializar_memoria(){
 
 	TAM_PAG = config_get_int_value(config,"TAM_PAGINA");
 	TAM_MEMORIA = config_get_int_value(config,"TAM_MEMORIA");
+	RETARDO = config_get_int_value(config,"RETARDO_RESPUESTA")/1000;
 
 	//PATH_INSTRUCCIONES = buscar("PATH_INSTRUCCIONES");
 
@@ -62,14 +95,12 @@ char** cargar_proceso(char* nombreArchivo){
 	char* instruccion;
 	char* buffer;
 	buffer=malloc(MAX_LINEA);
-	short tam_instruccion;
 
 	// recorre archivo cargando linea por linea en la lista
 	while (!feof(archivoProceso)){
 		fgets(buffer, MAX_LINEA, archivoProceso);
-		tam_instruccion=strlen(buffer)-1;
-		instruccion = malloc(tam_instruccion);
-		strncpy(instruccion, buffer, tam_instruccion);
+		instruccion = malloc(strlen (buffer) +1);
+		strcpy(instruccion, buffer);
 		queue_push(qProceso, instruccion);
 	}
 	free (buffer);
@@ -80,12 +111,13 @@ char** cargar_proceso(char* nombreArchivo){
 
 char** queue_a_array(t_queue* cola){
 	short elem = queue_size(cola);
-	char** array = malloc(sizeof (char*)*elem);
+	char** array = malloc(sizeof (char*)*(elem+1));
 	short i=0;
 	while(cola->elements->elements_count){
 		array[i] = queue_pop(cola);
 		i++;
 	}
+	array[i]=NULL;
 	queue_destroy(cola);
 	return array;
 }
@@ -97,4 +129,9 @@ void finalizar_memoria(){
 	free(tablaMemoria);
 	log_destroy(logger);
 	config_destroy(config);
+}
+
+void liberar_proceso(int socket_cliente){
+	char** instruccion=recibir_puntero(socket_cliente);
+	string_array_destroy(instruccion);
 }

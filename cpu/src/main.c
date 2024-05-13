@@ -5,16 +5,19 @@ t_log* logger;
 t_config* config;
 t_pcb pcb;
 int seVa;
+int memoria;
+
 
 int main() {
 	logger = log_create("logCpu.log", "LOGS CPU", 1, LOG_LEVEL_INFO);
 	config = config_create("cpu.config");
-    int conexion;
+
 	int socket_servidor;
 	int socket_dispatch;
 	char* ip;
 	char* puerto;
 	char* buffer;
+
 	pthread_t hilo_kernel;
 	sInstruccion instruccion;
 
@@ -24,8 +27,8 @@ int main() {
 	// buscamos datos en config y conectamos con memoria
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar("PUERTO_MEMORIA");
-	//conexion = crear_conexion(ip, puerto, "Memoria"); 
-	//enviar_mensaje("Saludos desde la cpu", conexion);
+	memoria = crear_conexion(ip, puerto, "Memoria"); 
+	enviar_mensaje("Saludos desde la cpu", memoria);
 
 	//tambien sera servidor, con el kernel como cliente
 	puerto = buscar("PUERTO_ESCUCHA_DISPATCH");
@@ -35,23 +38,20 @@ int main() {
 
 	while(1){
 		if(recibir_operacion(socket_dispatch)!=PCB)
-			log_error(logger, "El kernel me envío cualquier cosa...");
+			finalizar_cpu();
 		pcb=pcb_deserializar(socket_dispatch);
+		enviar_puntero(pcb.instrucciones, memoria, PROCESO);
 		while(!seVa){
-			buffer = fetch();
+    		buffer = fetch(memoria);
 			instruccion = decode(buffer);
 			execute(instruccion);
-			pcb.pc++;
+			pcb.registros.PC++;
 			free (buffer);
 			string_array_destroy(instruccion.componentes);
 		}
 		enviar_pcb(pcb, socket_dispatch, seVa);
 		seVa=false;
 	}
-	//liberar_conexion(conexion);
-    log_destroy(logger);
-    config_destroy(config);
-	pthread_join(hilo_kernel, NULL);
     return 0;
 
 }
