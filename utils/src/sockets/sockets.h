@@ -18,11 +18,16 @@ typedef enum
 	MENSAJE,
 	PAQUETE,
 	NUEVO_PROCESO,
+	PROCESO,
 	PCB,
 	SLEEP,
 	FETCH,
 	NUEVA_IO,
-	OPERACION_IO
+	OPERACION_IO,
+	FINALIZACION,
+	QUANTUM,
+	RECURSO,
+	IO
 }op_code;
 
 typedef struct
@@ -110,6 +115,26 @@ void enviar_mensaje(char*, int);
 */
 void enviar_string(char*, int, int);
 
+/**
+ * @fn       enviar_puntero
+ * @brief    Envía un puntero a traves del socket con el codigo dado
+ * @param    puntero
+ * @param    Socket del Cliente
+ * @param    codigo de operacion a enviar
+ * @return   nada
+ */
+void enviar_puntero(void*, int, int);
+
+/**
+ * @fn       enviar_int
+ * @brief    Envía un int a traves del socket con el codigo dado
+ * @param    int
+ * @param    Socket del Cliente
+ * @param    codigo de operacion a enviar
+ * @return   nada
+ */
+void enviar_int(int, int, int);
+
 
 /**
 * @fn       crear_paquete
@@ -193,3 +218,7 @@ void* serializar_paquete(t_paquete*, int);
 void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op);
 
 t_pcb pcb_deserializar(int);
+
+int recibir_int (int);
+
+void* recibir_puntero(int);

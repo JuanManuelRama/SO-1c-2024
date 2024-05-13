@@ -234,6 +234,46 @@ void* interactuar(int socket_cliente){
 	}
 }
 
+void enviar_int(int valor, int socket_cliente, int codigo_op)
+{
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = codigo_op;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(int);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	memcpy(paquete->buffer->stream, &valor, paquete->buffer->size);
+
+	int bytes = paquete->buffer->size + 2*sizeof(int);
+
+	void* a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+
+	free(a_enviar);
+	eliminar_paquete(paquete);
+}
+
+void enviar_puntero(void* puntero, int socket_cliente, int codigo_op)
+{
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = codigo_op;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = sizeof(void*);
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	memcpy(paquete->buffer->stream, &puntero, paquete->buffer->size);
+
+	int bytes = paquete->buffer->size + 2*sizeof(int);
+
+	void* a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+
+	free(a_enviar);
+	eliminar_paquete(paquete);
+}
+
 
 void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op)
 {
@@ -270,6 +310,21 @@ void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op)
 	send(socket_cliente, a_enviar, bytes, 0);
 
 	eliminar_paquete(paquete);
+}
+int recibir_int(int socket_cliente){
+	int valor;
+	void* stream=recibir_buffer(&valor, socket_cliente);
+	memcpy(&(valor),stream, sizeof(int));
+	free(stream);
+	return valor;
+}
+
+void* recibir_puntero(int socket_cliente){
+	void* puntero;
+	void* stream=recibir_buffer(&puntero, socket_cliente);
+	memcpy(&(puntero),stream, sizeof(void*));
+	free(stream);
+	return puntero;
 }
 
 t_pcb pcb_deserializar(int socket_cliente){
