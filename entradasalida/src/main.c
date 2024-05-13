@@ -3,22 +3,39 @@
 t_log* logger;
 t_config* config;
 
-int main() {
-	// el logger es lo unico compartido (habria que preguntar si no hay q hacer un logger por interfaz)
-	logger = log_create("logIO.log", "LOGS IO", 1, LOG_LEVEL_INFO);
+int main(int argc, char *argv[]) {
+	// nos aseguramos que nos pasen 3 argumentos por linea de comando (el exe, el nombre y el path al config)
+	if (argc != 3) {
+		logger = log_create("logIO.log", "LOGS IO", 1, LOG_LEVEL_INFO);
+		log_error(logger, "Faltan parametros para inicializar IO");
+		return EXIT_FAILURE;
+	}
 	
-	pthread_t hilo_impresora;
-	pthread_t hilo_monitor;
+	char* nombre = string_new();
+	char* path_config = string_new();
+	char* tipo;
 
-	pthread_create(&hilo_impresora, NULL, crear_interfaz_generica, crear_args_IO("IMPRESORA", "interfaz.config"));
+	// tomamos el nombre y path config de los parametros pasados por linea de comando
+	strcpy(nombre, argv[1]);
+	strcpy(path_config, argv[2]);
 
-	sleep(10);
+	logger = log_create("logIO.log", "LOGS IO", 1, LOG_LEVEL_INFO);
+	config = config_create(path_config);
+	tipo = buscar("TIPO_INTERFAZ");
 
-	pthread_create(&hilo_monitor, NULL, crear_interfaz_generica, crear_args_IO("MONITOR", "interfaz.config"));
-
-	pthread_join(hilo_impresora, NULL);
-	pthread_join(hilo_monitor, NULL);
+	if (!strcmp(tipo, "GENERICA")) {
+		crear_interfaz_generica(nombre);
+	} else if (!strcmp(tipo, "STDIN")) {
+		;
+	} else if (!strcmp(tipo, "STDOUT")) {
+		;
+	} else if (!strcmp(tipo, "DIALFS")) {
+		;
+	} else {
+		log_error(logger, "TIPO DE INTERFAZ NO RECONOCIDO");
+	}
 
     log_destroy(logger);
+	config_destroy(config);
     return 0;
 }
