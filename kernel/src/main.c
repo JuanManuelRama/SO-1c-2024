@@ -40,8 +40,8 @@ int main() {
 	// buscamos datos en config y conectamos a memoria
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar ("PUERTO_MEMORIA");
-	//conexion_memoria = crear_conexion(ip, puerto, "Memoria"); 
-	//enviar_mensaje("Saludos desde el Kernel",conexion_memoria);
+	conexion_memoria = crear_conexion(ip, puerto, "Memoria"); 
+	enviar_mensaje("Saludos desde el Kernel",conexion_memoria);
 
 	// buscamos datos en config y conectamos a cpu
 	ip = buscar("IP_CPU");
@@ -64,7 +64,7 @@ int main() {
 		while(1){
 		buffer  = readline(">");
 		mensaje = string_split(buffer, " ");
-		consola = strcmp ("INICIAR_PROCESO", mensaje[0]);
+		consola = get_terminal(mensaje[0]);
 		switch (consola){
 			case INICIAR_PROCESO:
 				crear_proceso (mensaje[1]);
