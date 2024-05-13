@@ -35,6 +35,21 @@ void finalizar_kernel(){
 	sem_destroy(&semEXIT);
 	sem_destroy(&sMultiprogramacion);
 }
+int get_terminal(char* comando){
+	if(!strcmp(comando, "INICIAR_PROCESO"))
+		return INICIAR_PROCESO;
+	if(!strcmp(comando, "FINALIZAR_PROCESO"))
+		return FINALIZAR_PROCESO;
+	if(!strcmp(comando, "EJECUTAR_SCRIPT"))
+		return EJECUTAR_SCRIPT;
+	if(!strcmp(comando, "DETENER_PLANIFICACION"))
+		return DETENER_PLANIFICACION;
+	if(!strcmp(comando, "INICIAR_PLANIFICACION"))
+		return INICIAR_PLANIFICACION;
+	if(!strcmp(comando, "PROCESO_ESTADO"))	
+		return PROCESO_ESTADO;
+	return -1;
+}
 
 char* get_estado(int estado){
 	switch(estado){
@@ -78,6 +93,10 @@ void PLP(){
 		pthread_mutex_unlock(&mNEW);
 		sem_wait(&sMultiprogramacion);
 		proceso->pcb.instrucciones = enviar_proceso(proceso->multifuncion);
+		if(proceso->pcb.instrucciones == NULL){
+			carnicero(proceso, "La memoria retorno valor erroneo");
+			continue;
+		}
 		proceso->pcb.estado=READY;
 		log_cambioEstado(proceso->pcb.pid, NEW, READY);
 		pthread_mutex_lock(&mREADY);
@@ -85,6 +104,14 @@ void PLP(){
 		pthread_mutex_unlock(&mREADY);
 		sem_post(&semPCP);
 	}
+}
+
+char** enviar_proceso(char* path){	
+	enviar_string(path, conexion_memoria, NUEVO_PROCESO);
+	if(recibir_operacion(conexion_memoria) != NUEVO_PROCESO){
+		return NULL;
+	}
+	return recibir_puntero (conexion_memoria);
 }
 
 void matadero (sProceso* proceso, char* motivo){
@@ -103,7 +130,7 @@ void carnicero(){
 	pthread_mutex_lock(&mEXIT);
 	proceso = queue_pop(cEXIT);
 	pthread_mutex_unlock(&mEXIT);
-	//liberar_memoria(proceso->pcb->instrucciones); FALTA PROGRAMAR
+	enviar_puntero(proceso->pcb.instrucciones, conexion_memoria, FINALIZACION);
 	log_finalizacion(proceso->pcb.pid, proceso->multifuncion);
 	free(proceso->multifuncion);
 	free(proceso);
@@ -111,11 +138,6 @@ void carnicero(){
 	}
 }
 
-char** enviar_proceso(char* path){	
-	enviar_string(path, conexion_memoria, NUEVO_PROCESO);
-	int size;
-	return NULL; //recibir_buffer (&size, conexion_memoria);
-}
 
 void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
 	// aca se podria de ver como mandar el tiempo como int/float

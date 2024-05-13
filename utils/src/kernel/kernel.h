@@ -54,11 +54,22 @@ void finalizar_kernel();
 
 
 /**
+ * @fn 		get_terminal
+ * @brief	Devuelve el valor de la terminal
+ * @param 	comando Comando a evaluar 
+ * @return 	Valor de la terminal
+ */
+int get_terminal(char*);
+
+/**
 *@fn 		get_estado
 *@brief		Transofrma un enum de estado en string
 *@param 	int Enum del estado
 *@return	String de estado
 */
+
+
+
 
 char* get_estado(int);
 
@@ -109,7 +120,7 @@ void PLP();
 *@param     proceso Proceso a elminiar
 *@param     motivo Motivo para eliminarlo
 */
-void matadero(sProceso*, char*)
+void matadero(sProceso*, char*);
 
 /**
 *@fn 		carnicero
