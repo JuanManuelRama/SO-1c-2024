@@ -9,6 +9,7 @@ t_queue* cEXIT;
 t_list* lBlocked;
 pthread_mutex_t mNEW;
 pthread_mutex_t mREADY;
+pthread_mutex_t mBLOCKED;
 pthread_mutex_t mEXIT;
 sem_t semPCP;
 sem_t semPLP;
@@ -21,6 +22,7 @@ int idPCB;
 int multiprogramacion;
 int quantum;
 int kernel_servidor;
+bool planificacion_activa;
 t_list *lista_conexiones_IO;
 
 // de prueba, despues se borra.
@@ -76,10 +78,10 @@ int main() {
 				log_info(logger, "Script ejecutado");
 				break;
 			case DETENER_PLANIFICACION:
-				log_info(logger, "Planificacion detenida");
+				detener_planificacion();
 				break;
 			case INICIAR_PLANIFICACION:
-				log_info(logger, "Planificacion iniciada");
+				iniciar_planificacion();
 				break;
 			case PROCESO_ESTADO:
 				log_info(logger, "El estado del proceso es:");

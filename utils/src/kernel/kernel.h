@@ -17,6 +17,7 @@ extern t_list* lBlocked;
 extern t_list* lista_conexiones_IO;
 extern pthread_mutex_t mNEW;
 extern pthread_mutex_t mREADY;
+extern pthread_mutex_t mBLOCKED;
 extern pthread_mutex_t mEXIT;
 extern sem_t semPCP;
 extern sem_t semPLP;
@@ -28,6 +29,7 @@ extern int idPCB;
 extern int multiprogramacion;
 extern int quantum;
 extern int kernel_servidor;
+extern bool planificacion_activa;
 
 typedef struct{
     t_pcb pcb;
@@ -84,6 +86,8 @@ char* get_estado(int);
 char** enviar_proceso(char*);
 
 
+
+
 /**
 *@fn 		syscall_IO_GEN
 *@brief		realiza llamado a IO generica, la hace dormir y espera un mensaje de vuelta
@@ -95,11 +99,17 @@ char** enviar_proceso(char*);
 void syscall_IO_GEN_SLEEP(int, char*);
 
 
+//FUNCIONES DE CONSOLA
+
 /**
 *@fn 		crear_proceso
 *@brief		Crea un proceso
 */
 void crear_proceso(char* path);
+
+void iniciar_planificacion();
+
+void detener_planificacion();
 
 //PLANIFICADORES
 /**

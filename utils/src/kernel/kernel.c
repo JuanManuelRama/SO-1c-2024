@@ -12,11 +12,13 @@ void inicializar_kernel(){
 	idPCB = 1;
 	pthread_mutex_init (&mNEW, NULL);
 	pthread_mutex_init(&mREADY, NULL);
+	pthread_mutex_init(&mBLOCKED, NULL);
 	pthread_mutex_init (&mEXIT, NULL);
 	sem_init(&semPCP, 0, 0);
 	sem_init(&semPLP, 0, 0);
 	sem_init(&semEXIT, 0, 0);
 	sem_init(&sMultiprogramacion, 0, multiprogramacion);
+	planificacion_activa = true;
 }
 
 void finalizar_kernel(){
@@ -68,7 +70,11 @@ char* get_estado(int estado){
 	}
 }
 
+// FUNCIONES DE CONSOLA
+
 void crear_proceso (char* path){
+	if(!planificacion_activa)
+		return;
 	sProceso* proceso = malloc(sizeof (sProceso));
 	proceso->pcb.estado=NEW;
 	proceso->pcb.pc=0;
@@ -82,6 +88,26 @@ void crear_proceso (char* path){
 	queue_push(cNEW, proceso);
 	pthread_mutex_unlock(&mNEW);
 	sem_post(&semPLP);
+}
+
+void detener_planificacion(){
+	if(planificacion_activa){
+		pthread_mutex_lock(&mNEW);
+		pthread_mutex_lock(&mREADY);
+		pthread_mutex_lock(&mBLOCKED);
+		pthread_mutex_lock(&mEXIT);
+		planificacion_activa = false;
+	}
+}
+
+void iniciar_planificacion(){
+	if(!planificacion_activa){
+		pthread_mutex_unlock(&mNEW);
+		pthread_mutex_unlock(&mREADY);
+		pthread_mutex_unlock(&mBLOCKED);
+		pthread_mutex_unlock(&mEXIT);
+		planificacion_activa = true;
+	}
 }
 
 void PLP(){
