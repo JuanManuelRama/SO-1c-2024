@@ -112,8 +112,13 @@ void execute(sInstruccion instruccion){
         case JNZ:
             exe_JNZ(instruccion.componentes[1], instruccion.componentes[2]);
             break;
+        case IO_GEN_SLEEP:
+            exe_IO_GEN_SLEEP(instruccion.componentes[1], instruccion.componentes[2]);
+            break;
         case EXIT:
             exe_EXIT();
+            break;
+
 	}
 }
 
@@ -129,6 +134,8 @@ int get_cod_instruccion(char* instruccion){
         return JNZ;
     else if (!strcmp(instruccion, "EXIT"))
         return EXIT;
+    else if (!strcmp(instruccion, "IO_GEN_SLEEP"))
+        return IO_GEN_SLEEP;
     return -1;
 }
 
@@ -157,6 +164,13 @@ void exe_JNZ(char* registro, char* numero_instruccion) {
 }
 void exe_EXIT(){
     seVa=FINALIZACION;
+}
+
+void exe_IO_GEN_SLEEP(char* nombre, char* tiempo){
+    strcpy(aEnviar, nombre);
+    strcat(aEnviar, " ");
+    strcat(aEnviar, tiempo);
+    seVa=IO;
 }
 
 //LOGS OBLIGATORIOS

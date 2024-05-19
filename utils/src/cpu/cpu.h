@@ -38,6 +38,7 @@ typedef struct{
 extern t_pcb pcb;
 extern int seVa;
 extern int memoria;
+extern char* aEnviar;
 
 void finalizar_cpu();
 
@@ -133,6 +134,15 @@ void exe_JNZ(char*, char*);
  * @brief Finaliza el proceso
  */
 void exe_EXIT();
+
+  /**
+ * @fn exe_IO_GEN_SLEEP
+ * @brief Realiza una operación de I/O
+ * @param nombre Nombre del dispositivo I/O
+ * @param tiempo Tiempo de espera
+ */ 
+void exe_IO_GEN_SLEEP(char*, char*);
+
 
 
 //LOGS OBLIGATORIOS

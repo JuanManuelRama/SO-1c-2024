@@ -91,7 +91,8 @@ int main() {
 				break;
 		}
 		free (buffer);
-		string_array_destroy(mensaje);
+		free (mensaje[0]);
+		free(mensaje);
 	}
 	pthread_join(hilo_IO, NULL);
 	finalizar_kernel();

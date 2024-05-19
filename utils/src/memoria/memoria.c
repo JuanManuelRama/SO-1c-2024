@@ -3,6 +3,7 @@
 void recibir_proceso(int socket_cliente){
 		int size;
 		char* proceso = recibir_buffer (&size, socket_cliente);
+		log_info(logger, "Nuevo proceso, archivo: %s", proceso);
 		char** aProceso = cargar_proceso(proceso);
 		enviar_puntero(aProceso, socket_cliente, NUEVO_PROCESO); //Para procesos netamente de testeos, en realidad habrá que pasarle el puntero a lista el kernel
 }
@@ -24,7 +25,7 @@ void interactuar_Kernel(int kernel){
 			log_error(logger, "el cliente se desconecto");
 			return EXIT_FAILURE;
 		default:
-			log_warning(logger,"Operacion no esperada por parte de este cliente");
+			log_warning(logger,"Operacion no esperada por parte del Kernel");
 			break;
 		}
 	}

@@ -6,23 +6,22 @@ t_config* config;
 t_pcb pcb;
 int seVa;
 int memoria;
+char* aEnviar;
 
 
 int main() {
-	logger = log_create("logCpu.log", "LOGS CPU", 1, LOG_LEVEL_INFO);
-	config = config_create("cpu.config");
-
 	int socket_servidor;
 	int socket_dispatch;
 	char* ip;
 	char* puerto;
 	char* buffer;
-
 	pthread_t hilo_kernel;
 	sInstruccion instruccion;
 
+
 	logger = log_create("logCpu.log", "LOGS CPU", 1, LOG_LEVEL_INFO);
 	config = config_create("cpu.config");
+	aEnviar = string_new();
 	seVa = false;
 	// buscamos datos en config y conectamos con memoria
 	ip = buscar("IP_MEMORIA");
@@ -50,6 +49,8 @@ int main() {
 			string_array_destroy(instruccion.componentes);
 		}
 		enviar_pcb(pcb, socket_dispatch, seVa);
+		if(seVa == IO)
+			enviar_string(aEnviar, socket_dispatch, seVa);
 		seVa=false;
 	}
     return 0;

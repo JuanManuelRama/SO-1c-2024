@@ -6,6 +6,7 @@ void inicializar_kernel(){
 	config = config_create("kernel.config");
 	cNEW = queue_create();
 	cREADY = queue_create();
+	lBlocked = list_create();
 	cEXIT = queue_create();
 	multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
 	quantum = config_get_int_value(config, "QUANTUM");
@@ -79,7 +80,7 @@ void crear_proceso (char* path){
 	proceso->pcb.estado=NEW;
 	proceso->pcb.pc=0;
 	proceso->pcb.quantum=quantum;
-	proceso->multifuncion=string_new();
+	proceso->multifuncion=path;
 	strcpy(proceso->multifuncion, path);
 	proceso->pcb.pid=idPCB;
 	idPCB++;
@@ -119,6 +120,7 @@ void PLP(){
 		pthread_mutex_unlock(&mNEW);
 		sem_wait(&sMultiprogramacion);
 		proceso->pcb.instrucciones = enviar_proceso(proceso->multifuncion);
+		free (proceso->multifuncion);
 		if(proceso->pcb.instrucciones == NULL){
 			matadero(proceso, "La memoria retorno valor erroneo");
 			continue;
@@ -143,7 +145,7 @@ char** enviar_proceso(char* path){
 void matadero (sProceso* proceso, char* motivo){
 	log_cambioEstado(proceso->pcb.pid, proceso->pcb.estado, FINISHED);
 	proceso->pcb.estado=FINISHED;
-	strcpy(proceso->multifuncion, motivo);
+	proceso->multifuncion = motivo;
 	pthread_mutex_lock(&mEXIT);
 	queue_push(cEXIT, proceso);
 	pthread_mutex_unlock(&mEXIT);
@@ -159,7 +161,6 @@ void carnicero(){
 	pthread_mutex_unlock(&mEXIT);
 	enviar_puntero(proceso->pcb.instrucciones, conexion_memoria, FINALIZACION);
 	log_finalizacion(proceso->pcb.pid, proceso->multifuncion);
-	free(proceso->multifuncion);
 	free(proceso);
 	sem_post(&sMultiprogramacion);
 	}
@@ -180,7 +181,6 @@ void planificadorCP(){
 	sProceso* proceso;
 	int motivo;
 	int size;
-	char* buffer;
 	pthread_t hilo_IO; //usamos para crearle un hilo a cada instancia de IO
 	while (1){
 		sem_wait(&semPCP);
@@ -199,12 +199,14 @@ void planificadorCP(){
 			case IO:
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
 				proceso->pcb.estado=BLOCKED;
-				 buffer = recibir_buffer(&size, conexion_cpu);
-				strcpy(proceso->multifuncion, buffer);
+				if(recibir_operacion(conexion_cpu) != IO)
+					matadero(proceso, "No coinciden los códigos de salida");
+				proceso->multifuncion = recibir_buffer(&size, conexion_cpu);
 				pthread_mutex_lock(&mBLOCKED);
 				list_add(lBlocked, proceso);
 				pthread_mutex_unlock(&mBLOCKED);
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
+				break;
 			default:
 				matadero(proceso, "Envio codigo de salida no valido");
 				break;
@@ -257,6 +259,7 @@ void atender_solicitud_IO(sProceso* proceso){
 		pthread_mutex_lock(&mBLOCKED);
 		list_remove_element(lBlocked, proceso);
 		pthread_mutex_unlock(&mBLOCKED);
+		free(proceso->multifuncion);
 		matadero(proceso, "Se intento comunicar con una IO no conectada");
 		string_array_destroy(nombre_y_operacion);
 		return;
