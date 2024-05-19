@@ -35,13 +35,14 @@ typedef struct{
     char** componentes;
 }sInstruccion;
 
+extern pthread_mutex_t mCdI;
 extern t_pcb pcb;
 extern int seVa;
 extern int memoria;
 extern char* aEnviar;
 
 void finalizar_cpu();
-
+void interrupciones(int);
 
 /**
  * @fn set_registro

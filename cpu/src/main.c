@@ -4,9 +4,11 @@
 t_log* logger;
 t_config* config;
 t_pcb pcb;
+pthread_mutex_t mCdI;
 int seVa;
 int memoria;
 char* aEnviar;
+
 
 
 int main() {
@@ -23,6 +25,7 @@ int main() {
 	config = config_create("cpu.config");
 	aEnviar = string_new();
 	seVa = false;
+	pthread_mutex_init(&mCdI, NULL);
 	// buscamos datos en config y conectamos con memoria
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar("PUERTO_MEMORIA");
@@ -41,12 +44,14 @@ int main() {
 		pcb=pcb_deserializar(socket_dispatch);
 		enviar_puntero(pcb.instrucciones, memoria, PROCESO);
 		while(!seVa){
+			pthread_mutex_lock(&mCdI);
     		buffer = fetch(memoria);
 			instruccion = decode(buffer);
 			execute(instruccion);
 			pcb.registros.PC++;
 			free (buffer);
 			string_array_destroy(instruccion.componentes);
+			pthread_mutex_unlock(&mCdI);
 		}
 		enviar_pcb(pcb, socket_dispatch, seVa);
 		if(seVa == IO)

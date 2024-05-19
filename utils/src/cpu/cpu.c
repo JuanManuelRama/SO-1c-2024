@@ -6,9 +6,35 @@ void finalizar_cpu(){
     liberar_conexion(memoria);
     log_destroy(logger);
     config_destroy(config);
+    pthread_mutex_destroy(&mCdI);
 	exit(0);
 }
 
+void interrupciones(int socket_interrupciones){
+    int cod_op;
+    while(1){
+       cod_op = recibir_operacion(socket_interrupciones);
+       pthread_mutex_lock(&mCdI);
+        switch (cod_op){
+            case FINALIZACION:
+                if(recibir_int(socket_interrupciones)==pcb.pid)
+                    seVa=FINALIZACION;
+                break;
+            case QUANTUM:
+                if(recibir_int(socket_interrupciones)==pcb.pid && seVa==false)
+                    seVa=QUANTUM;
+                break;
+            case -1:
+                log_error(logger, "el cliente se desconecto");
+                pthread_mutex_unlock(&mCdI);
+                return;
+            default:
+                log_warning(logger, "Operacion no esperada por parte de este cliente");
+                break;
+        }
+        pthread_mutex_unlock(&mCdI);
+    }
+}
 
 
 int set_registro(char* registro, int valor) {
