@@ -120,7 +120,7 @@ void PLP(){
 		sem_wait(&sMultiprogramacion);
 		proceso->pcb.instrucciones = enviar_proceso(proceso->multifuncion);
 		if(proceso->pcb.instrucciones == NULL){
-			carnicero(proceso, "La memoria retorno valor erroneo");
+			matadero(proceso, "La memoria retorno valor erroneo");
 			continue;
 		}
 		proceso->pcb.estado=READY;
@@ -141,7 +141,8 @@ char** enviar_proceso(char* path){
 }
 
 void matadero (sProceso* proceso, char* motivo){
-	log_cambioEstado(proceso->pcb.pid, RUNNING, FINISHED);
+	log_cambioEstado(proceso->pcb.pid, proceso->pcb.estado, FINISHED);
+	proceso->pcb.estado=FINISHED;
 	strcpy(proceso->multifuncion, motivo);
 	pthread_mutex_lock(&mEXIT);
 	queue_push(cEXIT, proceso);
@@ -178,14 +179,17 @@ void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
 void planificadorCP(){
 	sProceso* proceso;
 	int motivo;
+	int size;
+	char* buffer;
 	pthread_t hilo_IO; //usamos para crearle un hilo a cada instancia de IO
 	while (1){
 		sem_wait(&semPCP);
 		pthread_mutex_lock(&mREADY);
 		proceso = queue_pop(cREADY); 
 		pthread_mutex_unlock(&mREADY);
-		enviar_pcb(proceso->pcb, conexion_cpu, PCB); 
 		log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
+		proceso->pcb.estado=RUNNING;
+		enviar_pcb(proceso->pcb, conexion_cpu, PCB); 
 		motivo = recibir_operacion(conexion_cpu);
 		proceso->pcb=pcb_deserializar(conexion_cpu);
 		switch(motivo){
@@ -194,13 +198,12 @@ void planificadorCP(){
 				break;
 			case IO:
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
-				int size;
-				char* buffer = recibir_buffer(&size, conexion_cpu);
+				proceso->pcb.estado=BLOCKED;
+				 buffer = recibir_buffer(&size, conexion_cpu);
 				strcpy(proceso->multifuncion, buffer);
-
-				//mutex
+				pthread_mutex_lock(&mBLOCKED);
 				list_add(lBlocked, proceso);
-
+				pthread_mutex_unlock(&mBLOCKED);
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
 			default:
 				matadero(proceso, "Envio codigo de salida no valido");
@@ -251,9 +254,11 @@ void atender_solicitud_IO(sProceso* proceso){
 	t_conexion* IO_seleccionada = list_find(lista_conexiones_IO, existe_conexion);
 
 	if (IO_seleccionada == NULL) {
-		//mutex
+		pthread_mutex_lock(&mBLOCKED);
 		list_remove_element(lBlocked, proceso);
+		pthread_mutex_unlock(&mBLOCKED);
 		matadero(proceso, "Se intento comunicar con una IO no conectada");
+		string_array_destroy(nombre_y_operacion);
 		return;
 	}
 
@@ -264,16 +269,11 @@ void atender_solicitud_IO(sProceso* proceso){
 	int op = recibir_operacion(IO_seleccionada->socket);
 
 	if (op == -1) { // en caso de que la operacion no sea valida
-		//mutex
+		pthread_mutex_lock(&mBLOCKED);
 		list_remove_element(lBlocked, proceso);
-
-		strcpy(proceso->multifuncion, "Pidio una operacion no valida");
-		
-		pthread_mutex_lock(&mEXIT);
-		queue_push(cEXIT, proceso);
-		pthread_mutex_unlock(&mEXIT);
-		sem_post(&semEXIT);
-
+		pthread_mutex_unlock(&mBLOCKED);
+		matadero(proceso, "La IO no admite la operacion solicitada");
+		string_array_destroy(nombre_y_operacion);
 		return;
 	}
 
@@ -283,13 +283,16 @@ void atender_solicitud_IO(sProceso* proceso){
 
 	
 	// REPETIDO DE PLP: LO VOLVEMOS A READY DESPUES DE SU IO
+	pthread_mutex_lock(&mBLOCKED);
+	list_remove_element(lBlocked, proceso);
+	pthread_mutex_unlock(&mBLOCKED);
 	log_cambioEstado(proceso->pcb.pid, BLOCKED, READY);
-
+	proceso->pcb.estado=READY;
 	pthread_mutex_lock(&mREADY);
 	queue_push(cREADY, proceso);
 	pthread_mutex_unlock(&mREADY);
-
 	sem_post(&semPCP); //avisamos al dispatcher q volvio a ready
+	string_array_destroy(nombre_y_operacion);
 }
 
 
