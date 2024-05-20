@@ -73,6 +73,34 @@ char* get_estado(int estado){
 
 // FUNCIONES DE CONSOLA
 
+void interactuar_consola(char* buffer){
+	char** mensaje = string_split(buffer, " ");
+	int consola = get_terminal(mensaje[0]);
+	switch (consola){
+		case INICIAR_PROCESO:
+			crear_proceso (mensaje[1]);
+			break;
+		case FINALIZAR_PROCESO:
+			log_info(logger, "Proceso finalizado");
+			break;
+		case EJECUTAR_SCRIPT:
+			ejecutar_script(mensaje[1]);
+			break;
+		case DETENER_PLANIFICACION:
+				detener_planificacion();
+				break;
+		case INICIAR_PLANIFICACION:
+			iniciar_planificacion();
+			break;
+		case PROCESO_ESTADO:
+			log_info(logger, "El estado del proceso es:");
+			break;
+		default:
+			log_info(logger, "Código invalido");
+			break;
+	}
+}
+
 void crear_proceso (char* path){
 	if(!planificacion_activa)
 		return;
@@ -111,6 +139,21 @@ void iniciar_planificacion(){
 	}
 }
 
+void ejecutar_script(char* path){
+	FILE* script = fopen(path, "r");
+	if(script == NULL){
+		log_info(logger, "No se pudo abrir el archivo");
+		return;
+	}
+	char* buffer = malloc(50);
+	while(!feof(script)){
+		buffer = fgets(buffer, 50, script);
+		buffer[strcspn(buffer, "\n")]=0;
+		interactuar_consola(buffer);
+	}
+	fclose(script);
+}
+
 void PLP(){
 	sProceso* proceso;
 	while(1){
@@ -122,7 +165,7 @@ void PLP(){
 		proceso->pcb.instrucciones = enviar_proceso(proceso->multifuncion);
 		free (proceso->multifuncion);
 		if(proceso->pcb.instrucciones == NULL){
-			matadero(proceso, "La memoria retorno valor erroneo");
+			matadero(proceso, "La memoria no pudo abrir el archivo");
 			continue;
 		}
 		proceso->pcb.estado=READY;
@@ -275,6 +318,7 @@ void atender_solicitud_IO(sProceso* proceso){
 		pthread_mutex_lock(&mBLOCKED);
 		list_remove_element(lBlocked, proceso);
 		pthread_mutex_unlock(&mBLOCKED);
+		free(proceso->multifuncion);
 		matadero(proceso, "La IO no admite la operacion solicitada");
 		string_array_destroy(nombre_y_operacion);
 		return;
@@ -291,6 +335,7 @@ void atender_solicitud_IO(sProceso* proceso){
 	pthread_mutex_unlock(&mBLOCKED);
 	log_cambioEstado(proceso->pcb.pid, BLOCKED, READY);
 	proceso->pcb.estado=READY;
+	free(proceso->multifuncion);
 	pthread_mutex_lock(&mREADY);
 	queue_push(cREADY, proceso);
 	pthread_mutex_unlock(&mREADY);

@@ -55,13 +55,7 @@ void inicializar_kernel();
 void finalizar_kernel();
 
 
-/**
- * @fn 		get_terminal
- * @brief	Devuelve el valor de la terminal
- * @param 	comando Comando a evaluar 
- * @return 	Valor de la terminal
- */
-int get_terminal(char*);
+
 
 /**
 *@fn 		get_estado
@@ -102,6 +96,20 @@ void syscall_IO_GEN_SLEEP(int, char*);
 //FUNCIONES DE CONSOLA
 
 /**
+ * @fn 		interactuar_consola
+ * @brief	Interactua con la consola
+ * @param 	buffer Comando a evaluar 
+ */
+void interactuar_consola(char*);
+
+/**
+ * @fn 		get_terminal
+ * @brief	Devuelve el valor de la terminal
+ * @param 	comando Comando a evaluar 
+ * @return 	Valor de la terminal
+ */
+int get_terminal(char*);
+/**
 *@fn 		crear_proceso
 *@brief		Crea un proceso
 */
@@ -110,6 +118,8 @@ void crear_proceso(char* path);
 void iniciar_planificacion();
 
 void detener_planificacion();
+
+void ejecutar_script(char* path);
 
 //PLANIFICADORES
 /**

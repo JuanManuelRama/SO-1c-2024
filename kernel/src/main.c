@@ -59,41 +59,10 @@ int main() {
 	pthread_create(&hilo_carnicero, NULL, carnicero, NULL);
 	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
 
-	char* buffer;
-	char** mensaje;
-	int consola;
-
-		while(1){
-		buffer  = readline(">");
-		mensaje = string_split(buffer, " ");
-		consola = get_terminal(mensaje[0]);
-		switch (consola){
-			case INICIAR_PROCESO:
-				crear_proceso (mensaje[1]);
-				break;
-			case FINALIZAR_PROCESO:
-				log_info(logger, "Proceso finalizado");
-				break;
-			case EJECUTAR_SCRIPT:
-				log_info(logger, "Script ejecutado");
-				break;
-			case DETENER_PLANIFICACION:
-				detener_planificacion();
-				break;
-			case INICIAR_PLANIFICACION:
-				iniciar_planificacion();
-				break;
-			case PROCESO_ESTADO:
-				log_info(logger, "El estado del proceso es:");
-				break;
-			default:
-				log_info(logger, "Código invalido");
-				break;
-		}
-		free (buffer);
-		free (mensaje[0]);
-		free(mensaje);
-	}
+	while(1)
+		interactuar_consola(readline(">"));
+	
+	
 	pthread_join(hilo_IO, NULL);
 	finalizar_kernel();
 
