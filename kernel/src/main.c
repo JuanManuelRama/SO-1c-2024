@@ -59,8 +59,13 @@ int main() {
 	pthread_create(&hilo_carnicero, NULL, carnicero, NULL);
 	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
 
-	while(1)
-		interactuar_consola(readline(">"));
+	char* buffer;
+	while(1){
+	buffer=readline(">");
+	interactuar_consola(buffer);
+	free (buffer);
+	}
+		
 	
 	
 	pthread_join(hilo_IO, NULL);

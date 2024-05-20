@@ -99,6 +99,8 @@ void interactuar_consola(char* buffer){
 			log_info(logger, "Código invalido");
 			break;
 	}
+	free (mensaje[0]);
+	free(mensaje);
 }
 
 void crear_proceso (char* path){
@@ -151,6 +153,7 @@ void ejecutar_script(char* path){
 		buffer[strcspn(buffer, "\n")]=0;
 		interactuar_consola(buffer);
 	}
+	free (buffer);
 	fclose(script);
 }
 
