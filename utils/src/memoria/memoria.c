@@ -5,7 +5,7 @@ void recibir_proceso(int socket_cliente){
 		char* proceso = recibir_buffer (&size, socket_cliente);
 		log_info(logger, "Nuevo proceso, archivo: %s", proceso);
 		char** aProceso = cargar_proceso(proceso);
-		enviar_puntero(aProceso, socket_cliente, NUEVO_PROCESO); //Para procesos netamente de testeos, en realidad habrá que pasarle el puntero a lista el kernel
+		enviar_puntero(aProceso, socket_cliente, NUEVO_PROCESO);
 }
 
 void interactuar_Kernel(int kernel){
@@ -89,9 +89,12 @@ void inicializar_memoria(){
 }
 
 char** cargar_proceso(char* nombreArchivo){
-	// aca se podria agregar el uso de PATH_INSTRUCCIONES
+	// aca se deberá agregar el uso de PATH_INSTRUCCIONES
 	FILE* archivoProceso = fopen(nombreArchivo, "r");
-
+	if(archivoProceso == NULL){
+		log_error(logger, "No se pudo abrir el archivo: %s", nombreArchivo);
+		return NULL;
+	}
 	t_queue* qProceso = queue_create();
 	char* instruccion;
 	char* buffer;
@@ -102,6 +105,7 @@ char** cargar_proceso(char* nombreArchivo){
 		fgets(buffer, MAX_LINEA, archivoProceso);
 		instruccion = malloc(strlen (buffer) +1);
 		strcpy(instruccion, buffer);
+		instruccion[strcspn(instruccion, "\n")]=0;
 		queue_push(qProceso, instruccion);
 	}
 	free (buffer);
@@ -134,5 +138,6 @@ void finalizar_memoria(){
 
 void liberar_proceso(int socket_cliente){
 	char** instruccion=recibir_puntero(socket_cliente);
-	string_array_destroy(instruccion);
+	if(instruccion)
+		string_array_destroy(instruccion);
 }
