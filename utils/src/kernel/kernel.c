@@ -212,17 +212,6 @@ void carnicero(){
 	}
 }
 
-
-void syscall_IO_GEN_SLEEP(int socket, char* tiempo) {
-	// aca se podria de ver como mandar el tiempo como int/float
-	enviar_string(tiempo, socket, SLEEP);
-
-	//se asume que tras sleepear el IO devuelve un mensaje de exito
-	int operacion = recibir_operacion(socket);
-	if (operacion == MENSAJE)
-		recibir_mensaje(socket);
-}
-
 void planificadorCP(){
 	sProceso* proceso;
 	int motivo;
@@ -282,8 +271,10 @@ void escuchar_conexiones_IO(int socket_server) {
 				strcpy(conexion->nombre, nombre);
 				conexion->socket = socket;
 
-				//FALTA MUTEX
+				pthread_mutex_lock(&mCONEXIONES);
 				list_add(lista_conexiones_IO, conexion);
+				pthread_mutex_unlock(&mCONEXIONES);
+				
 				log_info(logger, "Se conecto la IO: %s", nombre);
 			// case STDIN, etc.
 		}
