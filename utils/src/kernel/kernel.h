@@ -19,6 +19,7 @@ extern pthread_mutex_t mNEW;
 extern pthread_mutex_t mREADY;
 extern pthread_mutex_t mBLOCKED;
 extern pthread_mutex_t mEXIT;
+extern pthreadh_mutex_t mCONEXIONES;
 extern sem_t semPCP;
 extern sem_t semPLP;
 extern sem_t semEXIT;
@@ -90,7 +91,7 @@ char** enviar_proceso(char*);
 */
 
 
-void syscall_IO_GEN_SLEEP(int, char*);
+void syscall_IO_GEN_SLEEP(int, int);
 
 
 //FUNCIONES DE CONSOLA
