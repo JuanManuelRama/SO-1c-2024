@@ -19,13 +19,14 @@ extern pthread_mutex_t mNEW;
 extern pthread_mutex_t mREADY;
 extern pthread_mutex_t mBLOCKED;
 extern pthread_mutex_t mEXIT;
-extern pthreadh_mutex_t mCONEXIONES;
+extern pthread_mutex_t mCONEXIONES;
 extern sem_t semPCP;
 extern sem_t semPLP;
 extern sem_t semEXIT;
 extern sem_t sMultiprogramacion;
 extern int conexion_memoria;
-extern int conexion_cpu;
+extern int conexion_cpu_dispatch;
+extern int conexion_cpu_interrupt;
 extern int idPCB;
 extern int multiprogramacion;
 extern int quantum;
@@ -82,18 +83,6 @@ char** enviar_proceso(char*);
 
 
 
-
-/**
-*@fn 		syscall_IO_GEN
-*@brief		realiza llamado a IO generica, la hace dormir y espera un mensaje de vuelta
-*@param 	socket de IO
-*@param     tiempo que queremos que duerma
-*/
-
-
-void syscall_IO_GEN_SLEEP(int, int);
-
-
 //FUNCIONES DE CONSOLA
 
 /**
@@ -124,10 +113,16 @@ void ejecutar_script(char* path);
 
 //PLANIFICADORES
 /**
-*@fn 		planificadorCP
-*@brief		Envía y recibe procesos de la CPU
+*@fn 		planificadorCP_FIFO
+*@brief		Envía y recibe procesos de la CPU segun fifo
 */
-void planificadorCP();
+void planificadorCP_FIFO();
+
+/**
+*@fn 		planificadorCP_RR
+*@brief		Envía y recibe procesos de la CPU segun RR
+*/
+void planificadorCP_RR();
 
 /**
 *@fn 		PLP
@@ -179,3 +174,15 @@ void log_finalizacion(int, char*);
 //falta agregar documentacion
 void atender_solicitud_IO(sProceso*);
 void escuchar_conexiones_IO(int socket);
+
+/**
+*@fn 		despachar_a_running
+*@brief		toma el primer elemento de cola READY, loggea, cambia su estado y lo manda a cpu
+*/
+void despachar_a_running();
+
+/**
+*@fn 		setear_timer
+*@brief		recibe un quantum, espera ese tiempo y al terminar manda interrupcion a cpu
+*/
+void setear_timer(int);

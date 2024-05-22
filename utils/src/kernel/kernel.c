@@ -26,7 +26,8 @@ void finalizar_kernel(){
 	log_destroy(logger);
 	config_destroy(config);
 	liberar_conexion(conexion_memoria);
-	liberar_conexion(conexion_cpu);
+	liberar_conexion(conexion_cpu_dispatch);
+	liberar_conexion(conexion_cpu_interrupt);
 	queue_destroy(cNEW);
 	queue_destroy(cREADY);
 	queue_destroy(cEXIT);
@@ -212,21 +213,20 @@ void carnicero(){
 	}
 }
 
-void planificadorCP(){
+void planificadorCP_FIFO(){
 	sProceso* proceso;
 	int motivo;
 	int size;
 	pthread_t hilo_IO; //usamos para crearle un hilo a cada instancia de IO
 	while (1){
 		sem_wait(&semPCP);
-		pthread_mutex_lock(&mREADY);
-		proceso = queue_pop(cREADY); 
-		pthread_mutex_unlock(&mREADY);
-		log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
-		proceso->pcb.estado=RUNNING;
-		enviar_pcb(proceso->pcb, conexion_cpu, PCB); 
-		motivo = recibir_operacion(conexion_cpu);
-		proceso->pcb=pcb_deserializar(conexion_cpu);
+
+		despachar_a_running();
+
+		//me quedo esperando que vuelva y veo porque volvio
+		motivo = recibir_operacion(conexion_cpu_dispatch);
+		proceso->pcb=pcb_deserializar(conexion_cpu_dispatch);
+
 		switch(motivo){
 			case FINALIZACION:
 				matadero(proceso, "Finalizo");
@@ -234,12 +234,16 @@ void planificadorCP(){
 			case IO:
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
 				proceso->pcb.estado=BLOCKED;
-				if(recibir_operacion(conexion_cpu) != IO)
+
+				if(recibir_operacion(conexion_cpu_dispatch) != IO)
 					matadero(proceso, "No coinciden los códigos de salida");
-				proceso->multifuncion = recibir_buffer(&size, conexion_cpu);
+
+				proceso->multifuncion = recibir_buffer(&size, conexion_cpu_dispatch);
+
 				pthread_mutex_lock(&mBLOCKED);
 				list_add(lBlocked, proceso);
 				pthread_mutex_unlock(&mBLOCKED);
+
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
 				break;
 			default:
@@ -248,6 +252,79 @@ void planificadorCP(){
 		}
 	}
 }
+
+void despachar_a_running() {
+	//despacha a running al primero que este en la lista de ready
+	sProceso* proceso;
+
+	pthread_mutex_lock(&mREADY);
+	proceso = queue_pop(cREADY); 
+	pthread_mutex_unlock(&mREADY);
+
+	log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
+	proceso->pcb.estado=RUNNING;
+	enviar_pcb(proceso->pcb, conexion_cpu_dispatch, PCB);
+}
+
+void setear_timer(int tiempo_quantum) {
+	sleep(tiempo_quantum / 1000); // divido para pasar de milisegs a segs (es lo q toma sleep)
+	// enviar_interrupcion_a_cpu() falta codear aca
+}
+
+void planificadorCP_RR(){
+	sProceso* proceso;
+	int motivo;
+	int size;
+	pthread_t hilo_IO; //usamos para crearle un hilo a cada instancia de IO
+	pthread_t hilo_timer;
+
+	while (1) {
+		sem_wait(&semPCP);
+
+		despachar_a_running();
+
+		pthread_create(&hilo_timer, NULL, setear_timer, (void *)quantum);
+
+		motivo = recibir_operacion(conexion_cpu_dispatch);
+		proceso->pcb=pcb_deserializar(conexion_cpu_dispatch);
+
+		switch(motivo){
+			case FINALIZACION:
+				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
+				matadero(proceso, "Finalizo");
+				break;
+			case IO:
+				pthread_cancel(hilo_timer);
+				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
+				proceso->pcb.estado=BLOCKED;
+
+				if(recibir_operacion(conexion_cpu_dispatch) != IO)
+					matadero(proceso, "No coinciden los códigos de salida");
+
+				proceso->multifuncion = recibir_buffer(&size, conexion_cpu_dispatch);
+
+				pthread_mutex_lock(&mBLOCKED);
+				list_add(lBlocked, proceso);
+				pthread_mutex_unlock(&mBLOCKED);
+				
+				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
+				break;
+			case FIN_DE_QUANTUM:
+				log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
+				proceso->pcb.estado=READY;
+
+				pthread_mutex_lock(&mREADY);
+				queue_push(cREADY, proceso);
+				pthread_mutex_unlock(&mREADY);
+
+				sem_post(&semPCP); // aviso que ya se puede despachar otro
+			default:
+				matadero(proceso, "Envio codigo de salida no valido");
+				break;
+		}
+	}
+}
+
 /*
 Al recibir una petición de I/O de parte de la CPU 
 primero se deberá validar que exista y esté conectada la interfaz solicitada,

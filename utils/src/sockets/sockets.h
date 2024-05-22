@@ -25,7 +25,7 @@ typedef enum
 	NUEVA_IO,
 	OPERACION_IO,
 	FINALIZACION,
-	QUANTUM,
+	FIN_DE_QUANTUM,
 	RECURSO,
 	IO
 }op_code;
