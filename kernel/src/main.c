@@ -11,6 +11,7 @@ pthread_mutex_t mNEW;
 pthread_mutex_t mREADY;
 pthread_mutex_t mBLOCKED;
 pthread_mutex_t mEXIT;
+pthread_mutex_t mCONEXIONES;
 sem_t semPCP;
 sem_t semPLP;
 sem_t semEXIT;
