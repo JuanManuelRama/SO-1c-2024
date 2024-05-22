@@ -35,6 +35,7 @@ int main() {
 	char* puerto;
 	pthread_t hilo_IO;
 	pthread_t hilo_pcp;
+	pthread_t hilo_plp;
 	pthread_t hilo_carnicero;
 
 	inicializar_kernel();
@@ -55,7 +56,7 @@ int main() {
 	kernel_servidor = iniciar_servidor(puerto, "Kernel");
 	pthread_create(&hilo_IO, NULL, escuchar_conexiones_IO, (void*)kernel_servidor);
 
-	pthread_create(&hilo_pcp, NULL, PLP, NULL);
+	pthread_create(&hilo_plp, NULL, PLP, NULL);
 	pthread_create(&hilo_carnicero, NULL, carnicero, NULL);
 	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
 

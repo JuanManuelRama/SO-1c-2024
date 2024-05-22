@@ -139,7 +139,8 @@ void execute(sInstruccion instruccion){
             exe_JNZ(instruccion.componentes[1], instruccion.componentes[2]);
             break;
         case IO_GEN_SLEEP:
-            exe_IO_GEN_SLEEP(instruccion.componentes[1], instruccion.componentes[2]);
+        // todos los cases de los tipos de interfaces IO
+            exe_IO(instruccion.componentes);
             break;
         case EXIT:
             exe_EXIT();
@@ -192,10 +193,11 @@ void exe_EXIT(){
     seVa=FINALIZACION;
 }
 
-void exe_IO_GEN_SLEEP(char* nombre, char* tiempo){
-    strcpy(aEnviar, nombre);
-    strcat(aEnviar, " ");
-    strcat(aEnviar, tiempo);
+void exe_IO (char** componentes){
+    strcpy (aEnviar, componentes[0]);
+    for (int i=1; i++; i < string_length(componentes) ){
+        strcat (aEnviar, componentes[i]);
+    }
     seVa=IO;
 }
 
