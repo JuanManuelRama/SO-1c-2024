@@ -18,6 +18,11 @@ typedef enum{
 	FINISHED
 }estados;
 
+typedef enum{
+	IO_FAILURE,
+	IO_SUCCESS
+}codigoIO;
+
 typedef struct
 {
 	uint32_t PC;

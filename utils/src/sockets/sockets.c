@@ -311,6 +311,7 @@ void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op)
 
 	eliminar_paquete(paquete);
 }
+
 int recibir_int(int socket_cliente){
 	int valor;
 	void* stream=recibir_buffer(&valor, socket_cliente);

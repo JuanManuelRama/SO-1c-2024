@@ -50,7 +50,7 @@ int main() {
 			execute(instruccion);
 			pcb.registros.PC++;
 			free (buffer);
-			string_array_destroy(instruccion.componentes);
+			//string_array_destroy(instruccion.componentes);
 			pthread_mutex_unlock(&mCdI);
 		}
 		enviar_pcb(pcb, socket_dispatch, seVa);

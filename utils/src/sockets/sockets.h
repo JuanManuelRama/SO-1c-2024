@@ -217,6 +217,22 @@ void* serializar_paquete(t_paquete*, int);
 
 void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op);
 
+/**
+ * @fn enviar_codigo_op
+ * @brief envia codigo de operacion
+ * @param socket_cliente
+ * @param codigo de operacion 
+ */
+void enviar_codigo_op(int, int);
+
+/**
+ * @fn recibir_codigo_op
+ * @brief recibe codigo de operacion
+ * @param socket_cliente
+ * @return codigo de operacion recibido
+ */
+int recibir_codigo_op(int);
+
 t_pcb pcb_deserializar(int);
 
 int recibir_int (int);

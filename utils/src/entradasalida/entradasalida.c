@@ -17,14 +17,29 @@ void crear_interfaz_generica(char* nombre) {
 	// una vez conectado y avisado que me conecte, me quedo esperando solicitudes
 	while(1) {
 		int cod_op = recibir_operacion(socket_kernel);
-		if (cod_op == IO) {
+		if (cod_op == OPERACION_IO) {
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
-			// aca habria que splitear lo que recibimos y analizar si puedo o no hacerla (siendo generica, solo puedo hacer sleep)
+			char** instruccion = string_n_split(buffer, 3, " ");
+
+			log_info(logger, "Operacion: %s", instruccion[0]);
+
+			if (!strcmp(instruccion[0], "IO_GEN_SLEEP")){
+				
+				int cant_unidades_trabajo = atoi(instruccion[2]);
+				sleep(cant_unidades_trabajo*unidad_trabajo/1000);
+
+				enviar_int(1, socket_kernel, IO_SUCCESS);
+				log_info(logger, "Resultado de %s: io_success", nombre);
+
+			} else {
+				enviar_int(1, socket_kernel, IO_FAILURE);
+				log_info(logger, "Resultado de %s: io_failure", nombre);
+			}
 
 			free(buffer);
 		} else {
-			log_error(logger, "Soy una IO, no puedo hacer otras cosas!!")
+			log_error(logger, "Soy una IO, no puedo hacer otras cosas!!");
 		}
 	}
 

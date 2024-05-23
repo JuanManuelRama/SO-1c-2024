@@ -87,8 +87,8 @@ void interactuar_consola(char* buffer){
 			ejecutar_script(mensaje[1]);
 			break;
 		case DETENER_PLANIFICACION:
-				detener_planificacion();
-				break;
+			detener_planificacion();
+			break;
 		case INICIAR_PLANIFICACION:
 			iniciar_planificacion();
 			break;
@@ -282,15 +282,17 @@ void escuchar_conexiones_IO(int socket_server) {
 }
 
 void atender_solicitud_IO(sProceso* proceso){
-	char** nombre_y_operacion = string_n_split(proceso->multifuncion, 2, " ");
+	char** instruccionIO = string_n_split(proceso->multifuncion, 3, " ");
 
 	// funcionalidad propia de gcc, inner function
 	bool existe_conexion(void* elem) {
 		t_conexion *conexion = (t_conexion*)elem;
-		return !strcmp(conexion->nombre, nombre_y_operacion[0]);
+		return !strcmp(conexion->nombre, instruccionIO[1]);
 	}
 
+	pthread_mutex_lock(&mCONEXIONES);
 	t_conexion* IO_seleccionada = list_find(lista_conexiones_IO, existe_conexion);
+	pthread_mutex_unlock(&mCONEXIONES);
 
 	if (IO_seleccionada == NULL) {
 		pthread_mutex_lock(&mBLOCKED);
@@ -298,30 +300,25 @@ void atender_solicitud_IO(sProceso* proceso){
 		pthread_mutex_unlock(&mBLOCKED);
 		free(proceso->multifuncion);
 		matadero(proceso, "Se intento comunicar con una IO no conectada");
-		string_array_destroy(nombre_y_operacion);
+		string_array_destroy(instruccionIO);
 		return;
 	}
 
 	// le mandamos a la instancia encontrada la operacion
-	enviar_string(nombre_y_operacion[1], IO_seleccionada->socket, OPERACION_IO);
+	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
 
 	// nos quedamos escuchando la respuesta
-	int op = recibir_operacion(IO_seleccionada->socket);
+	int codOp = recibir_operacion (IO_seleccionada->socket);
 
-	if (op == -1) { // en caso de que la operacion no sea valida
+	if (codOp == IO_FAILURE) { // en caso de que la operacion no sea valida
 		pthread_mutex_lock(&mBLOCKED);
 		list_remove_element(lBlocked, proceso);
 		pthread_mutex_unlock(&mBLOCKED);
 		free(proceso->multifuncion);
 		matadero(proceso, "La IO no admite la operacion solicitada");
-		string_array_destroy(nombre_y_operacion);
+		string_array_destroy(instruccionIO);
 		return;
 	}
-
-	// por ahora solo tenemos IO generica, que devuelve mensaje
-	// despues vemos que pueden devolver las otras y tratamos esos casos
-	recibir_mensaje(IO_seleccionada->socket);
-
 	
 	// REPETIDO DE PLP: LO VOLVEMOS A READY DESPUES DE SU IO
 	pthread_mutex_lock(&mBLOCKED);
@@ -334,7 +331,7 @@ void atender_solicitud_IO(sProceso* proceso){
 	queue_push(cREADY, proceso);
 	pthread_mutex_unlock(&mREADY);
 	sem_post(&semPCP); //avisamos al dispatcher q volvio a ready
-	string_array_destroy(nombre_y_operacion);
+	string_array_destroy(instruccionIO);
 }
 
 

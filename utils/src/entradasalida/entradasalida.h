@@ -5,7 +5,7 @@
 #include <sockets/sockets.h>
 #include <commons/string.h>
 
-extern t_log* logger;
-extern t_config* config;
+//extern t_log* logger;
+//extern t_config* config;
 
 void crear_interfaz_generica(char* nombre);

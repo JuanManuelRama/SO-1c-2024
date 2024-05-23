@@ -118,7 +118,7 @@ sInstruccion decode(char* buffer){
 	char** array;
 	array = string_split (buffer, " ");
     log_execute(pcb.pid, array[0], buffer+strlen(array[0]));
-     //Log obligatorio
+    //Log obligatorio
 	instruccion.cod_instruccion = get_cod_instruccion(array[0]);
 	instruccion.componentes=array;
 	return instruccion;
@@ -138,8 +138,8 @@ void execute(sInstruccion instruccion){
         case JNZ:
             exe_JNZ(instruccion.componentes[1], instruccion.componentes[2]);
             break;
-        case IO_GEN_SLEEP:
-        // todos los cases de los tipos de interfaces IO
+        case IO_GEN_SLEEP: 
+            // todos los cases de los tipos de interfaces IO
             exe_IO(instruccion.componentes);
             break;
         case EXIT:
@@ -195,8 +195,12 @@ void exe_EXIT(){
 
 void exe_IO (char** componentes){
     strcpy (aEnviar, componentes[0]);
-    for (int i=1; i++; i < string_length(componentes) ){
+
+    int i=1;
+    while(componentes[i]) {
+        strcat (aEnviar, " ");
         strcat (aEnviar, componentes[i]);
+        i++;
     }
     seVa=IO;
 }
