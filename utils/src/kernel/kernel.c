@@ -266,9 +266,9 @@ void despachar_a_running() {
 	enviar_pcb(proceso->pcb, conexion_cpu_dispatch, PCB);
 }
 
-void setear_timer(int tiempo_quantum) {
-	sleep(tiempo_quantum / 1000); // divido para pasar de milisegs a segs (es lo q toma sleep)
-	// enviar_interrupcion_a_cpu() falta codear aca
+void setear_timer(sProceso* proceso) {
+	sleep(proceso->pcb.quantum / 1000); // divido para pasar de milisegs a segs (es lo q toma sleep)
+	enviar_int (proceso->pcb.pid, conexion_cpu_interrupt, FIN_DE_QUANTUM);
 }
 
 void planificadorCP_RR(){
@@ -281,9 +281,15 @@ void planificadorCP_RR(){
 	while (1) {
 		sem_wait(&semPCP);
 
-		despachar_a_running();
+		pthread_mutex_lock(&mREADY);
+		proceso = queue_pop(cREADY); 
+		pthread_mutex_unlock(&mREADY);
 
-		pthread_create(&hilo_timer, NULL, setear_timer, (void *)quantum);
+		log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
+		proceso->pcb.estado=RUNNING;
+		enviar_pcb(proceso->pcb, conexion_cpu_dispatch, PCB);
+
+		pthread_create(&hilo_timer, NULL, setear_timer, (void *) proceso);
 
 		motivo = recibir_operacion(conexion_cpu_dispatch);
 		proceso->pcb=pcb_deserializar(conexion_cpu_dispatch);
@@ -318,6 +324,7 @@ void planificadorCP_RR(){
 				pthread_mutex_unlock(&mREADY);
 
 				sem_post(&semPCP); // aviso que ya se puede despachar otro
+				break;
 			default:
 				matadero(proceso, "Envio codigo de salida no valido");
 				break;

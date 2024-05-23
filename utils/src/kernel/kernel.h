@@ -185,4 +185,4 @@ void despachar_a_running();
 *@fn 		setear_timer
 *@brief		recibe un quantum, espera ese tiempo y al terminar manda interrupcion a cpu
 */
-void setear_timer(int);
+void setear_timer(sProceso*);

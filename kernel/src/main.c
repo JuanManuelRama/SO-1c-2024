@@ -64,7 +64,7 @@ int main() {
 
 	pthread_create(&hilo_plp, NULL, PLP, NULL);
 	pthread_create(&hilo_carnicero, NULL, carnicero, NULL);
-	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
+	pthread_create(&hilo_pcp, NULL, planificadorCP_RR, NULL);
 
 	char* buffer;
 	while(1){

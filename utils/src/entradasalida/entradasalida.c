@@ -24,7 +24,7 @@ void crear_interfaz_generica(char* nombre) {
 
 			free(buffer);
 		} else {
-			log_error(logger, "Soy una IO, no puedo hacer otras cosas!!")
+			log_error(logger, "Soy una IO, no puedo hacer otras cosas!!");
 		}
 	}
 

@@ -7,6 +7,7 @@
 #include <readline/readline.h>
 #include <commons/string.h>
 #include <semaphore.h>
+#include <commons/collections/queue.h>
 
 typedef enum{
     SET,
@@ -35,11 +36,17 @@ typedef struct{
     char** componentes;
 }sInstruccion;
 
-extern pthread_mutex_t mCdI;
+typedef struct{
+  int pid;
+  int motivo;
+}sInterrupcion;
+
+extern pthread_mutex_t mIntr;
 extern t_pcb pcb;
 extern int seVa;
 extern int memoria;
 extern char* aEnviar;
+extern t_queue *cIntr;
 
 void finalizar_cpu();
 void interrupciones(int);

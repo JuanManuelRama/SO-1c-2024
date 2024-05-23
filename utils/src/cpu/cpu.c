@@ -6,33 +6,26 @@ void finalizar_cpu(){
     liberar_conexion(memoria);
     log_destroy(logger);
     config_destroy(config);
-    pthread_mutex_destroy(&mCdI);
+    pthread_mutex_destroy(&mIntr);
+    queue_destroy(cIntr);
 	exit(0);
 }
 
 void interrupciones(int socket_interrupciones){
     int cod_op;
+    sInterrupcion* interrupcion;
     while(1){
-       cod_op = recibir_operacion(socket_interrupciones);
-       pthread_mutex_lock(&mCdI);
-        switch (cod_op){
-            case FINALIZACION:
-                if(recibir_int(socket_interrupciones)==pcb.pid)
-                    seVa=FINALIZACION;
-                break;
-            case QUANTUM:
-                if(recibir_int(socket_interrupciones)==pcb.pid && seVa==false)
-                    seVa=QUANTUM;
-                break;
-            case -1:
-                log_error(logger, "el cliente se desconecto");
-                pthread_mutex_unlock(&mCdI);
-                return;
-            default:
-                log_warning(logger, "Operacion no esperada por parte de este cliente");
-                break;
+       cod_op = recibir_operacion(socket_interrupciones);       
+        if(cod_op == -1){
+            log_error(logger, "Se desconectaron las interrupciones");
+            return;
         }
-        pthread_mutex_unlock(&mCdI);
+        interrupcion = malloc(sizeof(sInterrupcion));
+        interrupcion->motivo = cod_op;
+        interrupcion->pid = recibir_int(socket_interrupciones);
+        pthread_mutex_lock(&mIntr);
+        queue_push(cIntr, interrupcion);
+        pthread_mutex_unlock(&mIntr);
     }
 }
 
@@ -195,7 +188,8 @@ void exe_EXIT(){
 
 void exe_IO (char** componentes){
     strcpy (aEnviar, componentes[0]);
-    for (int i=1; i++; i < string_length(componentes) ){
+    for (int i=1; i < string_array_size(componentes); i++ ){
+        strcat (aEnviar, " ");
         strcat (aEnviar, componentes[i]);
     }
     seVa=IO;
