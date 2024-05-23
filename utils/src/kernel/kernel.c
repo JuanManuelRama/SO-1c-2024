@@ -26,7 +26,8 @@ void finalizar_kernel(){
 	log_destroy(logger);
 	config_destroy(config);
 	liberar_conexion(conexion_memoria);
-	liberar_conexion(conexion_cpu);
+	liberar_conexion(conexion_cpu_dispatch);
+	liberar_conexion(conexion_cpu_interrupt);
 	queue_destroy(cNEW);
 	queue_destroy(cREADY);
 	queue_destroy(cEXIT);
@@ -93,7 +94,7 @@ void interactuar_consola(char* buffer){
 			iniciar_planificacion();
 			break;
 		case PROCESO_ESTADO:
-			log_info(logger, "El estado del proceso es:");
+			proceso_estado();
 			break;
 		default:
 			log_info(logger, "Código invalido");
@@ -157,6 +158,16 @@ void ejecutar_script(char* path){
 	fclose(script);
 }
 
+void proceso_estado(){
+	detener_planificacion();
+	listar_procesos(cNEW->elements, NEW);
+	listar_procesos(cREADY->elements, READY);
+	listar_procesos(lBlocked, BLOCKED);
+	listar_procesos(cEXIT->elements, FINISHED);
+	iniciar_planificacion();
+}
+
+
 void PLP(){
 	sProceso* proceso;
 	while(1){
@@ -175,6 +186,7 @@ void PLP(){
 		log_cambioEstado(proceso->pcb.pid, NEW, READY);
 		pthread_mutex_lock(&mREADY);
 		queue_push(cREADY, proceso);
+		log_ingresoReady(cREADY->elements, "Normal");
 		pthread_mutex_unlock(&mREADY);
 		sem_post(&semPCP);
 	}
@@ -212,21 +224,20 @@ void carnicero(){
 	}
 }
 
-void planificadorCP(){
+void planificadorCP_FIFO(){
 	sProceso* proceso;
 	int motivo;
 	int size;
 	pthread_t hilo_IO; //usamos para crearle un hilo a cada instancia de IO
 	while (1){
 		sem_wait(&semPCP);
-		pthread_mutex_lock(&mREADY);
-		proceso = queue_pop(cREADY); 
-		pthread_mutex_unlock(&mREADY);
-		log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
-		proceso->pcb.estado=RUNNING;
-		enviar_pcb(proceso->pcb, conexion_cpu, PCB); 
-		motivo = recibir_operacion(conexion_cpu);
-		proceso->pcb=pcb_deserializar(conexion_cpu);
+
+		despachar_a_running();
+
+		//me quedo esperando que vuelva y veo porque volvio
+		motivo = recibir_operacion(conexion_cpu_dispatch);
+		proceso->pcb=pcb_deserializar(conexion_cpu_dispatch);
+
 		switch(motivo){
 			case FINALIZACION:
 				matadero(proceso, "Finalizo");
@@ -234,12 +245,16 @@ void planificadorCP(){
 			case IO:
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
 				proceso->pcb.estado=BLOCKED;
-				if(recibir_operacion(conexion_cpu) != IO)
+
+				if(recibir_operacion(conexion_cpu_dispatch) != IO)
 					matadero(proceso, "No coinciden los códigos de salida");
-				proceso->multifuncion = recibir_buffer(&size, conexion_cpu);
+
+				proceso->multifuncion = recibir_buffer(&size, conexion_cpu_dispatch);
+
 				pthread_mutex_lock(&mBLOCKED);
 				list_add(lBlocked, proceso);
 				pthread_mutex_unlock(&mBLOCKED);
+
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
 				break;
 			default:
@@ -248,6 +263,88 @@ void planificadorCP(){
 		}
 	}
 }
+
+void despachar_a_running() {
+	//despacha a running al primero que este en la lista de ready
+	sProceso* proceso;
+
+	pthread_mutex_lock(&mREADY);
+	proceso = queue_pop(cREADY); 
+	pthread_mutex_unlock(&mREADY);
+
+	log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
+	proceso->pcb.estado=RUNNING;
+	enviar_pcb(proceso->pcb, conexion_cpu_dispatch, PCB);
+}
+
+void setear_timer(sProceso* proceso) {
+	sleep(proceso->pcb.quantum / 1000); // divido para pasar de milisegs a segs (es lo q toma sleep)
+	enviar_int (proceso->pcb.pid, conexion_cpu_interrupt, FIN_DE_QUANTUM);
+}
+
+void planificadorCP_RR(){
+	sProceso* proceso;
+	int motivo;
+	int size;
+	pthread_t hilo_IO; //usamos para crearle un hilo a cada instancia de IO
+	pthread_t hilo_timer;
+
+	while (1) {
+		sem_wait(&semPCP);
+
+		pthread_mutex_lock(&mREADY);
+		proceso = queue_pop(cREADY); 
+		pthread_mutex_unlock(&mREADY);
+
+		log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
+		proceso->pcb.estado=RUNNING;
+		enviar_pcb(proceso->pcb, conexion_cpu_dispatch, PCB);
+
+		pthread_create(&hilo_timer, NULL, setear_timer, (void *) proceso);
+
+		motivo = recibir_operacion(conexion_cpu_dispatch);
+		proceso->pcb=pcb_deserializar(conexion_cpu_dispatch);
+
+		switch(motivo){
+			case FINALIZACION:
+				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
+				matadero(proceso, "Finalizo");
+				break;
+			case IO:
+				pthread_cancel(hilo_timer);
+				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
+				proceso->pcb.estado=BLOCKED;
+
+				if(recibir_operacion(conexion_cpu_dispatch) != IO)
+					matadero(proceso, "No coinciden los códigos de salida");
+
+				proceso->multifuncion = recibir_buffer(&size, conexion_cpu_dispatch);
+
+				pthread_mutex_lock(&mBLOCKED);
+				list_add(lBlocked, proceso);
+				pthread_mutex_unlock(&mBLOCKED);
+				
+				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
+				break;
+			case FIN_DE_QUANTUM:
+				log_finDeQuantum(proceso->pcb.pid);
+				log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
+				proceso->pcb.estado=READY;
+
+				pthread_mutex_lock(&mREADY);
+				queue_push(cREADY, proceso);
+				log_ingresoReady(cREADY->elements, "Normal");
+				pthread_mutex_unlock(&mREADY);
+
+				sem_post(&semPCP); // aviso que ya se puede despachar otro
+				break;
+			default:
+				matadero(proceso, "Envio codigo de salida no valido");
+				break;
+		}
+	}
+}
+
 /*
 Al recibir una petición de I/O de parte de la CPU 
 primero se deberá validar que exista y esté conectada la interfaz solicitada,
@@ -303,6 +400,7 @@ void atender_solicitud_IO(sProceso* proceso){
 		string_array_destroy(instruccionIO);
 		return;
 	}
+	log_bloqueo(proceso->pcb.pid, instruccionIO[0]);
 
 	// le mandamos a la instancia encontrada la operacion
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
@@ -329,6 +427,7 @@ void atender_solicitud_IO(sProceso* proceso){
 	free(proceso->multifuncion);
 	pthread_mutex_lock(&mREADY);
 	queue_push(cREADY, proceso);
+	log_ingresoReady(cREADY->elements, "Normal");
 	pthread_mutex_unlock(&mREADY);
 	sem_post(&semPCP); //avisamos al dispatcher q volvio a ready
 	string_array_destroy(instruccionIO);
@@ -345,4 +444,34 @@ void log_cambioEstado (int pid, int eAnterior, int eActual){
 }
 void log_finalizacion(int pid, char* motivo){
 	log_info(logger, "Finaliza el proceso %d - Motivo: %s", pid, motivo);
+}
+
+void log_finDeQuantum(int pid){
+	log_info(logger, "PID: %d - Desalojado por fin de Quantum", pid);
+}
+
+void log_ingresoReady(t_list* lista, char* cola){
+	sProceso* proceso;
+	char* listado = string_new();
+	for(int i=0; i<list_size(lista); i++){
+		proceso = list_get(lista, i);
+		string_append_with_format(&listado, "PID: %d ", proceso->pcb.pid);
+	}
+	log_info(logger, "Cola Ready %s: %s", cola, listado);
+	free(listado);
+}
+
+void log_bloqueo(int pid, char* motivo){
+	log_info(logger, "PID: %d - Bloqueado por: %s", pid, motivo);
+}
+
+void listar_procesos(t_list* lista, int estado){
+	sProceso* proceso;
+	char* listado = string_new();
+	for(int i=0; i<list_size(lista); i++){
+		proceso = list_get(lista, i);
+		string_append_with_format(&listado, "PID: %d ", proceso->pcb.pid);
+	}
+	log_info(logger, "Procesos en estado %s: %s", get_estado(estado), listado);
+	free(listado);
 }

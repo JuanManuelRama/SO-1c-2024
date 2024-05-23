@@ -18,7 +18,8 @@ sem_t semEXIT;
 sem_t sMultiprogramacion;
 t_pcb generica;
 int conexion_memoria;
-int conexion_cpu;
+int conexion_cpu_dispatch;
+int conexion_cpu_interrupt;
 int idPCB;
 int multiprogramacion;
 int quantum;
@@ -50,7 +51,11 @@ int main() {
 	// buscamos datos en config y conectamos a cpu
 	ip = buscar("IP_CPU");
 	puerto = buscar("PUERTO_CPU_DISPATCH");
-	conexion_cpu = crear_conexion(ip, puerto, "CPU");
+	conexion_cpu_dispatch = crear_conexion(ip, puerto, "CPU dispatch");
+
+	ip = buscar("IP_CPU");
+	puerto = buscar("PUERTO_CPU_INTERRUPT");
+	conexion_cpu_interrupt = crear_conexion(ip, puerto, "CPU interrupt");
 
 	//tambien sera servidor, con el I/O como cliente
 	puerto = buscar("PUERTO_ESCUCHA");
@@ -59,7 +64,7 @@ int main() {
 
 	pthread_create(&hilo_plp, NULL, PLP, NULL);
 	pthread_create(&hilo_carnicero, NULL, carnicero, NULL);
-	pthread_create(&hilo_pcp, NULL, planificadorCP, NULL);
+	pthread_create(&hilo_pcp, NULL, planificadorCP_RR, NULL);
 
 	char* buffer;
 	while(1){
