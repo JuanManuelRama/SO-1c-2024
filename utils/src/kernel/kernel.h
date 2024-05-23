@@ -111,6 +111,8 @@ void detener_planificacion();
 
 void ejecutar_script(char* path);
 
+void proceso_estado();
+
 //PLANIFICADORES
 /**
 *@fn 		planificadorCP_FIFO
@@ -163,6 +165,8 @@ void log_nuevoProceso (int);
 */
 void log_cambioEstado(int, int, int);
 
+void log_bloqueo(int, char*);
+
 /**
 *@fn 		log_cambioEstado
 *@brief		Loguea la finalizacion de un proceso
@@ -170,6 +174,10 @@ void log_cambioEstado(int, int, int);
 *@param     motivo Motivo de la finalización
 */
 void log_finalizacion(int, char*);
+
+void log_ingresoReady(t_list*, char*);
+void listar_procesos(t_list*, int);
+
 
 //falta agregar documentacion
 void atender_solicitud_IO(sProceso*);

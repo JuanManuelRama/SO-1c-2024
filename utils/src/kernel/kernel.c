@@ -88,13 +88,13 @@ void interactuar_consola(char* buffer){
 			ejecutar_script(mensaje[1]);
 			break;
 		case DETENER_PLANIFICACION:
-				detener_planificacion();
-				break;
+			detener_planificacion();
+			break;
 		case INICIAR_PLANIFICACION:
 			iniciar_planificacion();
 			break;
 		case PROCESO_ESTADO:
-			log_info(logger, "El estado del proceso es:");
+			proceso_estado();
 			break;
 		default:
 			log_info(logger, "Código invalido");
@@ -158,6 +158,16 @@ void ejecutar_script(char* path){
 	fclose(script);
 }
 
+void proceso_estado(){
+	detener_planificacion();
+	listar_procesos(cNEW->elements, NEW);
+	listar_procesos(cREADY->elements, READY);
+	listar_procesos(lBlocked, BLOCKED);
+	listar_procesos(cEXIT->elements, FINISHED);
+	iniciar_planificacion();
+}
+
+
 void PLP(){
 	sProceso* proceso;
 	while(1){
@@ -176,6 +186,7 @@ void PLP(){
 		log_cambioEstado(proceso->pcb.pid, NEW, READY);
 		pthread_mutex_lock(&mREADY);
 		queue_push(cREADY, proceso);
+		log_ingresoReady(cREADY->elements, "Normal");
 		pthread_mutex_unlock(&mREADY);
 		sem_post(&semPCP);
 	}
@@ -316,11 +327,13 @@ void planificadorCP_RR(){
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
 				break;
 			case FIN_DE_QUANTUM:
+				log_finDeQuantum(proceso->pcb.pid);
 				log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
 				proceso->pcb.estado=READY;
 
 				pthread_mutex_lock(&mREADY);
 				queue_push(cREADY, proceso);
+				log_ingresoReady(cREADY->elements, "Normal");
 				pthread_mutex_unlock(&mREADY);
 
 				sem_post(&semPCP); // aviso que ya se puede despachar otro
@@ -385,6 +398,7 @@ void atender_solicitud_IO(sProceso* proceso){
 		string_array_destroy(nombre_y_operacion);
 		return;
 	}
+	log_bloqueo(proceso->pcb.pid, nombre_y_operacion[0]);
 
 	// le mandamos a la instancia encontrada la operacion
 	enviar_string(nombre_y_operacion[1], IO_seleccionada->socket, OPERACION_IO);
@@ -416,6 +430,7 @@ void atender_solicitud_IO(sProceso* proceso){
 	free(proceso->multifuncion);
 	pthread_mutex_lock(&mREADY);
 	queue_push(cREADY, proceso);
+	log_ingresoReady(cREADY->elements, "Normal");
 	pthread_mutex_unlock(&mREADY);
 	sem_post(&semPCP); //avisamos al dispatcher q volvio a ready
 	string_array_destroy(nombre_y_operacion);
@@ -432,4 +447,34 @@ void log_cambioEstado (int pid, int eAnterior, int eActual){
 }
 void log_finalizacion(int pid, char* motivo){
 	log_info(logger, "Finaliza el proceso %d - Motivo: %s", pid, motivo);
+}
+
+void log_finDeQuantum(int pid){
+	log_info(logger, "PID: %d - Desalojado por fin de Quantum", pid);
+}
+
+void log_ingresoReady(t_list* lista, char* cola){
+	sProceso* proceso;
+	char* listado = string_new();
+	for(int i=0; i<list_size(lista); i++){
+		proceso = list_get(lista, i);
+		string_append_with_format(&listado, "PID: %d ", proceso->pcb.pid);
+	}
+	log_info(logger, "Cola Ready %s: %s", cola, listado);
+	free(listado);
+}
+
+void log_bloqueo(int pid, char* motivo){
+	log_info(logger, "PID: %d - Bloqueado por: %s", pid, motivo);
+}
+
+void listar_procesos(t_list* lista, int estado){
+	sProceso* proceso;
+	char* listado = string_new();
+	for(int i=0; i<list_size(lista); i++){
+		proceso = list_get(lista, i);
+		string_append_with_format(&listado, "PID: %d ", proceso->pcb.pid);
+	}
+	log_info(logger, "Procesos en estado %s: %s", get_estado(estado), listado);
+	free(listado);
 }
