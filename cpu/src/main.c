@@ -57,7 +57,7 @@ int main() {
 			execute(instruccion);
 			pcb.registros.PC++;
 			free (buffer);
-			//string_array_destroy(instruccion.componentes);
+			string_array_destroy(instruccion.componentes);
 			pthread_mutex_lock(&mIntr);
 			while(!queue_is_empty(cIntr)){
 				pthread_mutex_unlock(&mIntr);

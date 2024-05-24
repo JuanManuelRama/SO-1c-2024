@@ -232,7 +232,15 @@ void planificadorCP_FIFO(){
 	while (1){
 		sem_wait(&semPCP);
 
-		despachar_a_running();
+		//despachar_a_running(proceso);
+
+		pthread_mutex_lock(&mREADY);
+		proceso = queue_pop(cREADY); 
+		pthread_mutex_unlock(&mREADY);
+
+		log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
+		proceso->pcb.estado=RUNNING;
+		enviar_pcb(proceso->pcb, conexion_cpu_dispatch, PCB);
 
 		//me quedo esperando que vuelva y veo porque volvio
 		motivo = recibir_operacion(conexion_cpu_dispatch);
@@ -264,9 +272,9 @@ void planificadorCP_FIFO(){
 	}
 }
 
-void despachar_a_running() {
+void despachar_a_running(sProceso* proceso) {
 	//despacha a running al primero que este en la lista de ready
-	sProceso* proceso;
+	//sProceso* proceso;
 
 	pthread_mutex_lock(&mREADY);
 	proceso = queue_pop(cREADY); 
@@ -415,6 +423,21 @@ void atender_solicitud_IO(sProceso* proceso){
 		free(proceso->multifuncion);
 		matadero(proceso, "La IO no admite la operacion solicitada");
 		string_array_destroy(instruccionIO);
+		return;
+	}
+
+	if (codOp == 0 || codOp == -1) { // en caso de que el socket de la interfaz se haya desconectado
+		pthread_mutex_lock(&mBLOCKED);
+		list_remove_element(lBlocked, proceso);
+		pthread_mutex_unlock(&mBLOCKED);
+		free(proceso->multifuncion);
+		matadero(proceso, "Se intento comunicar con una IO no conectada");
+		string_array_destroy(instruccionIO);
+
+		pthread_mutex_lock(&mCONEXIONES);
+		list_remove_element(lista_conexiones_IO, IO_seleccionada);
+		pthread_mutex_unlock(&mCONEXIONES);
+
 		return;
 	}
 	

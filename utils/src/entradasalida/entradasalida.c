@@ -29,15 +29,16 @@ void crear_interfaz_generica(char* nombre) {
 				int cant_unidades_trabajo = atoi(instruccion[2]);
 				sleep(cant_unidades_trabajo*unidad_trabajo/1000);
 
-				enviar_int(1, socket_kernel, IO_SUCCESS);
 				log_info(logger, "Resultado de %s: io_success", nombre);
+				enviar_operacion(socket_kernel, IO_SUCCESS);
 
 			} else {
-				enviar_int(1, socket_kernel, IO_FAILURE);
 				log_info(logger, "Resultado de %s: io_failure", nombre);
+				enviar_operacion(socket_kernel, IO_FAILURE);
 			}
 
 			free(buffer);
+			string_array_destroy(instruccion);
 		} else {
 			log_error(logger, "Soy una IO, no puedo hacer otras cosas!!");
 		}

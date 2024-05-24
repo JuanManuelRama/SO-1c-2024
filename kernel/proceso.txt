@@ -1,2 +1,2 @@
-IO_GEN_SLEEP impresora 10
+IO_GEN_SLEEP fax 20
 EXIT

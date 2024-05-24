@@ -134,6 +134,16 @@ int crear_conexion(char *ip, char* puerto, char* servidor)
 	return socket_cliente;
 }
 
+void enviar_operacion(int socket_cliente, int codigo_op){
+	void* codigo = malloc(sizeof(op_code));
+
+	memcpy(codigo, &codigo_op, sizeof(int));
+
+	send(socket_cliente, codigo, sizeof(op_code), 0);
+
+	free(codigo);
+}
+
 void enviar_mensaje(char* mensaje, int socket_cliente)
 {
 	enviar_string(mensaje, socket_cliente, MENSAJE);
