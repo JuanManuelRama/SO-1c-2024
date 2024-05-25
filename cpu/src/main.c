@@ -60,14 +60,15 @@ int main() {
 			string_array_destroy(instruccion.componentes);
 			pthread_mutex_lock(&mIntr);
 			while(!queue_is_empty(cIntr)){
-				pthread_mutex_unlock(&mIntr);
 				interrupcion = queue_pop(cIntr);
+				pthread_mutex_unlock(&mIntr);
 				switch(interrupcion->motivo){
 					case FINALIZACION:
-						seVa = FINALIZACION;
+						if(pcb.pid == interrupcion->pid)
+							seVa = FINALIZACION;
 						break;
 					case FIN_DE_QUANTUM:
-						if(!seVa)
+						if(!seVa && pcb.pid == interrupcion->pid)
 							seVa = FIN_DE_QUANTUM;
 						break;
 					default:

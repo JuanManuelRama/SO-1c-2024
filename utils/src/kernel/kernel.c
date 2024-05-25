@@ -151,7 +151,7 @@ void ejecutar_script(char* path){
 	char* buffer = malloc(50);
 	while(!feof(script)){
 		buffer = fgets(buffer, 50, script);
-		buffer[strcspn(buffer, "\n")]=0;
+		buffer[strcspn(buffer, "\n")]=0; //saco el \n
 		interactuar_consola(buffer);
 	}
 	free (buffer);
