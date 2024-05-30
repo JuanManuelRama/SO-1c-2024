@@ -32,7 +32,7 @@ void interactuar_Kernel(int kernel){
 }
 
 void interactuar_cpu(int cpu){
-		while (1) {
+	while (1) {
 		int cod_op = recibir_operacion(cpu);
 		switch (cod_op) {
 		case MENSAJE:
@@ -50,6 +50,37 @@ void interactuar_cpu(int cpu){
 		default:
 			log_warning(logger,"Operacion no esperada por parte de este cliente");
 			break;
+		}
+	}
+}
+
+void interactuar_IO (int IO){
+	while (1) {
+
+		int cod_op = recibir_operacion(IO);
+		switch (cod_op) {
+
+		//cases de solicitudes de las interfaces 
+
+		case -1:
+			log_error(logger, "el cliente se desconecto");
+			return EXIT_FAILURE;
+		default:
+			log_warning(logger,"Operacion no esperada por parte de este cliente");
+			break;
+		}
+	}
+}
+
+void escuchar_nuevas_IO (int socket_server){
+	int socket;
+	pthread_t hilo_IO;
+
+	while(1){
+		socket = accept(socket_server, NULL, NULL);
+		if (recibir_operacion(socket) == NUEVA_IO) {
+			pthread_create(&hilo_IO, NULL, interactuar_IO, (void*)socket);
+			log_info(logger, "Se conecto nueva IO");
 		}
 	}
 }

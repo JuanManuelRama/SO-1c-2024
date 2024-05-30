@@ -41,6 +41,9 @@ void inicializar_memoria();
 
 void interactuar_cpu (int socket_cliente);
 void interactuar_Kernel (int socket_cliente);
+void interactuar_IO (int socket_IO);
+
+void escuchar_nuevas_IO (int socket_server);
 
 
 /**

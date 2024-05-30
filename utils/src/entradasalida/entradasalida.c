@@ -1,18 +1,9 @@
 #include "entradasalida.h"
 
 void crear_interfaz_generica(char* nombre) {
-    int socket_kernel;
-    char* ip;
-	char* puerto;
-	int unidad_trabajo;
-
-    // buscamos datos en config y conectamos con Kernel
-	ip = config_get_string_value(config, "IP_KERNEL");
-	puerto = config_get_string_value(config, "PUERTO_KERNEL");
-	unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
-
-	socket_kernel = crear_conexion(ip, puerto, "Kernel");
-	enviar_string(nombre, socket_kernel, NUEVA_IO);
+    
+	int unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
+	int socket_kernel = conectar_kernel(nombre);
 
 	// una vez conectado y avisado que me conecte, me quedo esperando solicitudes
 	while(1) {
@@ -40,9 +31,117 @@ void crear_interfaz_generica(char* nombre) {
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
-			log_error(logger, "Soy una IO, no puedo hacer otras cosas!!");
+			log_error(logger, "Operación inválida");
 		}
 	}
 
 	liberar_conexion(socket_kernel);
+}
+
+void crear_interfaz_stdin (char* nombre){
+	int socket_kernel = conectar_kernel (nombre);
+	int socket_memoria = conectar_memoria (nombre); 
+
+	while(1) {
+		int cod_op = recibir_operacion(socket_kernel);
+		if (cod_op == OPERACION_IO) {
+			int size;
+			char* buffer = recibir_buffer(&size, socket_kernel);
+			char** instruccion = string_n_split(buffer, 3, " ");
+
+			log_info(logger, "Operacion: %s", instruccion[0]);
+
+			if (!strcmp(instruccion[0], "IO_STDIN_READ")){
+
+				int registro_direccion = instruccion[2];
+				int registro_tamaño = instruccion[3];
+				char* valor;
+				
+				valor = readline(">");
+				log_info(logger, "Valor ingresado: %s", valor);
+				free(valor);
+
+				log_info(logger, "Resultado de %s: io_success", nombre);
+				enviar_operacion(socket_kernel, IO_SUCCESS);
+
+			} else {
+				log_info(logger, "Resultado de %s: io_failure", nombre);
+				enviar_operacion(socket_kernel, IO_FAILURE);
+			}
+
+			free(buffer);
+			string_array_destroy(instruccion);
+		} else {
+			log_error(logger, "Operación inválida");
+		}
+	}
+	
+}
+
+void crear_interfaz_stdout (char* nombre){
+
+	int unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
+	int socket_kernel = conectar_kernel (nombre);
+	int socket_memoria = conectar_memoria (nombre); 
+
+	while(1) {
+		int cod_op = recibir_operacion(socket_kernel);
+		if (cod_op == OPERACION_IO) {
+			int size;
+			char* buffer = recibir_buffer(&size, socket_kernel);
+			char** instruccion = string_n_split(buffer, 3, " ");
+
+			log_info(logger, "Operacion: %s", instruccion[0]);
+
+			if (!strcmp(instruccion[0], "IO_STDOUT_WRITE")){
+
+				int registro_direccion = instruccion[2];
+				int registro_tamaño = instruccion[3];
+
+				sleep(unidad_trabajo/1000);
+				log_info(logger, "Trabajo muy duro como un esclavo");
+
+				log_info(logger, "Resultado de %s: io_success", nombre);
+				enviar_operacion(socket_kernel, IO_SUCCESS);
+
+			} else {
+				log_info(logger, "Resultado de %s: io_failure", nombre);
+				enviar_operacion(socket_kernel, IO_FAILURE);
+			}
+
+			free(buffer);
+			string_array_destroy(instruccion);
+		} else {
+			log_error(logger, "Operación inválida");
+		}
+	}
+	
+}
+
+int conectar_kernel (char* nombre){
+	int socket;
+	char* ip;
+	char* puerto;
+
+	ip = config_get_string_value(config, "IP_KERNEL");
+	puerto = config_get_string_value(config, "PUERTO_KERNEL");
+
+	socket = crear_conexion(ip, puerto, "Kernel");
+	enviar_string(nombre, socket, NUEVA_IO);
+
+	return socket;
+}
+
+int conectar_memoria (char* nombre){
+	int socket;
+	char* ip;
+	char* puerto;
+
+	ip = config_get_string_value(config, "IP_MEMORIA");
+	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
+
+	socket = crear_conexion(ip, puerto, "Memoria");
+	enviar_operacion(socket, NUEVA_IO);
+
+	return socket;
 }

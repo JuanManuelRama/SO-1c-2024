@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <sockets/sockets.h>
 #include <commons/string.h>
+#include <readline/readline.h>
 
 //extern t_log* logger;
 //extern t_config* config;

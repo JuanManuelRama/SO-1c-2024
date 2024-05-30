@@ -132,6 +132,8 @@ void execute(sInstruccion instruccion){
             exe_JNZ(instruccion.componentes[1], instruccion.componentes[2]);
             break;
         case IO_GEN_SLEEP: 
+        case IO_STDIN_READ:
+        case IO_STDOUT_WRITE:
             // todos los cases de los tipos de interfaces IO
             exe_IO(instruccion.componentes);
             break;
@@ -156,6 +158,10 @@ int get_cod_instruccion(char* instruccion){
         return EXIT;
     else if (!strcmp(instruccion, "IO_GEN_SLEEP"))
         return IO_GEN_SLEEP;
+    else if (!strcmp(instruccion, "IO_STDIN_READ"))
+        return IO_STDIN_READ;
+    else if (!strcmp(instruccion, "IO_STDOUT_WRITE"))
+        return IO_STDOUT_WRITE;
     return -1;
 }
 

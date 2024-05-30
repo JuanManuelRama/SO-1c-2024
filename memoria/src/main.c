@@ -36,6 +36,9 @@ int main (){
 	//socket_IO = esperar_cliente("IO", socket_servidor);
 	//pthread_create(&hilo_IO, NULL, interactuar, (void*)socket_IO);
 
+	// me quedo escuchando nuevas interfaces que se puedan conectar
+	pthread_create(&hilo_IO, NULL, escuchar_nuevas_IO, (void*)socket_servidor);
+
 
 	pthread_join(hilo_kernel, NULL);
 	pthread_join(hilo_cpu, NULL);

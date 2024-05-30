@@ -26,9 +26,9 @@ int main(int argc, char *argv[]) {
 	if (!strcmp(tipo, "GENERICA")) {
 		crear_interfaz_generica(nombre);
 	} else if (!strcmp(tipo, "STDIN")) {
-		;
+		crear_interfaz_stdin(nombre);
 	} else if (!strcmp(tipo, "STDOUT")) {
-		;
+		crear_interfaz_stdout(nombre);
 	} else if (!strcmp(tipo, "DIALFS")) {
 		;
 	} else {
