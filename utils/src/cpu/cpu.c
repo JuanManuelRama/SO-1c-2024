@@ -131,6 +131,12 @@ void execute(sInstruccion instruccion){
         case JNZ:
             exe_JNZ(instruccion.componentes[1], instruccion.componentes[2]);
             break;
+        case WAIT:
+            exe_WAIT(instruccion.componentes[1]);
+            break;
+        case SIGNAL:
+            exe_SIGNAL(instruccion.componentes[1]);
+            break;
         case IO_GEN_SLEEP: 
         case IO_STDIN_READ:
         case IO_STDOUT_WRITE:
@@ -162,6 +168,10 @@ int get_cod_instruccion(char* instruccion){
         return IO_STDIN_READ;
     else if (!strcmp(instruccion, "IO_STDOUT_WRITE"))
         return IO_STDOUT_WRITE;
+    else if (!strcmp(instruccion, "WAIT"))
+        return WAIT;
+    else if (!strcmp(instruccion, "SIGNAL"))
+        return SIGNAL;
     return -1;
 }
 
@@ -190,6 +200,16 @@ void exe_JNZ(char* registro, char* numero_instruccion) {
 }
 void exe_EXIT(){
     seVa=FINALIZACION;
+}
+
+void exe_WAIT(char* recurso){
+    strcpy (aEnviar, recurso);
+    seVa=WAIT;
+}
+
+void exe_SIGNAL(char* recurso){
+    strcpy (aEnviar, recurso);
+    seVa=SIGNAL;
 }
 
 void exe_IO (char** componentes){

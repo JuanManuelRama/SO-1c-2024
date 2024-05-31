@@ -144,6 +144,20 @@ void exe_JNZ(char*, char*);
 void exe_EXIT();
 
   /**
+ * @fn exe_WAIT
+ * @brief Vuelve al Kernel a consumir el recurso
+ * @param recurso Nombre del recurso
+ */
+void exe_WAIT(char*);
+
+  /**
+ * @fn exe_SIGNAL
+ * @brief Vuelve al Kernel a liberar un recurso
+ * @param recurso Nombre del recurso
+ */
+void exe_SIGNAL(char*);
+
+  /**
  * @fn exe_IO_GEN_SLEEP
  * @brief Realiza una operación de I/O
  * @param nombre Nombre del dispositivo I/O
