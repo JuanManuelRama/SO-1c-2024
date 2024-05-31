@@ -52,6 +52,8 @@ int get_terminal(char* comando){
 		return INICIAR_PLANIFICACION;
 	if(!strcmp(comando, "PROCESO_ESTADO"))	
 		return PROCESO_ESTADO;
+	if(!strcmp(comando, "MULTIPROGRAMACION"))
+		return MULTIPROGRAMACION;
 	return -1;
 }
 
@@ -92,6 +94,9 @@ void interactuar_consola(char* buffer){
 			break;
 		case INICIAR_PLANIFICACION:
 			iniciar_planificacion();
+			break;
+		case MULTIPROGRAMACION:
+			cambiar_multiprogramacion(atoi(mensaje[1]));
 			break;
 		case PROCESO_ESTADO:
 			proceso_estado();
@@ -158,6 +163,18 @@ void ejecutar_script(char* path){
 	fclose(script);
 }
 
+void cambiar_multiprogramacion(int grado){
+	int cambio = grado - multiprogramacion;
+	if (grado<0)
+		return;
+	if(cambio>0)
+		for(int i=0; i<cambio; i++)
+			sem_post(&sMultiprogramacion);
+	else
+		for(int i=0; i>cambio; i--)
+			sem_wait(&sMultiprogramacion);
+	multiprogramacion = grado;
+}
 void proceso_estado(){
 	detener_planificacion();
 	listar_procesos(cNEW->elements, NEW);

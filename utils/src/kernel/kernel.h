@@ -103,13 +103,15 @@ int get_terminal(char*);
 *@fn 		crear_proceso
 *@brief		Crea un proceso
 */
-void crear_proceso(char* path);
+void crear_proceso(char*);
 
 void iniciar_planificacion();
 
 void detener_planificacion();
 
-void ejecutar_script(char* path);
+void ejecutar_script(char*);
+
+void cambiar_multiprogramacion(int);
 
 void proceso_estado();
 
