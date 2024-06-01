@@ -17,6 +17,7 @@ extern t_list* lBlocked;
 extern t_list* lista_conexiones_IO;
 extern pthread_mutex_t mNEW;
 extern pthread_mutex_t mREADY;
+extern pthread_mutex_t mRUNNING;
 extern pthread_mutex_t mBLOCKED;
 extern pthread_mutex_t mEXIT;
 extern pthread_mutex_t mCONEXIONES;
@@ -31,6 +32,7 @@ extern int idPCB;
 extern int multiprogramacion;
 extern int quantum;
 extern int kernel_servidor;
+extern int pidRunning;
 extern bool planificacion_activa;
 
 typedef struct{
@@ -74,12 +76,12 @@ char* get_estado(int);
 /**
 *@fn 		enviar_proceso
 *@brief		Envia la dirreccion del de proceso a la memoria
-*@param 	path path del proceso relativo a la memoria
+*@param 	proceso Proceso a enviar
 *@return	puntero a la lista de instrucciones (aun no está programado)	
 */
 
 
-char** enviar_proceso(char*);
+char** enviar_proceso(sProceso);
 
 
 

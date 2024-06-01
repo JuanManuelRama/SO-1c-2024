@@ -2,10 +2,18 @@
 
 void recibir_proceso(int socket_cliente){
 		int size;
-		char* proceso = recibir_buffer (&size, socket_cliente);
-		log_info(logger, "Nuevo proceso, archivo: %s", proceso);
-		char** aProceso = cargar_proceso(proceso);
-		enviar_puntero(aProceso, socket_cliente, NUEVO_PROCESO);
+		t_proceso* proceso = malloc(sizeof(t_proceso));
+		char* path = recibir_buffer (&size, socket_cliente);
+		proceso->pid = recibir_operacion(socket_cliente);
+		proceso->instrucciones = cargar_proceso(path);
+		free (path);
+		if(proceso->instrucciones){
+		proceso->paginas = malloc(sizeof(t_pag)*CANT_PAG);
+		log_TdP(proceso->pid);
+		}
+		else
+			proceso=NULL;
+		enviar_puntero(proceso, socket_cliente, NUEVO_PROCESO);
 }
 
 void interactuar_Kernel(int kernel){
@@ -39,7 +47,7 @@ void interactuar_cpu(int cpu){
 			recibir_mensaje(cpu);
 			break;
 		case PROCESO:
-			instrucciones = recibir_puntero(cpu);
+			proceso = recibir_puntero(cpu);
 			break;
 		case FETCH:
 			buscar_instruccion(cpu);
@@ -88,7 +96,7 @@ void escuchar_nuevas_IO (int socket_server){
 void buscar_instruccion(int socket_cliente){
 	int instruccion = recibir_int(socket_cliente);
 	sleep(RETARDO);
-	enviar_string(instrucciones[instruccion], socket_cliente, FETCH);
+	enviar_string(proceso->instrucciones[instruccion], socket_cliente, FETCH);
 }
 
 void inicializar_tabla_de_memoria(){
@@ -168,7 +176,17 @@ void finalizar_memoria(){
 }
 
 void liberar_proceso(int socket_cliente){
-	char** instruccion=recibir_puntero(socket_cliente);
-	if(instruccion)
-		string_array_destroy(instruccion);
+	t_proceso* proceso=recibir_puntero(socket_cliente);
+	if(proceso){
+	string_array_destroy(proceso->instrucciones);
+	free(proceso->paginas);
+	log_TdP(proceso->pid);
+	}
+
+	free(proceso);
+}
+
+// LOGS OBLIGATORIOS
+log_TdP(int pid){
+	log_info(logger, "PID: %d - Tamaño: %d", pid, CANT_PAG);
 }

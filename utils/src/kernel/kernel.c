@@ -13,6 +13,7 @@ void inicializar_kernel(){
 	idPCB = 1;
 	pthread_mutex_init (&mNEW, NULL);
 	pthread_mutex_init(&mREADY, NULL);
+	pthread_mutex_init(&mREADY, NULL);
 	pthread_mutex_init(&mBLOCKED, NULL);
 	pthread_mutex_init (&mEXIT, NULL);
 	sem_init(&semPCP, 0, 0);
@@ -20,6 +21,7 @@ void inicializar_kernel(){
 	sem_init(&semEXIT, 0, 0);
 	sem_init(&sMultiprogramacion, 0, multiprogramacion);
 	planificacion_activa = true;
+	pidRunning = -1;
 }
 
 void finalizar_kernel(){
@@ -33,6 +35,8 @@ void finalizar_kernel(){
 	queue_destroy(cEXIT);
 	pthread_mutex_destroy(&mNEW);
 	pthread_mutex_destroy(&mREADY);
+	pthread_mutex_destroy(&mRUNNING);
+	pthread_mutex_destroy(&mBLOCKED);
 	pthread_mutex_destroy(&mEXIT);
 	sem_destroy(&semPLP);
 	sem_destroy(&semPCP);
@@ -131,6 +135,7 @@ void detener_planificacion(){
 	if(planificacion_activa){
 		pthread_mutex_lock(&mNEW);
 		pthread_mutex_lock(&mREADY);
+		pthread_mutex_lock(&mRUNNING);
 		pthread_mutex_lock(&mBLOCKED);
 		pthread_mutex_lock(&mEXIT);
 		planificacion_activa = false;
@@ -141,6 +146,7 @@ void iniciar_planificacion(){
 	if(!planificacion_activa){
 		pthread_mutex_unlock(&mNEW);
 		pthread_mutex_unlock(&mREADY);
+		pthread_mutex_unlock(&mRUNNING);
 		pthread_mutex_unlock(&mBLOCKED);
 		pthread_mutex_unlock(&mEXIT);
 		planificacion_activa = true;
@@ -179,6 +185,8 @@ void proceso_estado(){
 	detener_planificacion();
 	listar_procesos(cNEW->elements, NEW);
 	listar_procesos(cREADY->elements, READY);
+	if(pidRunning != -1)
+		log_info(logger,"Procesos en estado %s: %d", get_estado(RUNNING), pidRunning);
 	listar_procesos(lBlocked, BLOCKED);
 	listar_procesos(cEXIT->elements, FINISHED);
 	iniciar_planificacion();
@@ -193,7 +201,7 @@ void PLP(){
 		proceso = queue_pop(cNEW);
 		pthread_mutex_unlock(&mNEW);
 		sem_wait(&sMultiprogramacion);
-		proceso->pcb.instrucciones = enviar_proceso(proceso->multifuncion);
+		proceso->pcb.instrucciones = enviar_proceso(*proceso);
 		free (proceso->multifuncion);
 		if(proceso->pcb.instrucciones == NULL){
 			matadero(proceso, "La memoria no pudo abrir el archivo");
@@ -209,8 +217,9 @@ void PLP(){
 	}
 }
 
-char** enviar_proceso(char* path){	
-	enviar_string(path, conexion_memoria, NUEVO_PROCESO);
+char** enviar_proceso(sProceso proceso){	
+	enviar_string(proceso.multifuncion, conexion_memoria, NUEVO_PROCESO);
+	enviar_operacion(conexion_memoria, proceso.pcb.pid);
 	if(recibir_operacion(conexion_memoria) != NUEVO_PROCESO){
 		return NULL;
 	}
@@ -323,13 +332,18 @@ void planificadorCP_RR(){
 
 		log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
 		proceso->pcb.estado=RUNNING;
+		pthread_mutex_lock(&mRUNNING);
+		pidRunning = proceso->pcb.pid;
+		pthread_mutex_unlock(&mRUNNING);
 		enviar_pcb(proceso->pcb, conexion_cpu_dispatch, PCB);
 
 		pthread_create(&hilo_timer, NULL, setear_timer, (void *) proceso);
 
 		motivo = recibir_operacion(conexion_cpu_dispatch);
 		proceso->pcb=pcb_deserializar(conexion_cpu_dispatch);
-
+		pthread_mutex_lock(&mRUNNING);
+		pidRunning = -1;
+		pthread_mutex_unlock(&mRUNNING);
 		switch(motivo){
 			case FINALIZACION:
 				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo

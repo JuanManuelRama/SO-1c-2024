@@ -9,6 +9,7 @@ t_queue* cEXIT;
 t_list* lBlocked;
 pthread_mutex_t mNEW;
 pthread_mutex_t mREADY;
+pthread_mutex_t mRUNNING;
 pthread_mutex_t mBLOCKED;
 pthread_mutex_t mEXIT;
 pthread_mutex_t mCONEXIONES;
@@ -25,6 +26,7 @@ int multiprogramacion;
 int quantum;
 int kernel_servidor;
 bool planificacion_activa;
+int pidRunning;
 t_list *lista_conexiones_IO;
 
 // de prueba, despues se borra.

@@ -21,12 +21,23 @@ typedef struct {
 	char instruccion [MAX_LINEA];
 } t_instruccion;
 
+typedef struct {
+	int macro;
+	bool estado;
+}t_pag;
+
+typedef struct {
+	int pid;
+	char** instrucciones;
+	t_pag* paginas;
+}t_proceso;
+
 extern int TAM_MEMORIA;
 extern int RETARDO;
 extern short CANT_PAG;
 extern short TAM_PAG;
 extern char* PATH_INSTRUCCIONES;
-extern char** instrucciones;
+extern t_proceso* proceso;
 extern void* memoria_contigua;
 extern t_log* logger;
 extern t_config* config;

@@ -5,7 +5,7 @@ int RETARDO;
 short CANT_PAG;
 short TAM_PAG;
 char* PATH_INSTRUCCIONES;
-char** instrucciones;
+t_proceso* proceso;
 
 void* memoria_contigua;
 
