@@ -7,10 +7,8 @@ void recibir_proceso(int socket_cliente){
 		proceso->pid = recibir_operacion(socket_cliente);
 		proceso->instrucciones = cargar_proceso(path);
 		free (path);
-		if(proceso->instrucciones){
-		proceso->paginas = malloc(sizeof(t_pag)*CANT_PAG);
-		log_TdP(proceso->pid);
-		}
+		if(proceso->instrucciones)
+			proceso->paginas = nuevaTablaPaginas(proceso->pid);
 		else
 			proceso=NULL;
 		enviar_puntero(proceso, socket_cliente, NUEVO_PROCESO);
@@ -51,6 +49,9 @@ void interactuar_cpu(int cpu){
 			break;
 		case FETCH:
 			buscar_instruccion(cpu);
+			break;
+		case PAGINA:
+			traducir_pagina(cpu);
 			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
@@ -99,12 +100,7 @@ void buscar_instruccion(int socket_cliente){
 	enviar_string(proceso->instrucciones[instruccion], socket_cliente, FETCH);
 }
 
-void inicializar_tabla_de_memoria(){
-    for(short i = 0; i < CANT_PAG; i++){
-    	tablaMemoria[i].ocupado=false;
-		tablaMemoria[i].espacio_libre=TAM_PAG;
-	}
-}
+
 
 void inicializar_memoria(){
 	logger = log_create ("logM.log", "LOGS MEMORIA",1, LOG_LEVEL_INFO); 
@@ -123,8 +119,7 @@ void inicializar_memoria(){
 
 	CANT_PAG = TAM_MEMORIA/TAM_PAG;
 	memoria_contigua = malloc(TAM_MEMORIA);
-	tablaMemoria = malloc(CANT_PAG*sizeof(t_tablaMemoria));
-	inicializar_tabla_de_memoria();
+	bitmap = bitarray_create(malloc(CANT_PAG/8), CANT_PAG/8);
 }
 
 char** cargar_proceso(char* nombreArchivo){
@@ -166,6 +161,26 @@ char** queue_a_array(t_queue* cola){
 	return array;
 }
 
+t_pag* nuevaTablaPaginas (int pid){
+	t_pag* tabla = malloc(CANT_PAG*sizeof(t_pag));
+	for(short i = 0; i < CANT_PAG; i++)
+		tabla[i].estado = false;
+	log_TdP(pid);
+	return tabla;
+}
+
+void traducir_pagina(int cpu){
+	int pagina = recibir_int(cpu);
+	if(proceso->paginas[pagina].estado){
+		log_pagina (proceso->pid, pagina, proceso->paginas[pagina].macro);
+		enviar_int(proceso->paginas[pagina].macro, cpu, PAGINA);
+	}
+	else
+		enviar_operacion(cpu, -1);	
+}
+
+
+
 
 
 void finalizar_memoria(){
@@ -187,6 +202,10 @@ void liberar_proceso(int socket_cliente){
 }
 
 // LOGS OBLIGATORIOS
-log_TdP(int pid){
+void log_TdP(int pid){
 	log_info(logger, "PID: %d - Tamaño: %d", pid, CANT_PAG);
+}
+
+void log_pagina(int pid, int pagina, int macro){
+	log_info(logger, "PID: %d - Pagina: %d - Marco: %d", pid, pagina, macro);
 }

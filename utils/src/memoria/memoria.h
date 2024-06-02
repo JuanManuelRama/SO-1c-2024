@@ -6,6 +6,7 @@
 #include <commons/collections/queue.h>
 #include <pthread.h>
 #include <commons/string.h>
+#include <commons/bitarray.h>
 
 #define MAX_LINEA 50
 
@@ -42,12 +43,12 @@ extern void* memoria_contigua;
 extern t_log* logger;
 extern t_config* config;
 extern t_tablaMemoria (*tablaMemoria);
+extern t_bitarray* bitmap;
 
 
 
 
 
-void inicializar_tabla_de_memoria();
 void inicializar_memoria();
 
 void interactuar_cpu (int socket_cliente);
@@ -87,6 +88,10 @@ void buscar_instruccion(int);
 */
 char** queue_a_array(t_queue*);
 
+
+t_pag* nuevaTablaPaginas (int);
+
+void traducir_pagina(int);
 
 void liberar_proceso(int);
 

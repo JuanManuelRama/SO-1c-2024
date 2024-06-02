@@ -6,6 +6,7 @@ short CANT_PAG;
 short TAM_PAG;
 char* PATH_INSTRUCCIONES;
 t_proceso* proceso;
+t_bitarray* bitmap;
 
 void* memoria_contigua;
 
