@@ -180,6 +180,9 @@ void log_bloqueo(int, char*);
 void log_finalizacion(int, char*);
 
 void log_ingresoReady(t_list*, char*);
+
+void log_finDeQuantum(int);
+
 void listar_procesos(t_list*, int);
 
 
