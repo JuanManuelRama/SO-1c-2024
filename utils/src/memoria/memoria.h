@@ -91,6 +91,42 @@ char** queue_a_array(t_queue*);
 
 t_pag* nuevaTablaPaginas (int);
 
+
+/**
+ * @fn 		aniadir_paginas
+ * @brief	Añade paginas
+ * @param 	cpu Socket cpu
+*/
+void aniadir_paginas (int);
+
+/**
+ * @fn 		buscar_marco
+ * @brief	Busca un marco vacío
+ * @returns Indice del marco o -1 en Out of Memory
+ */
+int buscar_marco();
+
+/**
+ * @fn 		sacar_paginas
+ * @brief	Saca paginas
+ * @param 	paginas Cantidad de paginas a sacar
+ 
+*/
+void sacar_paginas(int);
+
+/**
+ * @fn 		traducir_pagina
+ * @brief	Traduce una pagina
+ * @param 	cpu Socket de la CPU
+ */
+
+/**
+ * @fn 		tamanio_proceso
+ * @brief	Devuelve el tamaño del proceso
+ * @param 	socket_cliente
+*/
+void tamanio_proceso(int);
+
 void traducir_pagina(int);
 
 void liberar_proceso(int);

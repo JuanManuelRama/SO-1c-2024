@@ -53,6 +53,15 @@ void interactuar_cpu(int cpu){
 		case PAGINA:
 			traducir_pagina(cpu);
 			break;
+		case MAS_PAGINA:
+			aniadir_paginas(cpu);
+			break;
+		case MENOS_PAGINA:
+			sacar_paginas(cpu);
+			break;
+		case TAM_PROCESO:
+			tamanio_proceso(cpu);
+			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
 			return EXIT_FAILURE;
@@ -179,7 +188,52 @@ void traducir_pagina(int cpu){
 		enviar_operacion(cpu, -1);	
 }
 
+void aniadir_paginas (int cpu){
+	int paginas = recibir_int(cpu);
+	int i = 0;
+	int marco;
+	while (i < paginas){
+		if(marco = buscar_marco()==(-1)){
+			enviar_operacion(cpu, OOM);
+			return;
+		}
+		proceso->paginas[i].macro = marco;
+		proceso->paginas[i].estado = true;
+		i++;
+	}
+	enviar_operacion(cpu, 1);
+}
 
+int buscar_marco (){
+	int i = 0;
+	while (i < CANT_PAG){
+		if (bitarray_test_bit(bitmap, i) == 0){
+			bitarray_set_bit(bitmap, i);
+			return i;
+		}
+		i++;
+	}
+	return -1;
+}
+
+tamanio_proceso(int socket_cliente){
+	int i;
+	for(i = 0; i<CANT_PAG && proceso->paginas[i].estado; i++);
+	enviar_operacion(socket_cliente, i*TAM_PAG);
+}
+
+
+
+sacar_paginas (int paginas){
+	int i = CANT_PAG;
+	while (!proceso->paginas[i].estado)
+		i--;
+	while (i >paginas){
+		bitarray_clean_bit(bitmap, proceso->paginas[i].macro);
+		proceso->paginas[i].estado = false;
+		i--;
+	}
+}
 
 
 
@@ -194,6 +248,8 @@ void liberar_proceso(int socket_cliente){
 	t_proceso* proceso=recibir_puntero(socket_cliente);
 	if(proceso){
 	string_array_destroy(proceso->instrucciones);
+	for(int i = 0; i<CANT_PAG && proceso->paginas[i].estado; i++)
+		bitarray_clean_bit(bitmap, proceso->paginas[i].macro);
 	free(proceso->paginas);
 	log_TdP(proceso->pid);
 	}
