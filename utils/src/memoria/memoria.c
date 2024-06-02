@@ -224,7 +224,8 @@ tamanio_proceso(int socket_cliente){
 
 
 
-sacar_paginas (int paginas){
+sacar_paginas (int cpu){
+	int paginas = recibir_int(cpu);
 	int i = CANT_PAG;
 	while (!proceso->paginas[i].estado)
 		i--;
