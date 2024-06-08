@@ -132,3 +132,8 @@ void traducir_pagina(int);
 void liberar_proceso(int);
 
 void finalizar_memoria();
+
+
+//LOGS OBLIGATORIOS
+void log_TdP(int);
+void log_pagina(int, int, int);

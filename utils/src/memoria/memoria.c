@@ -167,6 +167,7 @@ char** queue_a_array(t_queue* cola){
 	}
 	array[i]=NULL;
 	queue_destroy(cola);
+
 	return array;
 }
 
@@ -193,7 +194,7 @@ void aniadir_paginas (int cpu){
 	int i = 0;
 	int marco;
 	while (i < paginas){
-		if(marco = buscar_marco()==(-1)){
+		if((marco = buscar_marco())==(-1)){
 			enviar_operacion(cpu, OOM);
 			return;
 		}
@@ -216,7 +217,7 @@ int buscar_marco (){
 	return -1;
 }
 
-tamanio_proceso(int socket_cliente){
+void tamanio_proceso(int socket_cliente){
 	int i;
 	for(i = 0; i<CANT_PAG && proceso->paginas[i].estado; i++);
 	enviar_operacion(socket_cliente, i*TAM_PAG);
@@ -224,7 +225,7 @@ tamanio_proceso(int socket_cliente){
 
 
 
-sacar_paginas (int cpu){
+void sacar_paginas (int cpu){
 	int paginas = recibir_int(cpu);
 	int i = CANT_PAG;
 	while (!proceso->paginas[i].estado)
@@ -243,6 +244,7 @@ void finalizar_memoria(){
 	free(tablaMemoria);
 	log_destroy(logger);
 	config_destroy(config);
+	bitarray_destroy(bitmap);
 }
 
 void liberar_proceso(int socket_cliente){

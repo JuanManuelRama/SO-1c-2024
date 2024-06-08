@@ -32,7 +32,9 @@ void finalizar_kernel(){
 	liberar_conexion(conexion_cpu_interrupt);
 	queue_destroy(cNEW);
 	queue_destroy(cREADY);
+	list_destroy(lBlocked);
 	queue_destroy(cEXIT);
+	list_destroy(lista_conexiones_IO);
 	pthread_mutex_destroy(&mNEW);
 	pthread_mutex_destroy(&mREADY);
 	pthread_mutex_destroy(&mRUNNING);
@@ -42,6 +44,7 @@ void finalizar_kernel(){
 	sem_destroy(&semPCP);
 	sem_destroy(&semEXIT);
 	sem_destroy(&sMultiprogramacion);
+	exit(0);
 }
 int get_terminal(char* comando){
 	if(!strcmp(comando, "INICIAR_PROCESO"))
@@ -58,6 +61,8 @@ int get_terminal(char* comando){
 		return PROCESO_ESTADO;
 	if(!strcmp(comando, "MULTIPROGRAMACION"))
 		return MULTIPROGRAMACION;
+	if (!strcmp(comando, "0"))
+		finalizar_kernel();
 	return -1;
 }
 
@@ -86,31 +91,39 @@ void interactuar_consola(char* buffer){
 	switch (consola){
 		case INICIAR_PROCESO:
 			crear_proceso (mensaje[1]);
+				free (mensaje[0]);
+				free(mensaje);
 			break;
 		case FINALIZAR_PROCESO:
 			log_info(logger, "Proceso finalizado");
 			break;
 		case EJECUTAR_SCRIPT:
 			ejecutar_script(mensaje[1]);
+				free (mensaje[0]);
+				free(mensaje);
 			break;
 		case DETENER_PLANIFICACION:
 			detener_planificacion();
+			string_array_destroy(mensaje);
 			break;
 		case INICIAR_PLANIFICACION:
 			iniciar_planificacion();
+			string_array_destroy(mensaje);
 			break;
 		case MULTIPROGRAMACION:
 			cambiar_multiprogramacion(atoi(mensaje[1]));
+			string_array_destroy(mensaje);
 			break;
 		case PROCESO_ESTADO:
 			proceso_estado();
+			string_array_destroy(mensaje);
 			break;
 		default:
 			log_info(logger, "Código invalido");
+			string_array_destroy(mensaje);
 			break;
 	}
-	free (mensaje[0]);
-	free(mensaje);
+
 }
 
 void crear_proceso (char* path){
@@ -157,6 +170,7 @@ void ejecutar_script(char* path){
 	FILE* script = fopen(path, "r");
 	if(script == NULL){
 		log_info(logger, "No se pudo abrir el archivo");
+		free(path);
 		return;
 	}
 	char* buffer = malloc(50);
@@ -166,6 +180,7 @@ void ejecutar_script(char* path){
 		interactuar_consola(buffer);
 	}
 	free (buffer);
+	free(path);
 	fclose(script);
 }
 

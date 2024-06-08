@@ -8,6 +8,7 @@ void finalizar_cpu(){
     config_destroy(config);
     pthread_mutex_destroy(&mIntr);
     queue_destroy(cIntr);
+    free(aEnviar);
 	exit(0);
 }
 

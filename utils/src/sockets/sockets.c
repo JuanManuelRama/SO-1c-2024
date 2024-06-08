@@ -319,6 +319,8 @@ void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op)
 
 	send(socket_cliente, a_enviar, bytes, 0);
 
+	free (a_enviar);
+
 	eliminar_paquete(paquete);
 }
 
@@ -332,7 +334,8 @@ int recibir_int(int socket_cliente){
 
 void* recibir_puntero(int socket_cliente){
 	void* puntero;
-	void* stream=recibir_buffer(&puntero, socket_cliente);
+	int size;
+	void* stream=recibir_buffer(&size, socket_cliente);
 	memcpy(&(puntero),stream, sizeof(void*));
 	free(stream);
 	return puntero;
@@ -340,7 +343,8 @@ void* recibir_puntero(int socket_cliente){
 
 t_pcb pcb_deserializar(int socket_cliente){
     t_pcb pcb;
-	void* stream=recibir_buffer(&pcb, socket_cliente);
+	int size;
+	void* stream=recibir_buffer(&size, socket_cliente);
     memcpy(&(pcb),stream, sizeof(t_pcb));
     free(stream);
     return pcb;
