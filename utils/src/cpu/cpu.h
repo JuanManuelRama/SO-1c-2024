@@ -45,6 +45,7 @@ extern pthread_mutex_t mIntr;
 extern t_pcb pcb;
 extern int seVa;
 extern int memoria;
+extern int tam_pag;
 extern char* aEnviar;
 extern t_queue *cIntr;
 
@@ -79,6 +80,9 @@ void interrupciones(int);
  int get_cod_instruccion(char*);
 
  void interactuar_dispatch(int);
+
+int MMU(int);
+int cuanto_leo(char*);
 
 //CICLO DE INSTRUCCIÓN
  /**

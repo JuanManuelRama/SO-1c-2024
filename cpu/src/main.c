@@ -8,6 +8,7 @@ t_queue *cIntr;
 pthread_mutex_t mIntr;
 int seVa;
 int memoria;
+int tam_pag;
 char* aEnviar;
 
 

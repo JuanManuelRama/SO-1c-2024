@@ -12,6 +12,42 @@ void finalizar_cpu(){
 	exit(0);
 }
 
+int MMU(int DL){
+    int pag = DL/tam_pag;
+    int desplazamiento = DL - pag*tam_pag;
+    if(desplazamiento>tam_pag)
+        return -1;
+    enviar_int(pag, memoria, PAGINA);
+    if(recibir_operacion(memoria)!=PAGINA)
+        log_error(logger, "La memoria me envió cualquier cosa...");
+    int marco = recibir_int(memoria);
+    int DF = marco*tam_pag + desplazamiento;
+    return DF;
+}
+
+int cuanto_leo(char* registro){
+     if(!strcmp(registro, "AX")){
+        return 1;
+    } else if(!strcmp(registro, "BX")){
+        return 1;
+    } else if(!strcmp(registro, "CX")){
+        return 1;
+    } else if(!strcmp(registro, "DX")){
+        return 1;
+    } else if(!strcmp(registro, "EAX")){
+        return 4;
+    } else if(!strcmp(registro, "EBX")){
+        return 4;
+    } else if(!strcmp(registro, "ECX")){
+        return 4;
+    } else if(!strcmp(registro, "EDX")){
+        return 4;
+    }else{
+        return -1;
+    }
+}
+
+
 void interrupciones(int socket_interrupciones){
     int cod_op;
     sInterrupcion* interrupcion;
