@@ -183,7 +183,18 @@ void execute(sInstruccion instruccion){
         case EXIT:
             exe_EXIT();
             break;
-
+        case MOV_IN:
+            exe_MOVE_IN(instruccion.componentes[1], instruccion.componentes[2]);
+            break;
+        case MOV_OUT:
+            exe_MOVE_OUT(instruccion.componentes[1], instruccion.componentes[2]);
+            break;
+        case RESIZE:
+            exe_RESIZE(atoi(instruccion.componentes[1]));
+            break;
+        case COPY_STRING:
+            exe_COPY_STRING(atoi(instruccion.componentes[1]));
+            break;
 	}
 }
 
@@ -191,7 +202,7 @@ void execute(sInstruccion instruccion){
 int get_cod_instruccion(char* instruccion){
     if(!strcmp(instruccion, "SUM"))
         return SUM;
-    else if(!strcmp(instruccion, "SET"))  //FALTAN CASI TODOS 
+    else if(!strcmp(instruccion, "SET"))
         return SET;
     else if (!strcmp(instruccion, "SUB"))
         return SUB;
@@ -209,6 +220,14 @@ int get_cod_instruccion(char* instruccion){
         return WAIT;
     else if (!strcmp(instruccion, "SIGNAL"))
         return SIGNAL;
+    else if (!strcmp(instruccion,"MOV_IN"))
+        return MOV_IN;
+    else if (!strcmp(instruccion,"MOV_OUT"))
+        return MOV_OUT;
+    else if (!strcmp(instruccion,"RESIZE"))
+        return RESIZE;
+    else if (!strcmp(instruccion,"COPY_STRING"))
+        return COPY_STRING;
     return -1;
 }
 
@@ -259,6 +278,73 @@ void exe_IO (char** componentes){
         i++;
     }
     seVa=IO;
+}
+
+void exe_MOVE_IN(char* reg_datos, char* reg_direccion){
+    int DF = MMU(get_registro(reg_direccion));
+    int leer = cuanto_leo(reg_datos);
+
+    if(DF == -1){
+        seVa=SEG_FAULT;
+        return 0;
+    }
+
+    enviar_int(DF, memoria, LECTURA);
+    enviar_operacion(leer, memoria);
+
+    if(leer == 4){
+        set_registro(reg_datos,recibir_int(memoria));
+    }
+    else{
+        set_registro(reg_datos,recibir_byte(memoria));
+    }
+}
+
+void exe_MOVE_OUT(char* reg_direccion, char* reg_datos){
+    int DF = MMU(get_registro(reg_direccion));
+    int escribir = cuanto_leo(reg_datos);
+    int valor = get_registro(reg_datos);
+
+    if(DF == -1){
+        seVa=SEG_FAULT;
+        return 0;
+    }
+
+    enviar_int(DF, memoria, ESCRITURA);
+    enviar_operacion(escribir, memoria);
+    enviar_operacion(valor,memoria);
+}
+
+void exe_RESIZE(int tamanio){
+    enviar_operacion(TAM_PROCESO,memoria);
+    int tamanioActual = recibir_operacion(memoria);
+
+    if(tamanioActual == tamanio){
+        return;
+    } else if(tamanioActual > tamanio){
+        enviar_int((tamanioActual-tamanio)/tam_pag,MENOS_PAGINA,memoria);
+    }
+    else{
+        enviar_int((tamanio-tamanioActual)/tam_pag,MAS_PAGINA,memoria);
+    }
+}
+
+void exe_COPY_STRING(int tamanio){
+    int DF = MMU(pcb.registros.SI);
+    int size;
+
+    enviar_int(DF, memoria, LECTURA_STRING);
+    char* cadenaCompleta = recibir_buffer(&size,memoria);
+
+    DF = MMU(pcb.registros.DI);
+   
+    char* cadena = malloc(tamanio+1);
+    strncpy(cadena,cadenaCompleta,tamanio);
+    enviar_string(cadena,memoria,ESCRITURA_STRING);
+    enviar_operacion(DF,memoria);
+
+    free (cadenaCompleta);
+    free (cadena);
 }
 
 //LOGS OBLIGATORIOS

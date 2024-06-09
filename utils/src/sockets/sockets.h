@@ -34,7 +34,12 @@ typedef enum
 	OOM,
 	IO,
 	IO_FAILURE,
-	IO_SUCCESS
+	IO_SUCCESS,
+	SEG_FAULT,
+	LECTURA,
+	ESCRITURA,
+	LECTURA_STRING,
+	ESCRITURA_STRING
 }op_code;
 
 typedef struct
