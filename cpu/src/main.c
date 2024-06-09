@@ -35,7 +35,9 @@ int main() {
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar("PUERTO_MEMORIA");
 	memoria = crear_conexion(ip, puerto, "Memoria"); 
+	tam_pag = recibir_operacion(memoria);
 	enviar_mensaje("Saludos desde la cpu", memoria);
+
 
 	//tambien sera servidor, con el kernel como cliente
 	puerto = buscar("PUERTO_ESCUCHA_DISPATCH");
