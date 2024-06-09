@@ -7,6 +7,7 @@ void recibir_proceso(int socket_cliente){
 		proceso->pid = recibir_operacion(socket_cliente);
 		proceso->instrucciones = cargar_proceso(path);
 		free (path);
+		sleep(RETARDO);
 		if(proceso->instrucciones)
 			proceso->paginas = nuevaTablaPaginas(proceso->pid);
 		else
@@ -61,6 +62,18 @@ void interactuar_cpu(int cpu){
 			break;
 		case TAM_PROCESO:
 			tamanio_proceso(cpu);
+			break;
+		case LECTURA:
+			leer(cpu);
+			break;
+		case ESCRITURA:
+			escribir(cpu);
+			break;
+		case LECTURA_STRING:
+			leer_string(cpu);
+			break;	
+		case ESCRITURA_STRING:
+			escribir_string(cpu);
 			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
@@ -129,6 +142,12 @@ void inicializar_memoria(){
 	CANT_PAG = TAM_MEMORIA/TAM_PAG;
 	memoria_contigua = malloc(TAM_MEMORIA);
 	bitmap = bitarray_create(malloc(CANT_PAG/8), CANT_PAG/8);
+	inicializar_bitmap();
+}
+
+void inicializar_bitmap(){
+	for(int i = 0; i < CANT_PAG; i++)
+		bitarray_clean_bit(bitmap, i);
 }
 
 char** cargar_proceso(char* nombreArchivo){
@@ -191,9 +210,14 @@ void traducir_pagina(int cpu){
 
 void aniadir_paginas (int cpu){
 	int paginas = recibir_int(cpu);
-	int i = 0;
+	int tamActual = tam_proc();
+	int tamNuevo = tamActual + paginas*TAM_PAG;
+	log_camTam(proceso->pid, tamActual, "Ampliar", tamNuevo);
+	int i = tamActual/TAM_PAG;
 	int marco;
-	while (i < paginas){
+
+	while (paginas){
+		sleep(RETARDO);
 		if((marco = buscar_marco())==(-1)){
 			enviar_operacion(cpu, OOM);
 			return;
@@ -201,7 +225,9 @@ void aniadir_paginas (int cpu){
 		proceso->paginas[i].macro = marco;
 		proceso->paginas[i].estado = true;
 		i++;
+		paginas--;
 	}
+	log_camTam(proceso->pid, tamActual, "Ampliar", tamNuevo);
 	enviar_operacion(cpu, 1);
 }
 
@@ -218,25 +244,72 @@ int buscar_marco (){
 }
 
 void tamanio_proceso(int socket_cliente){
-	int i;
-	for(i = 0; i<CANT_PAG && proceso->paginas[i].estado; i++);
-	enviar_operacion(socket_cliente, i*TAM_PAG);
+	int tamanio = tam_proc();
+	enviar_operacion(socket_cliente, tamanio);
 }
 
+int tam_proc(){
+	int i = 0;
+	while (i < CANT_PAG && proceso->paginas[i].estado)
+		i++;
+	return i*TAM_PAG;
+}
 
 
 void sacar_paginas (int cpu){
 	int paginas = recibir_int(cpu);
-	int i = CANT_PAG;
-	while (!proceso->paginas[i].estado)
-		i--;
-	while (i >paginas){
+	int tamActual = tam_proc();
+	int tamNuevo = tamActual - paginas*TAM_PAG;	
+	int i = tamActual/TAM_PAG-1;
+	while (paginas){
 		bitarray_clean_bit(bitmap, proceso->paginas[i].macro);
 		proceso->paginas[i].estado = false;
 		i--;
+		paginas--;
+	}
+	log_camTam(proceso->pid, tamActual, "Reducir", tamNuevo);
+	sleep(RETARDO);
+}
+
+void leer(int socket_cliente){
+	int DF = recibir_int(socket_cliente);
+	int tamanio = recibir_int(socket_cliente);
+	if(tamanio == 4){
+		int* valor = memoria_contigua + DF;
+		enviar_int(*valor, socket_cliente, LECTURA);
+	}
+	else{
+		uint8_t* valor = memoria_contigua + DF;
+		enviar_int(*valor, socket_cliente, LECTURA);
 	}
 }
 
+void escribir(int socket_cliente){
+	int DF = recibir_int(socket_cliente);
+	int tamanio = recibir_int(socket_cliente);
+	if(tamanio == 4){
+		int valor = recibir_int(socket_cliente);
+		memcpy(memoria_contigua + DF, &valor, tamanio);
+	}
+	else{
+		uint8_t valor = recibir_int(socket_cliente);
+		memcpy(memoria_contigua + DF, &valor, tamanio);
+	}
+}
+
+void leer_string(int socket_cliente){
+	int DF = recibir_int(socket_cliente);
+	char* cadena = memoria_contigua + DF;
+	enviar_string(cadena, socket_cliente, LECTURA_STRING);
+}
+
+void escribir_string(int socket_cliente){
+	int DF = recibir_int(socket_cliente);
+	int size;
+	char* cadena = recibir_buffer(&size, socket_cliente);
+	strcpy(memoria_contigua + DF, cadena);
+	free(cadena);
+}
 
 
 void finalizar_memoria(){
@@ -256,8 +329,8 @@ void liberar_proceso(int socket_cliente){
 	free(proceso->paginas);
 	log_TdP(proceso->pid);
 	}
-
 	free(proceso);
+	sleep(RETARDO);
 }
 
 // LOGS OBLIGATORIOS
@@ -267,4 +340,8 @@ void log_TdP(int pid){
 
 void log_pagina(int pid, int pagina, int macro){
 	log_info(logger, "PID: %d - Pagina: %d - Marco: %d", pid, pagina, macro);
+}
+
+void log_camTam(int pid, int tamActual, char* cambio, int tamNuevo){
+	log_info(logger, "PID: %d - Tamaño Actual: %d - Tamaño a %s: %d", pid, tamActual, cambio, tamNuevo);
 }

@@ -132,6 +132,7 @@ void crear_proceso (char* path){
 	sProceso* proceso = malloc(sizeof (sProceso));
 	proceso->pcb.estado=NEW;
 	proceso->pcb.pc=0;
+	proceso->pcb.registros.PC=0;
 	proceso->pcb.quantum=quantum;
 	proceso->multifuncion=path;
 	strcpy(proceso->multifuncion, path);

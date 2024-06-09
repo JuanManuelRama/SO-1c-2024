@@ -286,17 +286,20 @@ void exe_MOVE_IN(char* reg_datos, char* reg_direccion){
 
     if(DF == -1){
         seVa=SEG_FAULT;
-        return 0;
+        return;
     }
 
     enviar_int(DF, memoria, LECTURA);
-    enviar_operacion(leer, memoria);
-
+    enviar_operacion(memoria, leer);
+    if(recibir_operacion(memoria)!=LECTURA){
+        log_error(logger, "La memoria me envió cualquier cosa...");
+        return;
+    }
     if(leer == 4){
         set_registro(reg_datos,recibir_int(memoria));
     }
     else{
-        set_registro(reg_datos,recibir_byte(memoria));
+        set_registro(reg_datos,recibir_int(memoria));
     }
 }
 
@@ -307,25 +310,27 @@ void exe_MOVE_OUT(char* reg_direccion, char* reg_datos){
 
     if(DF == -1){
         seVa=SEG_FAULT;
-        return 0;
+        return;
     }
 
     enviar_int(DF, memoria, ESCRITURA);
-    enviar_operacion(escribir, memoria);
-    enviar_operacion(valor,memoria);
+    enviar_operacion(memoria, escribir);
+    enviar_operacion(memoria, valor);
 }
 
 void exe_RESIZE(int tamanio){
-    enviar_operacion(TAM_PROCESO,memoria);
+    enviar_operacion(memoria, TAM_PROCESO);
     int tamanioActual = recibir_operacion(memoria);
 
     if(tamanioActual == tamanio){
         return;
     } else if(tamanioActual > tamanio){
-        enviar_int((tamanioActual-tamanio)/tam_pag,MENOS_PAGINA,memoria);
+        enviar_int((tamanioActual-tamanio)/tam_pag,memoria, MENOS_PAGINA);
     }
     else{
-        enviar_int((tamanio-tamanioActual)/tam_pag,MAS_PAGINA,memoria);
+        enviar_int((tamanio-tamanioActual)/tam_pag,memoria, MAS_PAGINA);
+        if(recibir_operacion(memoria) == OOM)
+            seVa=OOM;
     }
 }
 
@@ -334,6 +339,10 @@ void exe_COPY_STRING(int tamanio){
     int size;
 
     enviar_int(DF, memoria, LECTURA_STRING);
+    if(recibir_operacion(memoria)!=LECTURA_STRING){
+        log_error(logger, "La memoria me envió cualquier cosa...");
+        return;
+    }
     char* cadenaCompleta = recibir_buffer(&size,memoria);
 
     DF = MMU(pcb.registros.DI);
@@ -341,7 +350,7 @@ void exe_COPY_STRING(int tamanio){
     char* cadena = malloc(tamanio+1);
     strncpy(cadena,cadenaCompleta,tamanio);
     enviar_string(cadena,memoria,ESCRITURA_STRING);
-    enviar_operacion(DF,memoria);
+    enviar_operacion(memoria, DF);
 
     free (cadenaCompleta);
     free (cadena);
