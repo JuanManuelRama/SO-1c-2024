@@ -201,8 +201,8 @@ t_pag* nuevaTablaPaginas (int pid){
 void traducir_pagina(int cpu){
 	int pagina = recibir_int(cpu);
 	if(proceso->paginas[pagina].estado){
-		log_pagina (proceso->pid, pagina, proceso->paginas[pagina].macro);
-		enviar_int(proceso->paginas[pagina].macro, cpu, PAGINA);
+		log_pagina (proceso->pid, pagina, proceso->paginas[pagina].marco);
+		enviar_int(proceso->paginas[pagina].marco, cpu, PAGINA);
 	}
 	else
 		enviar_operacion(cpu, -1);	
@@ -217,17 +217,16 @@ void aniadir_paginas (int cpu){
 	int marco;
 
 	while (paginas){
-		sleep(RETARDO);
 		if((marco = buscar_marco())==(-1)){
 			enviar_operacion(cpu, OOM);
 			return;
 		}
-		proceso->paginas[i].macro = marco;
+		proceso->paginas[i].marco = marco;
 		proceso->paginas[i].estado = true;
 		i++;
 		paginas--;
 	}
-	log_camTam(proceso->pid, tamActual, "Ampliar", tamNuevo);
+	sleep(RETARDO);
 	enviar_operacion(cpu, 1);
 }
 
@@ -262,7 +261,7 @@ void sacar_paginas (int cpu){
 	int tamNuevo = tamActual - paginas*TAM_PAG;	
 	int i = tamActual/TAM_PAG-1;
 	while (paginas){
-		bitarray_clean_bit(bitmap, proceso->paginas[i].macro);
+		bitarray_clean_bit(bitmap, proceso->paginas[i].marco);
 		proceso->paginas[i].estado = false;
 		i--;
 		paginas--;
@@ -275,12 +274,14 @@ void leer(int socket_cliente){
 	int DF = recibir_int(socket_cliente);
 	int tamanio = recibir_int(socket_cliente);
 	if(tamanio == 4){
-		int* valor = memoria_contigua + DF;
-		enviar_int(*valor, socket_cliente, LECTURA);
+		uint32_t valor;
+		memcpy(&valor, memoria_contigua + DF, 4);
+		enviar_int(valor, socket_cliente, LECTURA);
 	}
 	else{
-		uint8_t* valor = memoria_contigua + DF;
-		enviar_int(*valor, socket_cliente, LECTURA);
+		uint8_t valor;
+		memcpy(&valor, memoria_contigua + DF, 1);
+		enviar_int(valor, socket_cliente, LECTURA);
 	}
 }
 
@@ -288,7 +289,7 @@ void escribir(int socket_cliente){
 	int DF = recibir_int(socket_cliente);
 	int tamanio = recibir_int(socket_cliente);
 	if(tamanio == 4){
-		int valor = recibir_int(socket_cliente);
+		uint32_t valor = recibir_int(socket_cliente);
 		memcpy(memoria_contigua + DF, &valor, tamanio);
 	}
 	else{
@@ -323,11 +324,11 @@ void finalizar_memoria(){
 void liberar_proceso(int socket_cliente){
 	t_proceso* proceso=recibir_puntero(socket_cliente);
 	if(proceso){
-	string_array_destroy(proceso->instrucciones);
-	for(int i = 0; i<CANT_PAG && proceso->paginas[i].estado; i++)
-		bitarray_clean_bit(bitmap, proceso->paginas[i].macro);
-	free(proceso->paginas);
-	log_TdP(proceso->pid);
+		string_array_destroy(proceso->instrucciones);
+		for(int i = 0; i<CANT_PAG && proceso->paginas[i].estado; i++)
+			bitarray_clean_bit(bitmap, proceso->paginas[i].marco);
+		free(proceso->paginas);
+		log_TdP(proceso->pid);
 	}
 	free(proceso);
 	sleep(RETARDO);
@@ -338,8 +339,8 @@ void log_TdP(int pid){
 	log_info(logger, "PID: %d - Tamaño: %d", pid, CANT_PAG);
 }
 
-void log_pagina(int pid, int pagina, int macro){
-	log_info(logger, "PID: %d - Pagina: %d - Marco: %d", pid, pagina, macro);
+void log_pagina(int pid, int pagina, int marco){
+	log_info(logger, "PID: %d - Pagina: %d - Marco: %d", pid, pagina, marco);
 }
 
 void log_camTam(int pid, int tamActual, char* cambio, int tamNuevo){

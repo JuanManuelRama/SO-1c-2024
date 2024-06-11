@@ -23,7 +23,7 @@ typedef struct {
 } t_instruccion;
 
 typedef struct {
-	int macro;
+	int marco;
 	bool estado;
 }t_pag;
 

@@ -295,17 +295,12 @@ void exe_MOVE_IN(char* reg_datos, char* reg_direccion){
         log_error(logger, "La memoria me envió cualquier cosa...");
         return;
     }
-    if(leer == 4){
-        set_registro(reg_datos,recibir_int(memoria));
-    }
-    else{
-        set_registro(reg_datos,recibir_int(memoria));
-    }
+    set_registro(reg_datos,recibir_int(memoria));
 }
 
 void exe_MOVE_OUT(char* reg_direccion, char* reg_datos){
     int DF = MMU(get_registro(reg_direccion));
-    int escribir = cuanto_leo(reg_datos);
+    int cantBytes = cuanto_leo(reg_datos);
     int valor = get_registro(reg_datos);
 
     if(DF == -1){
@@ -314,7 +309,7 @@ void exe_MOVE_OUT(char* reg_direccion, char* reg_datos){
     }
 
     enviar_int(DF, memoria, ESCRITURA);
-    enviar_operacion(memoria, escribir);
+    enviar_operacion(memoria, cantBytes);
     enviar_operacion(memoria, valor);
 }
 
