@@ -14,6 +14,7 @@ typedef enum{
 typedef enum{
 	NEW,
 	READY,
+	READY_PLUS,
 	RUNNING,
 	BLOCKED,
 	FINISHED

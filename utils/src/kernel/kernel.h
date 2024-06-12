@@ -6,17 +6,21 @@
 #include <commons/string.h>
 #include <readline/readline.h>
 #include <commons/collections/queue.h>
+#include <time.h>
+#include <unistd.h>
 #include <semaphore.h>
 
 extern t_log* logger;
 extern t_config* config;
 extern t_queue* cNEW;
 extern t_queue* cREADY;
+extern t_queue* cREADY_PLUS; // usado para VRR
 extern t_queue* cEXIT;
 extern t_list* lBlocked;
 extern t_list* lista_conexiones_IO;
 extern pthread_mutex_t mNEW;
 extern pthread_mutex_t mREADY;
+extern pthread_mutex_t mREADY_PLUS; // usado para VRR
 extern pthread_mutex_t mRUNNING;
 extern pthread_mutex_t mBLOCKED;
 extern pthread_mutex_t mEXIT;
@@ -34,6 +38,7 @@ extern int quantum;
 extern int kernel_servidor;
 extern int pidRunning;
 extern bool planificacion_activa;
+extern bool planiEsVrr; // vrr (se usa para ver a donde mandas a un proceso q vuelve de IO, ready/ready+)
 
 typedef struct{
     t_pcb pcb;
@@ -129,6 +134,8 @@ void planificadorCP_FIFO();
 *@brief		Envía y recibe procesos de la CPU segun RR
 */
 void planificadorCP_RR();
+
+void planificadorCP_VRR();
 
 /**
 *@fn 		PLP

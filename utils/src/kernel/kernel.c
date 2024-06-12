@@ -6,6 +6,7 @@ void inicializar_kernel(){
 	config = config_create("kernel.config");
 	cNEW = queue_create();
 	cREADY = queue_create();
+	cREADY_PLUS = queue_create(); // vrr
 	lBlocked = list_create();
 	cEXIT = queue_create();
 	multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
@@ -13,6 +14,7 @@ void inicializar_kernel(){
 	idPCB = 1;
 	pthread_mutex_init (&mNEW, NULL);
 	pthread_mutex_init(&mREADY, NULL);
+	pthread_mutex_init(&mREADY_PLUS, NULL); // vrr (global? o inicializamos solo cuando plani = vrr?)
 	pthread_mutex_init(&mREADY, NULL);
 	pthread_mutex_init(&mBLOCKED, NULL);
 	pthread_mutex_init (&mEXIT, NULL);
@@ -32,11 +34,13 @@ void finalizar_kernel(){
 	liberar_conexion(conexion_cpu_interrupt);
 	queue_destroy(cNEW);
 	queue_destroy(cREADY);
+	queue_destroy(cREADY_PLUS);
 	list_destroy(lBlocked);
 	queue_destroy(cEXIT);
 	list_destroy(lista_conexiones_IO);
 	pthread_mutex_destroy(&mNEW);
 	pthread_mutex_destroy(&mREADY);
+	pthread_mutex_destroy(&mREADY_PLUS);	
 	pthread_mutex_destroy(&mRUNNING);
 	pthread_mutex_destroy(&mBLOCKED);
 	pthread_mutex_destroy(&mEXIT);
@@ -72,6 +76,8 @@ char* get_estado(int estado){
 			return "NEW";
 		case READY:
 			return "READY";
+		case READY_PLUS:
+			return "READY PLUS";
 		case RUNNING:
 			return "RUNNING";
 		case BLOCKED:
@@ -328,7 +334,7 @@ void despachar_a_running(sProceso* proceso) {
 }
 
 void setear_timer(sProceso* proceso) {
-	sleep(proceso->pcb.quantum / 1000); // divido para pasar de milisegs a segs (es lo q toma sleep)
+	usleep(proceso->pcb.quantum * 1000); // divido para pasar de milisegs a microsegs (es lo q toma usleep)
 	enviar_int (proceso->pcb.pid, conexion_cpu_interrupt, FIN_DE_QUANTUM);
 }
 
@@ -397,6 +403,100 @@ void planificadorCP_RR(){
 				matadero(proceso, "Envio codigo de salida no valido");
 				break;
 		}
+	}
+}
+
+void planificadorCP_VRR() {
+	sProceso* proceso;
+	int motivo;
+	int size;
+	pthread_t hilo_IO; //usamos para crearle un hilo a cada instancia de IO
+	pthread_t hilo_timer;
+	struct timespec tiempoInicio;
+	struct timespec tiempoVuelta;
+
+	while (1) {
+		sem_wait(&semPCP);
+
+		if (!queue_is_empty(cREADY_PLUS)) {
+			// prioridad a los de ready plus
+			pthread_mutex_lock(&mREADY_PLUS);
+			proceso = queue_pop(cREADY_PLUS); 
+			pthread_mutex_unlock(&mREADY_PLUS);
+
+			log_cambioEstado(proceso->pcb.pid, READY_PLUS, RUNNING);
+		} else {
+			pthread_mutex_lock(&mREADY);
+			proceso = queue_pop(cREADY); 
+			pthread_mutex_unlock(&mREADY);
+
+			log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
+		}
+
+
+		proceso->pcb.estado=RUNNING;
+
+		pthread_mutex_lock(&mRUNNING);
+		pidRunning = proceso->pcb.pid;
+		pthread_mutex_unlock(&mRUNNING);
+
+		enviar_pcb(proceso->pcb, conexion_cpu_dispatch, PCB); // lo mando a correr
+		clock_gettime(CLOCK_MONOTONIC_RAW, &tiempoInicio); // marco la hora q lo mande a correr
+
+		pthread_create(&hilo_timer, NULL, setear_timer, (void *) proceso); // seteo timer (lo que le quede esta en su pcb)
+
+		// me quedo esperando a que vuelva
+		motivo = recibir_operacion(conexion_cpu_dispatch);
+		proceso->pcb=pcb_deserializar(conexion_cpu_dispatch);
+
+		pthread_mutex_lock(&mRUNNING);
+		pidRunning = -1;
+		pthread_mutex_unlock(&mRUNNING);
+
+		switch(motivo){
+			case FINALIZACION:
+				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
+				matadero(proceso, "Finalizo");
+				break;
+			case IO:
+				clock_gettime(CLOCK_MONOTONIC_RAW, &tiempoInicio); // marco la hora q volvio
+
+				pthread_cancel(hilo_timer); // cancelo el hilo de timer pq volvio antes de tiempo
+
+				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
+				proceso->pcb.estado = BLOCKED;
+				proceso->pcb.quantum = (tiempoVuelta.tv_nsec - tiempoInicio.tv_nsec) * 1000; 
+				// actualizo el quantum restante
+				// multiplico por mil para pasar de nanosec a milisec
+
+				if(recibir_operacion(conexion_cpu_dispatch) != IO)
+					matadero(proceso, "No coinciden los códigos de salida");
+
+				proceso->multifuncion = recibir_buffer(&size, conexion_cpu_dispatch);
+
+				pthread_mutex_lock(&mBLOCKED);
+				list_add(lBlocked, proceso);
+				pthread_mutex_unlock(&mBLOCKED);
+				
+				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
+				break;
+			case FIN_DE_QUANTUM:
+				log_finDeQuantum(proceso->pcb.pid);
+				log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
+				proceso->pcb.estado=READY;
+				proceso->pcb.quantum=quantum; // le "recargo" el quantum para la prox vuelta
+
+				pthread_mutex_lock(&mREADY);
+				queue_push(cREADY, proceso);
+				log_ingresoReady(cREADY->elements, "Normal");
+				pthread_mutex_unlock(&mREADY);
+
+				sem_post(&semPCP); // pasa a estar esperando, aviso al dispatcher
+				break;
+			default:
+				matadero(proceso, "Envio codigo de salida no valido");
+				break;
+		}		
 	}
 }
 
@@ -488,18 +588,34 @@ void atender_solicitud_IO(sProceso* proceso){
 		return;
 	}
 	
-	// REPETIDO DE PLP: LO VOLVEMOS A READY DESPUES DE SU IO
+	// LO VOLVEMOS A READY DESPUES DE SU IO
+
+	// lo sacamos de blocked
 	pthread_mutex_lock(&mBLOCKED);
 	list_remove_element(lBlocked, proceso);
 	pthread_mutex_unlock(&mBLOCKED);
-	log_cambioEstado(proceso->pcb.pid, BLOCKED, READY);
-	proceso->pcb.estado=READY;
+
 	free(proceso->multifuncion);
-	pthread_mutex_lock(&mREADY);
-	queue_push(cREADY, proceso);
-	log_ingresoReady(cREADY->elements, "Normal");
-	pthread_mutex_unlock(&mREADY);
-	sem_post(&semPCP); //avisamos al dispatcher q volvio a ready
+
+	if (!planiEsVrr) {
+		log_cambioEstado(proceso->pcb.pid, BLOCKED, READY);
+		proceso->pcb.estado=READY;
+
+		pthread_mutex_lock(&mREADY);
+		queue_push(cREADY, proceso);
+		log_ingresoReady(cREADY->elements, "Normal");
+		pthread_mutex_unlock(&mREADY);
+	} else {
+		log_cambioEstado(proceso->pcb.pid, BLOCKED, READY_PLUS);
+		proceso->pcb.estado=READY_PLUS;
+
+		pthread_mutex_lock(&mREADY_PLUS);
+		queue_push(cREADY_PLUS, proceso);
+		log_ingresoReady(cREADY_PLUS->elements, "Prioridad");
+		pthread_mutex_unlock(&mREADY_PLUS);
+	}
+
+	sem_post(&semPCP); //avisamos al dispatcher q hay proceso listo
 	string_array_destroy(instruccionIO);
 }
 

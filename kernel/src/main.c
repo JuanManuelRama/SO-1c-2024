@@ -6,9 +6,11 @@ t_config* config;
 t_queue* cNEW;
 t_queue* cREADY;
 t_queue* cEXIT;
+t_queue* cREADY_PLUS; // usado para VRR
 t_list* lBlocked;
 pthread_mutex_t mNEW;
 pthread_mutex_t mREADY;
+pthread_mutex_t mREADY_PLUS; // usado para VRR
 pthread_mutex_t mRUNNING;
 pthread_mutex_t mBLOCKED;
 pthread_mutex_t mEXIT;
@@ -26,10 +28,9 @@ int multiprogramacion;
 int quantum;
 int kernel_servidor;
 bool planificacion_activa;
+bool planiEsVrr; // medio tosco el flag global, se puede pensar otra forma (se usa para vrr)
 int pidRunning;
 t_list *lista_conexiones_IO;
-
-// de prueba, despues se borra.
 
 
 int main() {
@@ -37,6 +38,7 @@ int main() {
 	int socket_IO;
 	char* ip;
 	char* puerto;
+	char* algoritmoCortoPlazo;
 	pthread_t hilo_IO;
 	pthread_t hilo_pcp;
 	pthread_t hilo_plp;
@@ -66,7 +68,18 @@ int main() {
 
 	pthread_create(&hilo_plp, NULL, PLP, NULL);
 	pthread_create(&hilo_carnicero, NULL, carnicero, NULL);
-	pthread_create(&hilo_pcp, NULL, planificadorCP_RR, NULL);
+
+	algoritmoCortoPlazo = buscar("ALGORITMO_PLANIFICACION");
+	planiEsVrr = false;
+	if (!strcmp(algoritmoCortoPlazo, "FIFO")) {
+		pthread_create(&hilo_pcp, NULL, planificadorCP_FIFO, NULL);
+	} else if (!strcmp(algoritmoCortoPlazo, "RR")) {
+		pthread_create(&hilo_pcp, NULL, planificadorCP_RR, NULL);
+	} else {
+		planiEsVrr = true;
+		pthread_create(&hilo_pcp, NULL, planificadorCP_VRR, NULL);
+	}
+
 
 	char* buffer;
 	while(1){
