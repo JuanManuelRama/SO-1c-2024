@@ -272,7 +272,7 @@ void sacar_paginas (int cpu){
 
 void leer(int socket_cliente){
 	int DF = recibir_int(socket_cliente);
-	int tamanio = recibir_int(socket_cliente);
+	int tamanio = recibir_operacion(socket_cliente);
 	if(tamanio == 4){
 		uint32_t valor;
 		memcpy(&valor, memoria_contigua + DF, 4);
@@ -287,7 +287,7 @@ void leer(int socket_cliente){
 
 void escribir(int socket_cliente){
 	int DF = recibir_int(socket_cliente);
-	int tamanio = recibir_int(socket_cliente);
+	int tamanio = recibir_operacion(socket_cliente);
 	if(tamanio == 4){
 		uint32_t valor = recibir_int(socket_cliente);
 		memcpy(memoria_contigua + DF, &valor, tamanio);

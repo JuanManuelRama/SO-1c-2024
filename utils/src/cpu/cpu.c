@@ -309,8 +309,7 @@ void exe_MOVE_OUT(char* reg_direccion, char* reg_datos){
     }
 
     enviar_int(DF, memoria, ESCRITURA);
-    enviar_operacion(memoria, cantBytes);
-    enviar_operacion(memoria, valor);
+    enviar_int(valor, memoria, cantBytes);
 }
 
 void exe_RESIZE(int tamanio){
