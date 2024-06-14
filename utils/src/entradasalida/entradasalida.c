@@ -18,7 +18,9 @@ void crear_interfaz_generica(char* nombre) {
 			if (!strcmp(instruccion[0], "IO_GEN_SLEEP")){
 				
 				int cant_unidades_trabajo = atoi(instruccion[2]);
-				sleep(cant_unidades_trabajo*unidad_trabajo/1000);
+				usleep(cant_unidades_trabajo*unidad_trabajo * 1000);
+				log_info(logger, "Me dormi %d milisegs", cant_unidades_trabajo*unidad_trabajo);
+				// multiplicamos x mil para pasar de milisec a microsec (q es lo q toma usleep)
 
 				log_info(logger, "Resultado de %s: io_success", nombre);
 				enviar_operacion(socket_kernel, IO_SUCCESS);
