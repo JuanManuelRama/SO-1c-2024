@@ -260,12 +260,12 @@ void exe_EXIT(){
 
 void exe_WAIT(char* recurso){
     strcpy (aEnviar, recurso);
-    seVa=WAIT;
+    seVa=PEDIRRECURSO;
 }
 
 void exe_SIGNAL(char* recurso){
     strcpy (aEnviar, recurso);
-    seVa=SIGNAL;
+    seVa=DARRECURSO;
 }
 
 void exe_IO (char** componentes){

@@ -84,7 +84,7 @@ int main() {
 			pthread_mutex_unlock(&mIntr);
 		}
 		enviar_pcb(pcb, socket_dispatch, seVa);
-		if(seVa == IO || seVa == WAIT || seVa == SIGNAL)
+		if(seVa == IO || seVa == DARRECURSO || seVa == PEDIRRECURSO)
 			enviar_string(aEnviar, socket_dispatch, seVa);
 		seVa=false;
 	}

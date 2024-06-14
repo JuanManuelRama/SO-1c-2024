@@ -19,6 +19,7 @@ int iniciar_servidor(char* puerto, char* modulo)
 							servinfo->ai_protocol);
 
 	// Asociamos el socket a un puerto
+	setsockopt(socket_servidor, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 	bind(socket_servidor, servinfo->ai_addr, servinfo->ai_addrlen);
 
 	// Escuchamos las conexiones entrantes
@@ -35,7 +36,9 @@ int esperar_cliente(char* cliente, int socket_servidor)
 {
     // Aceptamos un nuevo cliente
 	log_info(logger, "Esperando a %s", cliente);
-	int socket_cliente = accept(socket_servidor, NULL, NULL);
+	int socket_cliente;
+	setsockopt(socket_servidor, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+	socket_cliente = accept(socket_servidor, NULL, NULL);
 	log_info(logger, "Se conecto %s", cliente);
 
 	return socket_cliente;
@@ -126,6 +129,7 @@ int crear_conexion(char *ip, char* puerto, char* servidor)
                          server_info->ai_protocol);
 
 	// Ahora que tenemos el socket, vamos a conectarlo
+	setsockopt(socket_cliente, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 	connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
 
 	freeaddrinfo(server_info);
