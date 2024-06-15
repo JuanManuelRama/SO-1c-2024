@@ -334,7 +334,7 @@ void despachar_a_running(sProceso* proceso) {
 }
 
 void setear_timer(sProceso* proceso) {
-	usleep(proceso->pcb.quantum * 1000); // divido para pasar de milisegs a microsegs (es lo q toma usleep)
+	usleep(proceso->pcb.quantum * 1000); // multiplicamos por mil para ir de milisecs a microsecs (lo q toma usleep)
 	enviar_int (proceso->pcb.pid, conexion_cpu_interrupt, FIN_DE_QUANTUM);
 }
 
@@ -459,16 +459,15 @@ void planificadorCP_VRR() {
 				matadero(proceso, "Finalizo");
 				break;
 			case IO:
-				clock_gettime(CLOCK_MONOTONIC_RAW, &tiempoInicio); // marco la hora q volvio
+				clock_gettime(CLOCK_MONOTONIC_RAW, &tiempoVuelta); // marco la hora q volvio
 
 				pthread_cancel(hilo_timer); // cancelo el hilo de timer pq volvio antes de tiempo
 
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
 				proceso->pcb.estado = BLOCKED;
-				proceso->pcb.quantum = (tiempoVuelta.tv_nsec - tiempoInicio.tv_nsec) * 1000; 
+				proceso->pcb.quantum -= (tiempoVuelta.tv_sec - tiempoInicio.tv_sec) * 1000 + (tiempoVuelta.tv_nsec - tiempoInicio.tv_nsec) / 1000000;
 				// actualizo el quantum restante
-				// multiplico por mil para pasar de nanosec a milisec
-
+				
 				if(recibir_operacion(conexion_cpu_dispatch) != IO)
 					matadero(proceso, "No coinciden los códigos de salida");
 
