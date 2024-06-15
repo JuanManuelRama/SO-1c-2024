@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "entradasalida.h": "c",
+        "string.h": "c",
+        "readline.h": "c",
+        "sockets.h": "c",
+        "socket.h": "c",
+        "signal.h": "c",
+        "unistd.h": "c",
+        "netdb.h": "c",
+        "semaphore.h": "c"
+    }
+}
