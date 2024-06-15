@@ -298,6 +298,7 @@ void planificadorCP_FIFO(){
 			case FINALIZACION:
 				matadero(proceso, "Finalizo");
 				break;
+			case IO_STD:
 			case IO:
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
 				proceso->pcb.estado=BLOCKED;
@@ -371,6 +372,7 @@ void planificadorCP_RR(){
 				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
 				matadero(proceso, "Finalizo");
 				break;
+			case IO_STD:
 			case IO:
 				pthread_cancel(hilo_timer);
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
@@ -458,6 +460,7 @@ void planificadorCP_VRR() {
 				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
 				matadero(proceso, "Finalizo");
 				break;
+			case IO_STD:
 			case IO:
 				clock_gettime(CLOCK_MONOTONIC_RAW, &tiempoVuelta); // marco la hora q volvio
 
@@ -534,9 +537,11 @@ void escuchar_conexiones_IO(int socket_server) {
 
 void atender_solicitud_IO(sProceso* proceso){
 	char** instruccionIO = string_n_split(proceso->multifuncion, 3, " ");
+	int tamaño = atoi(instruccionIO[3]);
 	
 	int* vectorDirecciones;
-	if(!strcmp(instruccionIO[0], "IO_STDIN_READ")){
+	int tamañoVector = tamaño/tam_pagina+2;
+	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
 		if (recibir_operacion(conexion_cpu_dispatch) == PAQUETE)
 			vectorDirecciones = recibir_vector(conexion_cpu_dispatch);
 		else
@@ -567,8 +572,8 @@ void atender_solicitud_IO(sProceso* proceso){
 	// le mandamos a la instancia encontrada la operacion
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
 
-	if(!strcmp(instruccionIO[0], "IO_STDIN_READ"))
-		enviar_vector(vectorDirecciones, IO_seleccionada);
+	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE"))
+		enviar_vector(vectorDirecciones, tamañoVector, IO_seleccionada);
 
 	// nos quedamos escuchando la respuesta
 	int codOp = recibir_operacion (IO_seleccionada->socket);

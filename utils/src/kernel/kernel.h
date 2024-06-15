@@ -37,6 +37,7 @@ extern int multiprogramacion;
 extern int quantum;
 extern int kernel_servidor;
 extern int pidRunning;
+extern int tam_pagina;
 extern bool planificacion_activa;
 extern bool planiEsVrr; // vrr (se usa para ver a donde mandas a un proceso q vuelve de IO, ready/ready+)
 

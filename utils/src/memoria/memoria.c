@@ -109,6 +109,7 @@ void escuchar_nuevas_IO (int socket_server){
 	while(1){
 		socket = accept(socket_server, NULL, NULL);
 		if (recibir_operacion(socket) == NUEVA_IO) {
+			enviar_operacion(socket, TAM_PAG);
 			pthread_create(&hilo_IO, NULL, interactuar_IO, (void*)socket);
 			log_info(logger, "Se conecto nueva IO");
 		}
@@ -298,13 +299,31 @@ void escribir(int socket_cliente){
 }
 
 void leer_string(int socket_cliente){
-	int DF = recibir_int(socket_cliente);
-	char* cadena = memoria_contigua + DF;
+	int* direcciones;
+	int i, direccion;
+	char* cadena = string_new();
+	char caracterLeido;
+
+	if(recibir_operacion(socket_cliente)==PAQUETE)
+		direcciones = recibir_vector(socket_cliente);
+	else
+		log_info(logger, "Error en el envio de direcciones");
+
+	direccion=direcciones[0];
+	for(i=0; caracterLeido!='\0'; i++){
+		memcpy(&caracterLeido, memoria_contigua+direccion, 1);
+		strcat(cadena, &caracterLeido);
+		direccion++;
+		if(direccion%TAM_PAG == TAM_PAG-1){
+			direcciones++;
+			direccion=*direcciones;
+		}
+	}
 	enviar_string(cadena, socket_cliente, LECTURA_STRING);
 }
 
 void escribir_string(int socket_cliente){
-	int size, i, j, direccion;
+	int size, i, direccion;
 	char* cadena = recibir_buffer(&size, socket_cliente);
 	int* direcciones;
 
@@ -313,15 +332,16 @@ void escribir_string(int socket_cliente){
 	else
 		log_info(logger, "Error en el envio de direcciones");
 
-	j=0;
-	for(i=0; i<sizeof(direcciones)/sizeof(int); i++){
-		direccion = direcciones[i];
-		while(direccion%TAM_PAG < TAM_PAG-1){
-			memcpy(memoria_contigua+direccion, &cadena[j], 1);
-			direccion++;
-			j++;
+	direccion=direcciones[0];
+	for(i=0; cadena[i]!='\0'; i++){
+		memcpy(memoria_contigua+direccion, &cadena[i], 1);
+		direccion++;
+		if(direccion%TAM_PAG == TAM_PAG-1){
+			direcciones++;
+			direccion=*direcciones;
 		}
 	}
+
 	free(direcciones);
 	free(cadena);
 }

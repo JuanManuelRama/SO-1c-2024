@@ -34,6 +34,7 @@ int main (){
 	pthread_create(&hilo_cpu, NULL, interactuar_cpu, (void*)socket_cliente);
 
 	socket_cliente = esperar_cliente("Kernel", socket_servidor);
+	enviar_operacion(socket_cliente, TAM_PAG);
 	pthread_create(&hilo_kernel, NULL, interactuar_Kernel, (void*)socket_cliente);
 
 	//socket_IO = esperar_cliente("IO", socket_servidor);

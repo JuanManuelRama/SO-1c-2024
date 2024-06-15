@@ -244,7 +244,7 @@ void enviar_operacion(int, int);
 
 t_pcb pcb_deserializar(int);
 
-void enviar_vector(int*, int);
+void enviar_vector(int*, int, int);
 
 int* recibir_vector(int);
 

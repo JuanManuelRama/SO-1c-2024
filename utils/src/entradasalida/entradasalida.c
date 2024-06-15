@@ -44,14 +44,20 @@ void crear_interfaz_stdin (char* nombre){
 	int socket_kernel = conectar_kernel (nombre);
 	int socket_memoria = conectar_memoria (nombre); 
 
+	tam_pagina = recibir_operacion(socket_memoria);
+
 	while(1) {
 		int cod_op = recibir_operacion(socket_kernel);
 		if (cod_op == OPERACION_IO) {
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_n_split(buffer, 3, " ");
+
+			int direccion = atoi(instruccion[2]);
+			int tamaño = atoi(instruccion[3]);
 			
 			int* vectorDirecciones;
+			int tamañoVector = tamaño/tam_pagina+2;
 			if (recibir_operacion(socket_kernel) == PAQUETE)
 				vectorDirecciones = recibir_vector(socket_kernel);
 			else
@@ -62,12 +68,10 @@ void crear_interfaz_stdin (char* nombre){
 
 			if (!strcmp(instruccion[0], "IO_STDIN_READ")){
 
-				int direccion = atoi(instruccion[2]);
-				int tamaño = atoi(instruccion[3]);
+				
 				char valor[tamaño];
 
 				int i;
-				char c;
 
 				printf("Ingrese hasta %i caracteres", tamaño);
 				for(i=0; i<tamaño; i++)
@@ -78,11 +82,7 @@ void crear_interfaz_stdin (char* nombre){
 				log_info(logger, "Valor ingresado: %s", valor);
 
 				enviar_string(valor, socket_memoria, ESCRITURA_STRING);
-				enviar_vector(vectorDirecciones, socket_memoria);
-
-			
-
-
+				enviar_vector(vectorDirecciones, tamañoVector, socket_memoria);
 
 
 				free(valor);
@@ -110,6 +110,8 @@ void crear_interfaz_stdout (char* nombre){
 	int socket_kernel = conectar_kernel (nombre);
 	int socket_memoria = conectar_memoria (nombre); 
 
+	tam_pagina = recibir_operacion(socket_memoria);
+
 	while(1) {
 		int cod_op = recibir_operacion(socket_kernel);
 		if (cod_op == OPERACION_IO) {
@@ -117,15 +119,36 @@ void crear_interfaz_stdout (char* nombre){
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_n_split(buffer, 3, " ");
 
+			int direccion = atoi(instruccion[2]);
+			int tamaño = atoi(instruccion[3]);
+
+			int* vectorDirecciones;
+			int tamañoVector = tamaño/tam_pagina+2;
+			if (recibir_operacion(socket_kernel) == PAQUETE)
+				vectorDirecciones = recibir_vector(socket_kernel);
+			else
+				log_info(logger, "Error en el envio de direcciones");
+
 			log_info(logger, "Operacion: %s", instruccion[0]);
 
 			if (!strcmp(instruccion[0], "IO_STDOUT_WRITE")){
+				char* stringLeido;
+				int size;
 
-				int registro_direccion = instruccion[2];
-				int registro_tamaño = instruccion[3];
 
 				sleep(unidad_trabajo/1000);
 				log_info(logger, "Trabajo muy duro como un esclavo");
+
+				enviar_operacion(socket_memoria, LECTURA_STRING);
+				enviar_vector(vectorDirecciones, tamañoVector,  socket_memoria);
+
+				if(recibir_operacion(socket_memoria)==LECTURA_STRING){
+					stringLeido = recibir_buffer(&size, socket_memoria);
+				} else{
+					log_info(logger, "Error en el envio del string");
+				}
+
+				printf("%s", stringLeido);
 
 				log_info(logger, "Resultado de %s: io_success", nombre);
 				enviar_operacion(socket_kernel, IO_SUCCESS);

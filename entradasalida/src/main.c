@@ -3,6 +3,8 @@
 t_log* logger;
 t_config* config;
 
+int tam_pagina;
+
 int main(int argc, char *argv[]) {
 	// nos aseguramos que nos pasen 3 argumentos por linea de comando (el exe, el nombre y el path al config)
 	if (argc != 3) {

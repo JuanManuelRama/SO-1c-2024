@@ -26,6 +26,7 @@ int conexion_cpu_interrupt;
 int idPCB;
 int multiprogramacion;
 int quantum;
+int tam_pagina;
 int kernel_servidor;
 bool planificacion_activa;
 bool planiEsVrr; // medio tosco el flag global, se puede pensar otra forma (se usa para vrr)
@@ -50,6 +51,7 @@ int main() {
 	ip = buscar("IP_MEMORIA");
 	puerto = buscar ("PUERTO_MEMORIA");
 	conexion_memoria = crear_conexion(ip, puerto, "Memoria"); 
+	tam_pagina = recibir_operacion(conexion_memoria);
 	enviar_mensaje("Saludos desde el Kernel",conexion_memoria);
 
 	// buscamos datos en config y conectamos a cpu

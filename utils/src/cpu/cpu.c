@@ -19,8 +19,10 @@ int MMU(int DL){
     if(desplazamiento>tam_pag)
         return -1;
     enviar_int(pag, memoria, PAGINA);
-    if(recibir_operacion(memoria)!=PAGINA)
+    if(recibir_operacion(memoria)!=PAGINA){
         log_error(logger, "La memoria me envió cualquier cosa...");
+        return -1;
+    }
     int marco = recibir_int(memoria);
     int DF = marco*tam_pag + desplazamiento;
     return DF;
@@ -176,12 +178,11 @@ void execute(sInstruccion instruccion){
             exe_SIGNAL(instruccion.componentes[1]);
             break;
         case IO_GEN_SLEEP:
-        case IO_STDOUT_WRITE:
-            // todos los cases de los tipos de interfaces IO
             exe_IO_GEN(instruccion.componentes);
             break;
+        case IO_STDOUT_WRITE:
         case IO_STDIN_READ:
-            exe_IO_STDIN(instruccion.componentes);
+            exe_IO_STD(instruccion.componentes);
             break;
         case EXIT:
             exe_EXIT();
@@ -283,33 +284,20 @@ void exe_IO_GEN (char** componentes){
     seVa=IO_GEN;
 }
 
-void exe_IO_STDIN(char** componentes){
+void exe_IO_STD(char** componentes){
     int direccion = get_registro(componentes[2]);
     int tamaño = get_registro(componentes[3]);
 
-    //Paginas necesarias = 
-    //cociente entre tamaño a leer y tamaño de pagina redondeado para arriba
-    //+1 por si la primer pagina no esta completamente libre
-    int cantPaginas = tamaño/tam_pag+2;
-    int vectorDF[cantPaginas];
+    tamañoVector= tamaño/tam_pag+2;
+    int vectorDF[tamañoVector];
 
-    int numeroPagina = direccion/tam_pag;
-    int direccionSinOffset = direccion - numeroPagina*tam_pag;
-    int i;
-
-    vectorDF[0]=MMU(direccion);
-
-    for (i=1; i<cantPaginas; i++)
-        vectorDF[i]=MMU(direccionSinOffset + i*tam_pag);
-
-    componentes[2]=string_itoa(vectorDF[0]);
-    componentes[3]=string_itoa(tamaño);
+    crearVectorDirecciones(vectorDF, direccion, tamaño);
     
     vectorDirecciones = vectorDF;
 
     strcpy (aEnviar, componentes[0]);
 
-    i=1;
+    int i=1;
     while(componentes[i]) {
         strcat (aEnviar, " ");
         strcat (aEnviar, componentes[i]);
@@ -367,26 +355,50 @@ void exe_RESIZE(int tamanio){
     }
 }
 
-void exe_COPY_STRING(int tamanio){
-    int DF = MMU(pcb.registros.SI);
+void exe_COPY_STRING(int tamaño){
+    int direccion = get_registro("SI");
+    tamañoVector= tamaño/tam_pag+2;
+    int vectorDirecciones[tamañoVector];
     int size;
 
-    enviar_int(DF, memoria, LECTURA_STRING);
+    crearVectorDirecciones(vectorDirecciones, direccion, tamaño);
+
+    enviar_operacion(memoria, LECTURA_STRING);
+    enviar_vector(vectorDirecciones, tamañoVector, memoria);
+
     if(recibir_operacion(memoria)!=LECTURA_STRING){
         log_error(logger, "La memoria me envió cualquier cosa...");
         return;
     }
     char* cadenaCompleta = recibir_buffer(&size,memoria);
 
-    DF = MMU(pcb.registros.DI);
+    direccion = get_registro("DI");
+    crearVectorDirecciones(vectorDirecciones, direccion, tamaño);
    
-    char* cadena = malloc(tamanio+1);
-    strncpy(cadena,cadenaCompleta,tamanio);
-    enviar_string(cadena,memoria,ESCRITURA_STRING);
-    enviar_operacion(memoria, DF);
+    char* cadena = malloc(tamaño+1);
+    strncpy(cadena,cadenaCompleta,tamaño);
+    enviar_string(cadena, memoria,ESCRITURA_STRING);
+    enviar_vector(vectorDirecciones, tamañoVector, memoria);
 
     free (cadenaCompleta);
     free (cadena);
+}
+
+void crearVectorDirecciones(int vectorDF[], int direccionLogica, int tamaño){
+    //Paginas necesarias = 
+    //cociente entre tamaño a leer y tamaño de pagina redondeado para arriba
+    //+1 por si la primer pagina no esta completamente libre
+    int cantPaginas = tamaño/tam_pag+2;
+
+    int numeroPagina = direccionLogica/tam_pag;
+    int direccionSinOffset = direccionLogica - numeroPagina*tam_pag;
+    int i;
+
+    vectorDF[0]=MMU(direccionLogica);
+
+    for (i=1; i<cantPaginas; i++){
+        vectorDF[i]=MMU(direccionSinOffset + i*tam_pag);
+    }
 }
 
 //LOGS OBLIGATORIOS
@@ -397,3 +409,4 @@ void log_fetch (int pid, int pc){
 void log_execute (int pid, char* instruccion, char* parametros){
     log_info(logger, "PID: %d - Ejecutando: %s - %s", pid, instruccion, parametros);
 }
+

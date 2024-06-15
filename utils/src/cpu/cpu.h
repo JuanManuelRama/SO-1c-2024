@@ -46,8 +46,10 @@ extern t_pcb pcb;
 extern int seVa;
 extern int memoria;
 extern int tam_pag;
+extern int tam_memoria;
 extern char* aEnviar;
 extern int* vectorDirecciones;
+extern int tamañoVector;
 extern t_queue *cIntr;
 
 void finalizar_cpu();
