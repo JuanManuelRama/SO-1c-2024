@@ -35,6 +35,8 @@ typedef enum
 	TAM_PROCESO,
 	OOM,
 	IO,
+	IO_GEN,
+	IO_STD,
 	IO_FAILURE,
 	IO_SUCCESS,
 	SEG_FAULT,
@@ -241,6 +243,10 @@ void enviar_operacion(int, int);
 
 
 t_pcb pcb_deserializar(int);
+
+void enviar_vector(int*, int);
+
+int* recibir_vector(int);
 
 int recibir_int (int);
 

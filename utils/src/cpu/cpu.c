@@ -9,6 +9,7 @@ void finalizar_cpu(){
     pthread_mutex_destroy(&mIntr);
     queue_destroy(cIntr);
     free(aEnviar);
+    free(vectorDirecciones);
 	exit(0);
 }
 
@@ -174,11 +175,13 @@ void execute(sInstruccion instruccion){
         case SIGNAL:
             exe_SIGNAL(instruccion.componentes[1]);
             break;
-        case IO_GEN_SLEEP: 
-        case IO_STDIN_READ:
+        case IO_GEN_SLEEP:
         case IO_STDOUT_WRITE:
             // todos los cases de los tipos de interfaces IO
-            exe_IO(instruccion.componentes);
+            exe_IO_GEN(instruccion.componentes);
+            break;
+        case IO_STDIN_READ:
+            exe_IO_STDIN(instruccion.componentes);
             break;
         case EXIT:
             exe_EXIT();
@@ -268,7 +271,7 @@ void exe_SIGNAL(char* recurso){
     seVa=DARRECURSO;
 }
 
-void exe_IO (char** componentes){
+void exe_IO_GEN (char** componentes){
     strcpy (aEnviar, componentes[0]);
 
     int i=1;
@@ -277,7 +280,43 @@ void exe_IO (char** componentes){
         strcat (aEnviar, componentes[i]);
         i++;
     }
-    seVa=IO;
+    seVa=IO_GEN;
+}
+
+void exe_IO_STDIN(char** componentes){
+    int direccion = get_registro(componentes[2]);
+    int tamaño = get_registro(componentes[3]);
+
+    //Paginas necesarias = 
+    //cociente entre tamaño a leer y tamaño de pagina redondeado para arriba
+    //+1 por si la primer pagina no esta completamente libre
+    int cantPaginas = tamaño/tam_pag+2;
+    int vectorDF[cantPaginas];
+
+    int numeroPagina = direccion/tam_pag;
+    int direccionSinOffset = direccion - numeroPagina*tam_pag;
+    int i;
+
+    vectorDF[0]=MMU(direccion);
+
+    for (i=1; i<cantPaginas; i++)
+        vectorDF[i]=MMU(direccionSinOffset + i*tam_pag);
+
+    componentes[2]=string_itoa(vectorDF[0]);
+    componentes[3]=string_itoa(tamaño);
+    
+    vectorDirecciones = vectorDF;
+
+    strcpy (aEnviar, componentes[0]);
+
+    i=1;
+    while(componentes[i]) {
+        strcat (aEnviar, " ");
+        strcat (aEnviar, componentes[i]);
+        i++;
+    }
+    seVa=IO_STD;
+
 }
 
 void exe_MOVE_IN(char* reg_datos, char* reg_direccion){

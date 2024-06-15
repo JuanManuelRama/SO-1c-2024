@@ -90,9 +90,8 @@ void interactuar_IO (int IO){
 
 		int cod_op = recibir_operacion(IO);
 		switch (cod_op) {
-
-		//cases de solicitudes de las interfaces 
-
+		case ESCRITURA_STRING:
+			escribir_string(IO);
 		case -1:
 			log_error(logger, "el cliente se desconecto");
 			return EXIT_FAILURE;
@@ -305,10 +304,25 @@ void leer_string(int socket_cliente){
 }
 
 void escribir_string(int socket_cliente){
-	int DF = recibir_int(socket_cliente);
-	int size;
+	int size, i, j, direccion;
 	char* cadena = recibir_buffer(&size, socket_cliente);
-	strcpy(memoria_contigua + DF, cadena);
+	int* direcciones;
+
+	if(recibir_operacion(socket_cliente)==PAQUETE)
+		direcciones = recibir_vector(socket_cliente);
+	else
+		log_info(logger, "Error en el envio de direcciones");
+
+	j=0;
+	for(i=0; i<sizeof(direcciones)/sizeof(int); i++){
+		direccion = direcciones[i];
+		while(direccion%TAM_PAG < TAM_PAG-1){
+			memcpy(memoria_contigua+direccion, &cadena[j], 1);
+			direccion++;
+			j++;
+		}
+	}
+	free(direcciones);
 	free(cadena);
 }
 

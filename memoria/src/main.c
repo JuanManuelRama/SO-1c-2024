@@ -30,6 +30,7 @@ int main (){
 
 	socket_cliente = esperar_cliente("CPU", socket_servidor);
 	enviar_operacion(socket_cliente, TAM_PAG);
+	enviar_operacion(socket_cliente, TAM_MEMORIA);
 	pthread_create(&hilo_cpu, NULL, interactuar_cpu, (void*)socket_cliente);
 
 	socket_cliente = esperar_cliente("Kernel", socket_servidor);
