@@ -24,6 +24,23 @@ void inicializar_kernel(){
 	sem_init(&sMultiprogramacion, 0, multiprogramacion);
 	planificacion_activa = true;
 	pidRunning = -1;
+
+	char** arrayRecursos = config_get_array_value(config, "RECURSOS");
+	char** instanciasRecursos = config_get_array_value(config, "INSTANCIAS_RECURSOS");
+
+	cantRecursos = string_array_size(arrayRecursos);
+
+	recursos = malloc(cantRecursos*sizeof(t_recurso));
+
+	for (int i = 0; i < cantRecursos; i++) {
+		t_recurso recursoActual;
+
+		recursoActual.nombre = arrayRecursos[i];
+		recursoActual.instancias = atoi(instanciasRecursos[i]);
+		recursoActual.cBloqueados = queue_create();
+		recursos[i] = recursoActual;
+	}
+
 }
 
 void finalizar_kernel(){
@@ -410,6 +427,8 @@ void planificadorCP_VRR() {
 	sProceso* proceso;
 	int motivo;
 	int size;
+	int indiceRecurso;
+	char* recursoRecibido;
 	pthread_t hilo_IO; //usamos para crearle un hilo a cada instancia de IO
 	pthread_t hilo_timer;
 	struct timespec tiempoInicio;
@@ -478,6 +497,66 @@ void planificadorCP_VRR() {
 				pthread_mutex_unlock(&mBLOCKED);
 				
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
+				break;
+			case PEDIRRECURSO:
+				log_info(logger, "pedirrecurso");
+				recursoRecibido = recibir_buffer(&size, conexion_cpu_dispatch);
+				indiceRecurso = buscarRecurso(recursoRecibido);
+
+				if(indiceRecurso != -1){
+					recursos[indiceRecurso].instancias -= 1;
+        
+        			if (recursos[indiceRecurso].instancias < 0) {
+            			queue_push(recursos[indiceRecurso].cBloqueados, proceso);
+						log_info(logger, "PID: %d - Bloqueado por PEDIR RECURSO %s", proceso->pcb.pid, recursos[indiceRecurso].nombre);
+        			}
+					else {
+						proceso->pcb.estado=READY;
+
+						pthread_mutex_lock(&mREADY);
+						queue_push(cREADY, proceso);
+						log_ingresoReady(cREADY->elements, "Normal");
+						pthread_mutex_unlock(&mREADY);
+
+						sem_post(&semPCP);
+					}
+				}	
+				else {
+					matadero(proceso, "Pidio un recurso no existente");
+				}		
+				break;
+			case DARRECURSO:
+				log_info(logger, "darrecurso");
+				recursoRecibido = recibir_buffer(&size, conexion_cpu_dispatch);
+				indiceRecurso = buscarRecurso(recursoRecibido);
+
+				if(indiceRecurso != -1){
+        			recursos[indiceRecurso].instancias += 1;
+        
+        			if (recursos[indiceRecurso].instancias <= 0) {
+            			sProceso* procesoDesbloqueado = queue_pop(recursos[indiceRecurso].cBloqueados);
+
+						procesoDesbloqueado->pcb.estado=READY;
+
+						pthread_mutex_lock(&mREADY);
+						queue_push(cREADY, procesoDesbloqueado);
+						log_ingresoReady(cREADY->elements, "Normal");
+						pthread_mutex_unlock(&mREADY);
+
+						sem_post(&semPCP);
+
+        			}
+
+					pthread_mutex_lock(&mREADY);
+					queue_push(cREADY, proceso);
+					log_ingresoReady(cREADY->elements, "Normal");
+					pthread_mutex_unlock(&mREADY);
+
+					sem_post(&semPCP);
+    			}	
+				else {
+					matadero(proceso, "Pidio un recurso no existente");
+				}	
 				break;
 			case FIN_DE_QUANTUM:
 				log_finDeQuantum(proceso->pcb.pid);
@@ -659,4 +738,12 @@ void listar_procesos(t_list* lista, int estado){
 	}
 	log_info(logger, "Procesos en estado %s: %s", get_estado(estado), listado);
 	free(listado);
+}
+
+int buscarRecurso(char* nombre){
+	for (int i = 0; i < cantRecursos; i++) {
+    	if (!strcmp(nombre, recursos[i].nombre)) {
+			return i;
+		}
+	}
 }

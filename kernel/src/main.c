@@ -32,6 +32,9 @@ bool planiEsVrr; // medio tosco el flag global, se puede pensar otra forma (se u
 int pidRunning;
 t_list *lista_conexiones_IO;
 
+t_recurso* recursos;
+int cantRecursos;
+
 
 int main() {
 

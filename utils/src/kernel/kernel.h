@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <utils/hello.h>
 #include <sockets/sockets.h>
 #include <pthread.h>
 #include <commons/string.h>
@@ -39,6 +38,9 @@ extern int kernel_servidor;
 extern int pidRunning;
 extern bool planificacion_activa;
 extern bool planiEsVrr; // vrr (se usa para ver a donde mandas a un proceso q vuelve de IO, ready/ready+)
+
+extern t_recurso* recursos;
+extern int cantRecursos;
 
 typedef struct{
     t_pcb pcb;

@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <commons/collections/queue.h>
 
 typedef enum{
 	INICIAR_PROCESO,
@@ -44,3 +45,10 @@ typedef struct
 	int estado;
 	void* instrucciones;
 } t_pcb;
+
+typedef struct
+{
+	char* nombre;
+	int instancias;
+	t_queue* cBloqueados;
+} t_recurso;
