@@ -535,6 +535,14 @@ void escuchar_conexiones_IO(int socket_server) {
 
 void atender_solicitud_IO(sProceso* proceso){
 	char** instruccionIO = string_n_split(proceso->multifuncion, 3, " ");
+	
+	int* vectorDirecciones;
+	if(!strcmp(instruccionIO[0], "IO_STDIN_READ")){
+		if (recibir_operacion(conexion_cpu_dispatch) == PAQUETE)
+			vectorDirecciones = recibir_vector(conexion_cpu_dispatch);
+		else
+			log_info(logger, "CPU me mando cualquier cosa");
+	}
 
 	// funcionalidad propia de gcc, inner function
 	bool existe_conexion(void* elem) {
@@ -559,6 +567,9 @@ void atender_solicitud_IO(sProceso* proceso){
 
 	// le mandamos a la instancia encontrada la operacion
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
+
+	if(!strcmp(instruccionIO[0], "IO_STDIN_READ"))
+		enviar_vector(vectorDirecciones, IO_seleccionada);
 
 	// nos quedamos escuchando la respuesta
 	int codOp = recibir_operacion (IO_seleccionada->socket);

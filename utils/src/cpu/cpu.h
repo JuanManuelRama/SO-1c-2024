@@ -47,6 +47,7 @@ extern int seVa;
 extern int memoria;
 extern int tam_pag;
 extern char* aEnviar;
+extern int* vectorDirecciones;
 extern t_queue *cIntr;
 
 void finalizar_cpu();

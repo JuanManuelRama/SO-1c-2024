@@ -48,17 +48,41 @@ void crear_interfaz_stdin (char* nombre){
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_n_split(buffer, 3, " ");
+			
+			int* vectorDirecciones;
+			if (recibir_operacion(socket_kernel) == PAQUETE)
+				vectorDirecciones = recibir_vector(socket_kernel);
+			else
+				log_info(logger, "Error en el envio de direcciones");
+
 
 			log_info(logger, "Operacion: %s", instruccion[0]);
 
 			if (!strcmp(instruccion[0], "IO_STDIN_READ")){
 
-				int registro_direccion = instruccion[2];
-				int registro_tamaño = instruccion[3];
-				char* valor;
-				
-				valor = readline(">");
+				int direccion = atoi(instruccion[2]);
+				int tamaño = atoi(instruccion[3]);
+				char valor[tamaño];
+
+				int i;
+				char c;
+
+				printf("Ingrese hasta %i caracteres", tamaño);
+				for(i=0; i<tamaño; i++)
+					valor[i] = getchar();
+				valor[tamaño]='\0';
+				getchar();
+
 				log_info(logger, "Valor ingresado: %s", valor);
+
+				enviar_string(valor, socket_memoria, ESCRITURA_STRING);
+				enviar_vector(vectorDirecciones, socket_memoria);
+
+			
+
+
+
+
 				free(valor);
 
 				log_info(logger, "Resultado de %s: io_success", nombre);

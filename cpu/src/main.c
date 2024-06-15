@@ -9,6 +9,8 @@ pthread_mutex_t mIntr;
 int seVa;
 int memoria;
 int tam_pag;
+int tam_memoria;
+int* vectorDirecciones;
 char* aEnviar;
 
 
@@ -36,8 +38,8 @@ int main() {
 	puerto = buscar("PUERTO_MEMORIA");
 	memoria = crear_conexion(ip, puerto, "Memoria"); 
 	tam_pag = recibir_operacion(memoria);
+	tam_memoria = recibir_operacion(memoria);
 	enviar_mensaje("Saludos desde la cpu", memoria);
-
 
 	//tambien sera servidor, con el kernel como cliente
 	puerto = buscar("PUERTO_ESCUCHA_DISPATCH");
@@ -84,8 +86,13 @@ int main() {
 			pthread_mutex_unlock(&mIntr);
 		}
 		enviar_pcb(pcb, socket_dispatch, seVa);
-		if(seVa == IO || seVa == DARRECURSO || seVa == PEDIRRECURSO)
-			enviar_string(aEnviar, socket_dispatch, seVa);
+		if(seVa == IO_GEN || seVa == DARRECURSO || seVa == PEDIRRECURSO)
+			enviar_string(aEnviar, socket_dispatch, IO);
+		if(seVa == IO_STD){
+			enviar_string(aEnviar, socket_dispatch, IO);
+			enviar_vector(vectorDirecciones, socket_dispatch);
+		}
+
 		seVa=false;
 	}
     return 0;
