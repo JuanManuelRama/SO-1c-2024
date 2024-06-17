@@ -304,7 +304,7 @@ void leer_string(int socket_cliente){
 	char* cadena = string_new();
 	char caracterLeido;
 
-	if(recibir_operacion(socket_cliente)==PAQUETE)
+	if(recibir_operacion(socket_cliente)==VECTOR)
 		direcciones = recibir_vector(socket_cliente);
 	else
 		log_info(logger, "Error en el envio de direcciones");
@@ -327,7 +327,7 @@ void escribir_string(int socket_cliente){
 	char* cadena = recibir_buffer(&size, socket_cliente);
 	int* direcciones;
 
-	if(recibir_operacion(socket_cliente)==PAQUETE)
+	if(recibir_operacion(socket_cliente)==VECTOR)
 		direcciones = recibir_vector(socket_cliente);
 	else
 		log_info(logger, "Error en el envio de direcciones");

@@ -45,6 +45,7 @@ void crear_interfaz_stdin (char* nombre){
 	int socket_memoria = conectar_memoria (nombre); 
 
 	tam_pagina = recibir_operacion(socket_memoria);
+	log_info(logger, "tam_pag = %i", tam_pagina);
 
 	while(1) {
 		int cod_op = recibir_operacion(socket_kernel);
@@ -58,7 +59,7 @@ void crear_interfaz_stdin (char* nombre){
 			
 			int* vectorDirecciones;
 			int tamañoVector = tamaño/tam_pagina+2;
-			if (recibir_operacion(socket_kernel) == PAQUETE)
+			if (recibir_operacion(socket_kernel) == VECTOR)
 				vectorDirecciones = recibir_vector(socket_kernel);
 			else
 				log_info(logger, "Error en el envio de direcciones");
@@ -111,6 +112,7 @@ void crear_interfaz_stdout (char* nombre){
 	int socket_memoria = conectar_memoria (nombre); 
 
 	tam_pagina = recibir_operacion(socket_memoria);
+	log_info(logger, "tam_pag = %i", tam_pagina);
 
 	while(1) {
 		int cod_op = recibir_operacion(socket_kernel);
@@ -124,7 +126,7 @@ void crear_interfaz_stdout (char* nombre){
 
 			int* vectorDirecciones;
 			int tamañoVector = tamaño/tam_pagina+2;
-			if (recibir_operacion(socket_kernel) == PAQUETE)
+			if (recibir_operacion(socket_kernel) == VECTOR)
 				vectorDirecciones = recibir_vector(socket_kernel);
 			else
 				log_info(logger, "Error en el envio de direcciones");

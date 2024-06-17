@@ -328,10 +328,15 @@ void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op)
 	eliminar_paquete(paquete);
 }
 
-void enviar_vector(int vector[], int tamaño, int socket_cliente){
-	t_paquete* paquete = malloc(sizeof(t_paquete));
+void enviar_vector(int* vector, int tamaño, int socket_cliente){
 	int i;
 
+	enviar_int(tamaño, socket_cliente, VECTOR);
+	for (i=0; i < tamaño; i++){
+        enviar_operacion(socket_cliente, vector[i]);
+	}
+
+/*
 	paquete->codigo_operacion = PAQUETE;
 	paquete->buffer = malloc(sizeof(t_buffer));
 	paquete->buffer->stream = malloc (tamaño*sizeof(int));
@@ -351,19 +356,17 @@ void enviar_vector(int vector[], int tamaño, int socket_cliente){
 	send(socket_cliente, a_enviar, bytes, 0);
 
 	free(a_enviar);
-	eliminar_paquete(paquete);
+
+*/
 }
 
 int* recibir_vector(int socket_cliente){
-	int size;
-	void* stream=recibir_buffer(&size, socket_cliente);
-	size = size-2*sizeof(int);
-	int vector[size];
+	int tamañoVector, i;
+	int vector[tamañoVector];
 
-	for(int i=0; i<size/sizeof(int); i++)
-		memcpy(vector[i], stream + i*sizeof(int), sizeof(int));
-	
-	free(stream);
+	for(i=0; i<tamañoVector; i++){
+		vector[i]=recibir_operacion(socket_cliente);
+	}
 	return vector;
 }
 

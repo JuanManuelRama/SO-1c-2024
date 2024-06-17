@@ -615,14 +615,18 @@ void escuchar_conexiones_IO(int socket_server) {
 }
 
 void atender_solicitud_IO(sProceso* proceso){
-	char** instruccionIO = string_n_split(proceso->multifuncion, 3, " ");
+	char** instruccionIO = string_split(proceso->multifuncion, " ");
 	int tamaño = atoi(instruccionIO[3]);
 	
 	int* vectorDirecciones;
 	int tamañoVector = tamaño/tam_pagina+2;
 	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
-		if (recibir_operacion(conexion_cpu_dispatch) == PAQUETE)
+		if (recibir_operacion(conexion_cpu_dispatch) == VECTOR){
 			vectorDirecciones = recibir_vector(conexion_cpu_dispatch);
+			int i;
+			for(i=0; i<tamañoVector; i++)
+				printf("%i", vectorDirecciones[i]);
+		}
 		else
 			log_info(logger, "CPU me mando cualquier cosa");
 	}

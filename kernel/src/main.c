@@ -55,6 +55,7 @@ int main() {
 	puerto = buscar ("PUERTO_MEMORIA");
 	conexion_memoria = crear_conexion(ip, puerto, "Memoria"); 
 	tam_pagina = recibir_operacion(conexion_memoria);
+	log_info(logger, "tam_pag = %i", tam_pagina);
 	enviar_mensaje("Saludos desde el Kernel",conexion_memoria);
 
 	// buscamos datos en config y conectamos a cpu

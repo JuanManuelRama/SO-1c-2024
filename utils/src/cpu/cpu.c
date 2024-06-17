@@ -286,7 +286,11 @@ void exe_IO_GEN (char** componentes){
 
 void exe_IO_STD(char** componentes){
     int direccion = get_registro(componentes[2]);
+    sprintf(componentes[2], "%i", direccion);
+
     int tamaño = get_registro(componentes[3]);
+    sprintf(componentes[3], "%i", tamaño);
+
 
     tamañoVector= tamaño/tam_pag+2;
     int vectorDF[tamañoVector];

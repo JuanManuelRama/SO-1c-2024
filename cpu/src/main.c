@@ -39,6 +39,7 @@ int main() {
 	puerto = buscar("PUERTO_MEMORIA");
 	memoria = crear_conexion(ip, puerto, "Memoria"); 
 	tam_pag = recibir_operacion(memoria);
+	log_info(logger, "tam_pag = %i", tam_pag);
 	tam_memoria = recibir_operacion(memoria);
 	enviar_mensaje("Saludos desde la cpu", memoria);
 
