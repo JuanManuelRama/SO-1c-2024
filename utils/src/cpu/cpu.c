@@ -284,27 +284,34 @@ void exe_IO_GEN (char** componentes){
     seVa=IO_GEN;
 }
 
-void exe_IO_STD(char** componentes){/*
+void exe_IO_STD(char** componentes){
     int direccion = get_registro(componentes[2]);
     int tamaño = get_registro(componentes[3]);
-
-    tamañoVector= tamaño/tam_pag+2;
-    int vectorDF[tamañoVector];
-
-    crearVectorDirecciones(vectorDF, direccion, tamaño);
+    int desplazamiento = direccion%tam_pag;
+    int espacioEnPag = tam_pag-(desplazamiento);
+    if(tamaño<=espacioEnPag){
+        int vDirecciones[1];
+        vDirecciones[0] = MMU(direccion);
+        vectorDirecciones = vDirecciones;
+        tamañoVector = 1;
+    }
+    else{
+        int i;
+        int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
+        int vDirecciones[pagNecesarias];
+        vDirecciones[0]=MMU(direccion);
+        for(i=0; i<pagNecesarias-1; i++)
+            vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
+        vectorDirecciones = vDirecciones;
+        tamañoVector = pagNecesarias;
+    }
     
     vectorDirecciones = vectorDF;
 
     strcpy (aEnviar, componentes[0]);
-
-    int i=1;
-    while(componentes[i]) {
-        strcat (aEnviar, " ");
-        strcat (aEnviar, componentes[i]);
-        i++;
-    }
+    strcat (aEnviar, " ");
+    string_append_with_format(&aEnviar, "%d %d", tamaño, tamañoVector);
     seVa=IO_STD;
-*/
 }
 
 void exe_MOVE_IN(char* reg_datos, char* reg_direccion){
