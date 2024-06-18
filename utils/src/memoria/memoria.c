@@ -299,50 +299,33 @@ void escribir(int socket_cliente){
 }
 
 void leer_string(int socket_cliente){
-	int* direcciones;
-	int i, direccion;
-	char* cadena = string_new();
-	char caracterLeido;
-
-	if(recibir_operacion(socket_cliente)==PAQUETE)
-		direcciones = recibir_vector(socket_cliente);
-	else
-		log_info(logger, "Error en el envio de direcciones");
-
-	direccion=direcciones[0];
-	for(i=0; caracterLeido!='\0'; i++){
-		memcpy(&caracterLeido, memoria_contigua+direccion, 1);
-		strcat(cadena, &caracterLeido);
-		direccion++;
-		if(direccion%TAM_PAG == TAM_PAG-1){
-			direcciones++;
-			direccion=*direcciones;
-		}
+	int cantPag, tamaño, i, direccion;
+	int desplazamiento = 0;
+	cantPag = recibir_operacion(socket_cliente);
+	char* cadena = malloc(cantPag*TAM_PAG+1);
+	for(i=0; i<cantPag; i++){
+		tamaño = recibir_operacion(socket_cliente);
+		direccion = recibir_operacion(socket_cliente);
+		memcpy(cadena+desplazamiento, memoria_contigua+direccion, tamaño);
+		desplazamiento += tamaño;
 	}
+	cadena[desplazamiento] = '\0';
 	enviar_string(cadena, socket_cliente, LECTURA_STRING);
+	log_info(logger, cadena);
+	free(cadena);
 }
 
 void escribir_string(int socket_cliente){
-	int size, i, direccion;
-	char* cadena = recibir_buffer(&size, socket_cliente);
-	int* direcciones;
-
-	if(recibir_operacion(socket_cliente)==PAQUETE)
-		direcciones = recibir_vector(socket_cliente);
-	else
-		log_info(logger, "Error en el envio de direcciones");
-
-	direccion=direcciones[0];
-	for(i=0; cadena[i]!='\0'; i++){
-		memcpy(memoria_contigua+direccion, &cadena[i], 1);
-		direccion++;
-		if(direccion%TAM_PAG == TAM_PAG-1){
-			direcciones++;
-			direccion=*direcciones;
-		}
+	int cantPag, tamaño, i, direccion;
+	int deslplazamiento = 0;
+	char* cadena = recibir_buffer(&tamaño, socket_cliente);
+	cantPag = recibir_operacion(socket_cliente);
+	for(i=0; i<cantPag; i++){
+		tamaño = recibir_operacion(socket_cliente);
+		direccion = recibir_operacion(socket_cliente);
+		memcpy(memoria_contigua+direccion, cadena+deslplazamiento, tamaño);
+		deslplazamiento += tamaño;
 	}
-
-	free(direcciones);
 	free(cadena);
 }
 

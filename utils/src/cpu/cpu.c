@@ -284,7 +284,7 @@ void exe_IO_GEN (char** componentes){
     seVa=IO_GEN;
 }
 
-void exe_IO_STD(char** componentes){
+void exe_IO_STD(char** componentes){/*
     int direccion = get_registro(componentes[2]);
     int tamaño = get_registro(componentes[3]);
 
@@ -304,7 +304,7 @@ void exe_IO_STD(char** componentes){
         i++;
     }
     seVa=IO_STD;
-
+*/
 }
 
 void exe_MOVE_IN(char* reg_datos, char* reg_direccion){
@@ -356,51 +356,69 @@ void exe_RESIZE(int tamanio){
 }
 
 void exe_COPY_STRING(int tamaño){
+    float tam = tamaño;
+    int DF, size;
     int direccion = get_registro("SI");
-    tamañoVector= tamaño/tam_pag+2;
-    int vectorDirecciones[tamañoVector];
-    int size;
-
-    crearVectorDirecciones(vectorDirecciones, direccion, tamaño);
-
-    enviar_operacion(memoria, LECTURA_STRING);
-    enviar_vector(vectorDirecciones, tamañoVector, memoria);
-
-    if(recibir_operacion(memoria)!=LECTURA_STRING){
-        log_error(logger, "La memoria me envió cualquier cosa...");
-        return;
+    int desplazamiento = direccion%tam_pag;
+    int espacioEnPag = tam_pag-(desplazamiento);
+    if(tamaño<=espacioEnPag){
+        DF = MMU(direccion);
+        enviar_operacion(memoria, LECTURA_STRING);
+        enviar_operacion(memoria, 1);
+        enviar_operacion(memoria, tamaño);
+        enviar_operacion(memoria, DF);
     }
-    char* cadenaCompleta = recibir_buffer(&size,memoria);
-
+    else{
+        int i;
+        int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
+        int vDirecciones[pagNecesarias];
+        vDirecciones[0]=MMU(direccion);
+        for(i=0; i<pagNecesarias-1; i++)
+            vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
+        enviar_operacion(memoria, LECTURA_STRING);
+        enviar_operacion(memoria, pagNecesarias);
+        enviar_operacion(memoria, espacioEnPag);
+        enviar_operacion(memoria, vDirecciones[0]);
+        for(i=1; i<pagNecesarias-1; i++){
+            enviar_operacion(memoria, tam_pag);
+            enviar_operacion(memoria, vDirecciones[i]);
+        }
+        enviar_operacion(memoria, (tamaño-espacioEnPag)%tam_pag);
+        enviar_operacion(memoria, vDirecciones[i]);
+    }
+    recibir_operacion(memoria);
+    char* cadena = recibir_buffer(&size,memoria);
     direccion = get_registro("DI");
-    crearVectorDirecciones(vectorDirecciones, direccion, tamaño);
-   
-    char* cadena = malloc(tamaño+1);
-    strncpy(cadena,cadenaCompleta,tamaño);
-    enviar_string(cadena, memoria,ESCRITURA_STRING);
-    enviar_vector(vectorDirecciones, tamañoVector, memoria);
 
-    free (cadenaCompleta);
+    desplazamiento = direccion%tam_pag;
+    espacioEnPag = tam_pag-(desplazamiento);
+    if(tamaño<=espacioEnPag){
+        DF = MMU(direccion);
+        enviar_string(cadena, memoria, ESCRITURA_STRING);
+        enviar_operacion(memoria, 1);
+        enviar_operacion(memoria, tamaño);
+        enviar_operacion(memoria, DF);
+    }
+    else{
+        int i;
+        int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
+        int vDirecciones[pagNecesarias];
+        vDirecciones[0]=MMU(direccion);
+        for(i=0; i<pagNecesarias-1; i++)
+            vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
+        enviar_string(cadena, memoria, ESCRITURA_STRING);
+        enviar_operacion(memoria, pagNecesarias);
+        enviar_operacion(memoria, espacioEnPag);
+        enviar_operacion(memoria, vDirecciones[0]);
+        for(i=1; i<pagNecesarias-1; i++){
+            enviar_operacion(memoria, tam_pag);
+            enviar_operacion(memoria, vDirecciones[i]);
+        }
+        enviar_operacion(memoria, (tamaño-espacioEnPag)%tam_pag);
+        enviar_operacion(memoria, vDirecciones[i]);
+    }
     free (cadena);
 }
-
-void crearVectorDirecciones(int vectorDF[], int direccionLogica, int tamaño){
-    //Paginas necesarias = 
-    //cociente entre tamaño a leer y tamaño de pagina redondeado para arriba
-    //+1 por si la primer pagina no esta completamente libre
-    int cantPaginas = tamaño/tam_pag+2;
-
-    int numeroPagina = direccionLogica/tam_pag;
-    int direccionSinOffset = direccionLogica - numeroPagina*tam_pag;
-    int i;
-
-    vectorDF[0]=MMU(direccionLogica);
-
-    for (i=1; i<cantPaginas; i++){
-        vectorDF[i]=MMU(direccionSinOffset + i*tam_pag);
-    }
-}
-
 //LOGS OBLIGATORIOS
 void log_fetch (int pid, int pc){
     log_info(logger, "PID: %d - FETCH - Program Counter: %d", pid, pc);

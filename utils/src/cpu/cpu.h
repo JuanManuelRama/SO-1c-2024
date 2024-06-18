@@ -8,6 +8,7 @@
 #include <commons/string.h>
 #include <semaphore.h>
 #include <commons/collections/queue.h>
+#include <math.h>
 
 typedef enum{
     SET,
