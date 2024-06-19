@@ -287,10 +287,11 @@ void exe_IO_GEN (char** componentes){
 void exe_IO_STD(char** componentes){
     int direccion = get_registro(componentes[2]);
     int tamaño = get_registro(componentes[3]);
+    float tam = tamaño;
     int desplazamiento = direccion%tam_pag;
     int espacioEnPag = tam_pag-(desplazamiento);
     if(tamaño<=espacioEnPag){
-        int vDirecciones[1];
+        int* vDirecciones = calloc(1, sizeof(int));
         vDirecciones[0] = MMU(direccion);
         vectorDirecciones = vDirecciones;
         tamañoVector = 1;
@@ -298,18 +299,18 @@ void exe_IO_STD(char** componentes){
     else{
         int i;
         int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
-        int vDirecciones[pagNecesarias];
+        int* vDirecciones = calloc(pagNecesarias, sizeof(int));
         vDirecciones[0]=MMU(direccion);
         for(i=0; i<pagNecesarias-1; i++)
             vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
         vectorDirecciones = vDirecciones;
         tamañoVector = pagNecesarias;
     }
-    
-    vectorDirecciones = vectorDF;
-
     strcpy (aEnviar, componentes[0]);
+
     strcat (aEnviar, " ");
+    strcat (aEnviar, componentes[1]);
+    strcat(aEnviar, " ");
     string_append_with_format(&aEnviar, "%d %d", tamaño, tamañoVector);
     seVa=IO_STD;
 }

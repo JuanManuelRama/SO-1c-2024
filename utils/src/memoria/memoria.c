@@ -92,6 +92,10 @@ void interactuar_IO (int IO){
 		switch (cod_op) {
 		case ESCRITURA_STRING:
 			escribir_string(IO);
+			break;
+		case LECTURA_STRING:
+			leer_string(IO);
+			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
 			return EXIT_FAILURE;
@@ -311,7 +315,6 @@ void leer_string(int socket_cliente){
 	}
 	cadena[desplazamiento] = '\0';
 	enviar_string(cadena, socket_cliente, LECTURA_STRING);
-	log_info(logger, cadena);
 	free(cadena);
 }
 

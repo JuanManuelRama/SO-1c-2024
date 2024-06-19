@@ -615,17 +615,13 @@ void escuchar_conexiones_IO(int socket_server) {
 }
 
 void atender_solicitud_IO(sProceso* proceso){
-	char** instruccionIO = string_n_split(proceso->multifuncion, 3, " ");
-	int tamaño = atoi(instruccionIO[3]);
+	char** instruccionIO = string_n_split(proceso->multifuncion, 4, " ");
+	int tamañoVector = atoi(instruccionIO[3]);
 	
 	int* vectorDirecciones;
-	int tamañoVector = tamaño/tam_pagina+2;
-	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
-		if (recibir_operacion(conexion_cpu_dispatch) == PAQUETE)
-			vectorDirecciones = recibir_vector(conexion_cpu_dispatch);
-		else
-			log_info(logger, "CPU me mando cualquier cosa");
-	}
+	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE"))
+		vectorDirecciones = recibir_vector(conexion_cpu_dispatch, tamañoVector);
+
 
 	// funcionalidad propia de gcc, inner function
 	bool existe_conexion(void* elem) {
@@ -651,8 +647,11 @@ void atender_solicitud_IO(sProceso* proceso){
 	// le mandamos a la instancia encontrada la operacion
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
 
-	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE"))
-		enviar_vector(vectorDirecciones, tamañoVector, IO_seleccionada);
+	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
+		enviar_vector(vectorDirecciones, tamañoVector, IO_seleccionada->socket);
+		free(vectorDirecciones);
+	}
+		
 
 	// nos quedamos escuchando la respuesta
 	int codOp = recibir_operacion (IO_seleccionada->socket);
