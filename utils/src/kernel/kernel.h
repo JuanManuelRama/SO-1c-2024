@@ -17,6 +17,7 @@ extern t_queue* cREADY_PLUS; // usado para VRR
 extern t_queue* cEXIT;
 extern t_list* lBlocked;
 extern t_list* lista_conexiones_IO;
+extern t_recurso* recursos;
 extern pthread_mutex_t mNEW;
 extern pthread_mutex_t mREADY;
 extern pthread_mutex_t mREADY_PLUS; // usado para VRR
@@ -37,11 +38,11 @@ extern int quantum;
 extern int kernel_servidor;
 extern int pidRunning;
 extern int tam_pagina;
+extern int cantRecursos;
+extern int instanciasUtilizadas;
 extern bool planificacion_activa;
 extern bool planiEsVrr; // vrr (se usa para ver a donde mandas a un proceso q vuelve de IO, ready/ready+)
-
-extern t_recurso* recursos;
-extern int cantRecursos;
+extern char* recursoPedido;
 
 typedef struct{
     t_pcb pcb;
@@ -211,3 +212,7 @@ void despachar_a_running();
 *@brief		recibe un quantum, espera ese tiempo y al terminar manda interrupcion a cpu
 */
 void setear_timer(sProceso*);
+
+int buscar_recurso(char*);
+
+void liberar_recursos(int);

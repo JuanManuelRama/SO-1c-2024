@@ -251,3 +251,5 @@ int* recibir_vector(int);
 int recibir_int (int);
 
 void* recibir_puntero(int);
+
+t_paquete* recibir_recurso(int);

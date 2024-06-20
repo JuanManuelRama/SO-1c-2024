@@ -35,7 +35,8 @@ t_list *lista_conexiones_IO;
 
 t_recurso* recursos;
 int cantRecursos;
-
+int instanciasUtilizadas;
+char* recursoPedido;
 
 int main() {
 
