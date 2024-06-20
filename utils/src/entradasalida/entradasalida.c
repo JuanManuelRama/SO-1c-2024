@@ -45,7 +45,6 @@ void crear_interfaz_stdin (char* nombre){
 	int socket_memoria = conectar_memoria (nombre); 
 
 	tam_pagina = recibir_operacion(socket_memoria);
-	log_info(logger, "tam_pag = %i", tam_pagina);
 
 	while(1) {
 		int cod_op = recibir_operacion(socket_kernel);
@@ -86,8 +85,15 @@ void crear_interfaz_stdin (char* nombre){
             enviar_operacion(socket_memoria, tam_pagina);
             enviar_operacion(socket_memoria, vectorDirecciones[i]);
         }
-        enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
-        enviar_operacion(socket_memoria, vectorDirecciones[i]);
+		if((tamaño-espacioEnPag)%tam_pagina){
+			enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
+			enviar_operacion(socket_memoria, vectorDirecciones[i]);
+		}
+		
+		else{
+        	enviar_operacion(socket_memoria, tam_pagina);
+        	enviar_operacion(socket_memoria, vectorDirecciones[i]);
+		}
     }
 
 				log_info(logger, "Resultado de %s: io_success", nombre);
@@ -112,7 +118,6 @@ void crear_interfaz_stdout (char* nombre){
 	int socket_memoria = conectar_memoria (nombre); 
 
 	tam_pagina = recibir_operacion(socket_memoria);
-	log_info(logger, "tam_pag = %i", tam_pagina);
 
 	while(1) {
 		int cod_op = recibir_operacion(socket_kernel);
@@ -147,8 +152,14 @@ void crear_interfaz_stdout (char* nombre){
 						enviar_operacion(socket_memoria, tam_pagina);
 						enviar_operacion(socket_memoria, vectorDirecciones[i]);
 					}
+					if((tamaño-espacioEnPag)%tam_pagina){
 					enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
 					enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+					else{
+						enviar_operacion(socket_memoria, tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
 				}
 				recibir_operacion(socket_memoria);
 				char* cadena = recibir_buffer(&size,socket_memoria);

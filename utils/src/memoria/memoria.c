@@ -7,7 +7,7 @@ void recibir_proceso(int socket_cliente){
 		proceso->pid = recibir_operacion(socket_cliente);
 		proceso->instrucciones = cargar_proceso(path);
 		free (path);
-		sleep(RETARDO);
+		usleep(RETARDO*1000);
 		if(proceso->instrucciones)
 			proceso->paginas = nuevaTablaPaginas(proceso->pid);
 		else
@@ -122,7 +122,7 @@ void escuchar_nuevas_IO (int socket_server){
 
 void buscar_instruccion(int socket_cliente){
 	int instruccion = recibir_int(socket_cliente);
-	sleep(RETARDO);
+	usleep(RETARDO*1000);
 	enviar_string(proceso->instrucciones[instruccion], socket_cliente, FETCH);
 }
 
@@ -134,7 +134,7 @@ void inicializar_memoria(){
 
 	TAM_PAG = config_get_int_value(config,"TAM_PAGINA");
 	TAM_MEMORIA = config_get_int_value(config,"TAM_MEMORIA");
-	RETARDO = config_get_int_value(config,"RETARDO_RESPUESTA")/1000;
+	RETARDO = config_get_int_value(config,"RETARDO_RESPUESTA");
 
 	//PATH_INSTRUCCIONES = buscar("PATH_INSTRUCCIONES");
 
@@ -230,7 +230,7 @@ void aniadir_paginas (int cpu){
 		i++;
 		paginas--;
 	}
-	sleep(RETARDO);
+	usleep(RETARDO*1000);
 	enviar_operacion(cpu, 1);
 }
 
@@ -271,12 +271,13 @@ void sacar_paginas (int cpu){
 		paginas--;
 	}
 	log_camTam(proceso->pid, tamActual, "Reducir", tamNuevo);
-	sleep(RETARDO);
+	usleep(RETARDO*1000);
 }
 
 void leer(int socket_cliente){
 	int DF = recibir_int(socket_cliente);
 	int tamanio = recibir_operacion(socket_cliente);
+	usleep(RETARDO*1000);
 	log_acceso(proceso->pid, "Lectura", DF, tamanio);
 	if(tamanio == 4){
 		uint32_t valor;
@@ -294,6 +295,7 @@ void escribir(int socket_cliente){
 	int DF = recibir_int(socket_cliente);
 	int tamanio = recibir_operacion(socket_cliente);
 	log_acceso(proceso->pid, "Escritura", DF, tamanio);
+	usleep(RETARDO*1000);
 	if(tamanio == 4){
 		uint32_t valor = recibir_int(socket_cliente);
 		memcpy(memoria_contigua + DF, &valor, tamanio);
@@ -317,6 +319,7 @@ void leer_string(int socket_cliente){
 		desplazamiento += tamaño;
 	}
 	cadena[desplazamiento] = '\0';
+	usleep(RETARDO*1000);
 	enviar_string(cadena, socket_cliente, LECTURA_STRING);
 	free(cadena);
 }
@@ -333,6 +336,7 @@ void escribir_string(int socket_cliente){
 		memcpy(memoria_contigua+direccion, cadena+deslplazamiento, tamaño);
 		deslplazamiento += tamaño;
 	}
+	usleep(RETARDO*1000);
 	free(cadena);
 }
 
@@ -355,7 +359,7 @@ void liberar_proceso(int socket_cliente){
 		log_TdP(proceso->pid);
 	}
 	free(proceso);
-	sleep(RETARDO);
+	usleep(RETARDO*1000);
 }
 
 // LOGS OBLIGATORIOS

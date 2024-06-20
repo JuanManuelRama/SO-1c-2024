@@ -290,7 +290,7 @@ void carnicero(){
 	enviar_puntero(proceso->pcb.instrucciones, conexion_memoria, FINALIZACION);
 	log_finalizacion(proceso->pcb.pid, proceso->multifuncion);
 	free(proceso);
-	liberar_recursos(instanciasUtilizadas);
+	//liberar_recursos(instanciasUtilizadas);
 	sem_post(&sMultiprogramacion);
 	}
 }
@@ -864,7 +864,7 @@ void atender_solicitud_IO(sProceso* proceso){
 		return;
 	}
 	log_bloqueo(proceso->pcb.pid, instruccionIO[0]);
-
+	
 	// le mandamos a la instancia encontrada la operacion
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
 

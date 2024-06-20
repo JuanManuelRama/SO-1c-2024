@@ -373,7 +373,7 @@ void exe_COPY_STRING(int tamaño){
     int DF, size;
     int direccion = get_registro("SI");
     int desplazamiento = direccion%tam_pag;
-    int espacioEnPag = tam_pag-(desplazamiento);
+    int espacioEnPag = tam_pag-desplazamiento;
     if(tamaño<=espacioEnPag){
         DF = MMU(direccion);
         enviar_operacion(memoria, LECTURA_STRING);
@@ -397,8 +397,14 @@ void exe_COPY_STRING(int tamaño){
             enviar_operacion(memoria, tam_pag);
             enviar_operacion(memoria, vDirecciones[i]);
         }
-        enviar_operacion(memoria, (tamaño-espacioEnPag)%tam_pag);
-        enviar_operacion(memoria, vDirecciones[i]);
+        if((tamaño-espacioEnPag)%tam_pag){
+             enviar_operacion(memoria, (tamaño-espacioEnPag)%tam_pag);
+            enviar_operacion(memoria, vDirecciones[i]);
+        }
+        else{          
+            enviar_operacion(memoria, tam_pag);
+            enviar_operacion(memoria, vDirecciones[i]);
+        }
     }
     recibir_operacion(memoria);
     char* cadena = recibir_buffer(&size,memoria);
@@ -430,8 +436,14 @@ void exe_COPY_STRING(int tamaño){
             enviar_operacion(memoria, tam_pag);
             enviar_operacion(memoria, vDirecciones[i]);
         }
-        enviar_operacion(memoria, (tamaño-espacioEnPag)%tam_pag);
-        enviar_operacion(memoria, vDirecciones[i]);
+        if((tamaño-espacioEnPag)%tam_pag){
+            enviar_operacion(memoria, (tamaño-espacioEnPag)%tam_pag);
+            enviar_operacion(memoria, vDirecciones[i]);
+        }
+        else{          
+            enviar_operacion(memoria, tam_pag);
+            enviar_operacion(memoria, vDirecciones[i]);
+        }
     }
     log_rws(pcb.pid, "ESCRIBIR", DF, cadena);
     free (cadena);
