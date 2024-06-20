@@ -192,3 +192,7 @@ void log_fetch (int, int);
 *@param     parametros Parametros de la instruccion
 */
 void log_execute(int, char*, char*);
+
+void log_marco(int, int, int);
+
+void log_rw(int, char*, int, int);

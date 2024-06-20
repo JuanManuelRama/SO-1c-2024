@@ -150,3 +150,4 @@ void finalizar_memoria();
 void log_TdP(int);
 void log_pagina(int, int, int);
 void log_camTam(int, int, char*, int);
+void log_acceso(int, char*, int, int);

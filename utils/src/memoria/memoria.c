@@ -277,6 +277,7 @@ void sacar_paginas (int cpu){
 void leer(int socket_cliente){
 	int DF = recibir_int(socket_cliente);
 	int tamanio = recibir_operacion(socket_cliente);
+	log_acceso(proceso->pid, "Lectura", DF, tamanio);
 	if(tamanio == 4){
 		uint32_t valor;
 		memcpy(&valor, memoria_contigua + DF, 4);
@@ -292,6 +293,7 @@ void leer(int socket_cliente){
 void escribir(int socket_cliente){
 	int DF = recibir_int(socket_cliente);
 	int tamanio = recibir_operacion(socket_cliente);
+	log_acceso(proceso->pid, "Escritura", DF, tamanio);
 	if(tamanio == 4){
 		uint32_t valor = recibir_int(socket_cliente);
 		memcpy(memoria_contigua + DF, &valor, tamanio);
@@ -310,6 +312,7 @@ void leer_string(int socket_cliente){
 	for(i=0; i<cantPag; i++){
 		tamaño = recibir_operacion(socket_cliente);
 		direccion = recibir_operacion(socket_cliente);
+		log_acceso(proceso->pid, "Lectura", direccion, tamaño);
 		memcpy(cadena+desplazamiento, memoria_contigua+direccion, tamaño);
 		desplazamiento += tamaño;
 	}
@@ -326,6 +329,7 @@ void escribir_string(int socket_cliente){
 	for(i=0; i<cantPag; i++){
 		tamaño = recibir_operacion(socket_cliente);
 		direccion = recibir_operacion(socket_cliente);
+		log_acceso(proceso->pid, "Escritura", direccion, tamaño);
 		memcpy(memoria_contigua+direccion, cadena+deslplazamiento, tamaño);
 		deslplazamiento += tamaño;
 	}
@@ -360,9 +364,13 @@ void log_TdP(int pid){
 }
 
 void log_pagina(int pid, int pagina, int marco){
-	log_info(logger, "PID: %d - Pagina: %d - Marco: %d", pid, pagina, marco);
+	log_info(logger, "PID: %d - Página: %d - Marco: %d", pid, pagina, marco);
 }
 
 void log_camTam(int pid, int tamActual, char* cambio, int tamNuevo){
 	log_info(logger, "PID: %d - Tamaño Actual: %d - Tamaño a %s: %d", pid, tamActual, cambio, tamNuevo);
+}
+
+void log_acceso(int pid, char* accion, int DF, int tamaño){
+	log_info(logger, "PID: %d - Accion: %s - Dirección Física: %d - Tamaño: %d", pid, accion, DF, tamaño);
 }
