@@ -126,6 +126,10 @@ void cambiar_multiprogramacion(int);
 
 void proceso_estado();
 
+void finalizar_proceso(int);
+
+sProceso* buscar_proceso_en_lista(t_list*, int);
+
 //PLANIFICADORES
 /**
 *@fn 		planificadorCP_FIFO

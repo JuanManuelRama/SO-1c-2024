@@ -70,9 +70,9 @@ int main() {
 				interrupcion = queue_pop(cIntr);
 				pthread_mutex_unlock(&mIntr);
 				switch(interrupcion->motivo){
-					case FINALIZACION:
+					case INTERRUPCION:
 						if(pcb.pid == interrupcion->pid)
-							seVa = FINALIZACION;
+							seVa = INTERRUPCION;
 						break;
 					case FIN_DE_QUANTUM:
 						if(!seVa && pcb.pid == interrupcion->pid)

@@ -119,16 +119,17 @@ void interactuar_consola(char* buffer){
 	switch (consola){
 		case INICIAR_PROCESO:
 			crear_proceso (mensaje[1]);
-				free (mensaje[0]);
-				free(mensaje);
+			free (mensaje[0]);
+			free(mensaje);
 			break;
 		case FINALIZAR_PROCESO:
-			log_info(logger, "Proceso finalizado");
+			finalizar_proceso(atoi(mensaje[1]));
+			free (mensaje[0]);
+			free(mensaje);
 			break;
 		case EJECUTAR_SCRIPT:
 			ejecutar_script(mensaje[1]);
-				free (mensaje[0]);
-				free(mensaje);
+			string_array_destroy(mensaje);
 			break;
 		case DETENER_PLANIFICACION:
 			detener_planificacion();
@@ -173,6 +174,38 @@ void crear_proceso (char* path){
 	sem_post(&semPLP);
 }
 
+void finalizar_proceso(int pid){
+	if(pid==pidRunning){
+		enviar_int(pid, conexion_cpu_interrupt, INTERRUPCION);
+		iniciar_planificacion();
+		return;
+	}
+	detener_planificacion();
+	if(!buscar_proceso_en_lista(cNEW->elements, pid))
+		if(!buscar_proceso_en_lista(cREADY->elements, pid))
+			if(!buscar_proceso_en_lista(lBlocked, pid)){
+				log_warning(logger, "No se encontro el proceso");
+				iniciar_planificacion();
+			}
+}
+
+sProceso* buscar_proceso_en_lista(t_list* lista, int pid){
+	sProceso* proceso;
+
+	bool existe_proceso(void* elem) {
+		sProceso *proceso = (sProceso*)elem;
+		return proceso->pcb.pid == pid;
+	}
+
+	proceso = list_find(lista, existe_proceso);
+	if(!proceso)
+		return NULL;
+	list_remove_element(lista, proceso);
+	iniciar_planificacion();
+	matadero(proceso, "Interrumpido por Usuario");
+	return 1;
+}
+
 void detener_planificacion(){
 	if(planificacion_activa){
 		pthread_mutex_lock(&mNEW);
@@ -199,7 +232,6 @@ void ejecutar_script(char* path){
 	FILE* script = fopen(path, "r");
 	if(script == NULL){
 		log_info(logger, "No se pudo abrir el archivo");
-		free(path);
 		return;
 	}
 	char* buffer = malloc(50);
@@ -209,7 +241,6 @@ void ejecutar_script(char* path){
 		interactuar_consola(buffer);
 	}
 	free (buffer);
-	free(path);
 	fclose(script);
 }
 
@@ -667,7 +698,7 @@ void planificadorCP_VRR() {
 		switch(motivo){
 			case FINALIZACION:
 				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
-				matadero(proceso, "Finalizo");
+				matadero(proceso, "Éxito");
 				break;
 			case IO_STD:
 			case IO:
@@ -809,6 +840,10 @@ void planificadorCP_VRR() {
 
 				sem_post(&semPCP); // pasa a estar esperando, aviso al dispatcher
 				break;
+			case INTERRUPCION:
+				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
+				matadero(proceso, "Interrumpido por Usuario");
+				break;
 			default:
 				matadero(proceso, "Envio codigo de salida no valido");
 				break;
@@ -864,9 +899,7 @@ void atender_solicitud_IO(sProceso* proceso){
 		return !strcmp(conexion->nombre, instruccionIO[1]);
 	}
 
-	pthread_mutex_lock(&mCONEXIONES);
 	t_conexion* IO_seleccionada = list_find(lista_conexiones_IO, existe_conexion);
-	pthread_mutex_unlock(&mCONEXIONES);
 
 	if (IO_seleccionada == NULL) {
 		pthread_mutex_lock(&mBLOCKED);
