@@ -189,10 +189,10 @@ void execute(sInstruccion instruccion){
             exe_EXIT();
             break;
         case MOV_IN:
-            exe_MOVE_IN(instruccion.componentes[1], instruccion.componentes[2]);
+            exe_MOV_IN(instruccion.componentes[1], instruccion.componentes[2]);
             break;
         case MOV_OUT:
-            exe_MOVE_OUT(instruccion.componentes[1], instruccion.componentes[2]);
+            exe_MOV_OUT(instruccion.componentes[1], instruccion.componentes[2]);
             break;
         case RESIZE:
             exe_RESIZE(atoi(instruccion.componentes[1]));
@@ -316,7 +316,7 @@ void exe_IO_STD(char** componentes){
     seVa=IO_STD;
 }
 
-void exe_MOVE_IN(char* reg_datos, char* reg_direccion){
+void exe_MOV_IN(char* reg_datos, char* reg_direccion){
     int DF = MMU(get_registro(reg_direccion));
     int leer = cuanto_leo(reg_datos);
 
@@ -336,7 +336,7 @@ void exe_MOVE_IN(char* reg_datos, char* reg_direccion){
     set_registro(reg_datos,memoria);
 }
 
-void exe_MOVE_OUT(char* reg_direccion, char* reg_datos){
+void exe_MOV_OUT(char* reg_direccion, char* reg_datos){
     int DF = MMU(get_registro(reg_direccion));
     int cantBytes = cuanto_leo(reg_datos);
     int valor = get_registro(reg_datos);
