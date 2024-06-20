@@ -94,6 +94,7 @@ int main() {
 		}else if(seVa == IO_STD){
 			enviar_string(aEnviar, socket_dispatch, IO);
 			enviar_vector(vectorDirecciones, tamañoVector, socket_dispatch);
+			free(vectorDirecciones);
 		}
 
 		seVa=false;

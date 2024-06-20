@@ -25,6 +25,7 @@ int MMU(int DL){
     }
     int marco = recibir_int(memoria);
     int DF = marco*tam_pag + desplazamiento;
+    log_marco(pcb.pid, pag, marco);
     return DF;
 }
 
@@ -188,10 +189,10 @@ void execute(sInstruccion instruccion){
             exe_EXIT();
             break;
         case MOV_IN:
-            exe_MOVE_IN(instruccion.componentes[1], instruccion.componentes[2]);
+            exe_MOV_IN(instruccion.componentes[1], instruccion.componentes[2]);
             break;
         case MOV_OUT:
-            exe_MOVE_OUT(instruccion.componentes[1], instruccion.componentes[2]);
+            exe_MOV_OUT(instruccion.componentes[1], instruccion.componentes[2]);
             break;
         case RESIZE:
             exe_RESIZE(atoi(instruccion.componentes[1]));
@@ -287,10 +288,11 @@ void exe_IO_GEN (char** componentes){
 /*void exe_IO_STD(char** componentes){
     int direccion = get_registro(componentes[2]);
     int tamaño = get_registro(componentes[3]);
+    float tam = tamaño;
     int desplazamiento = direccion%tam_pag;
     int espacioEnPag = tam_pag-(desplazamiento);
     if(tamaño<=espacioEnPag){
-        int vDirecciones[1];
+        int* vDirecciones = calloc(1, sizeof(int));
         vDirecciones[0] = MMU(direccion);
         vectorDirecciones = vDirecciones;
         tamañoVector = 1;
@@ -298,23 +300,23 @@ void exe_IO_GEN (char** componentes){
     else{
         int i;
         int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
-        int vDirecciones[pagNecesarias];
+        int* vDirecciones = calloc(pagNecesarias, sizeof(int));
         vDirecciones[0]=MMU(direccion);
         for(i=0; i<pagNecesarias-1; i++)
             vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
         vectorDirecciones = vDirecciones;
         tamañoVector = pagNecesarias;
     }
-    
-    vectorDirecciones = vectorDF;
-
     strcpy (aEnviar, componentes[0]);
+
     strcat (aEnviar, " ");
+    strcat (aEnviar, componentes[1]);
+    strcat(aEnviar, " ");
     string_append_with_format(&aEnviar, "%d %d", tamaño, tamañoVector);
     seVa=IO_STD;
 }*/
 
-void exe_MOVE_IN(char* reg_datos, char* reg_direccion){
+void exe_MOV_IN(char* reg_datos, char* reg_direccion){
     int DF = MMU(get_registro(reg_direccion));
     int leer = cuanto_leo(reg_datos);
 
@@ -329,10 +331,12 @@ void exe_MOVE_IN(char* reg_datos, char* reg_direccion){
         log_error(logger, "La memoria me envió cualquier cosa...");
         return;
     }
-    set_registro(reg_datos,recibir_int(memoria));
+    int valor = recibir_int(memoria);
+    log_rw(pcb.pid, "LEER", DF, valor);
+    set_registro(reg_datos,memoria);
 }
 
-void exe_MOVE_OUT(char* reg_direccion, char* reg_datos){
+void exe_MOV_OUT(char* reg_direccion, char* reg_datos){
     int DF = MMU(get_registro(reg_direccion));
     int cantBytes = cuanto_leo(reg_datos);
     int valor = get_registro(reg_datos);
@@ -341,7 +345,7 @@ void exe_MOVE_OUT(char* reg_direccion, char* reg_datos){
         seVa=SEG_FAULT;
         return;
     }
-
+    log_rw(pcb.pid, "ESCRIBIR", DF, valor);
     enviar_int(DF, memoria, ESCRITURA);
     enviar_int(valor, memoria, cantBytes);
 }
@@ -380,6 +384,7 @@ void exe_COPY_STRING(int tamaño){
         int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
         int vDirecciones[pagNecesarias];
         vDirecciones[0]=MMU(direccion);
+        DF=vDirecciones[0];
         for(i=0; i<pagNecesarias-1; i++)
             vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
         enviar_operacion(memoria, LECTURA_STRING);
@@ -395,6 +400,7 @@ void exe_COPY_STRING(int tamaño){
     }
     recibir_operacion(memoria);
     char* cadena = recibir_buffer(&size,memoria);
+    log_rws(pcb.pid, "LEER", DF, cadena);
     direccion = get_registro("DI");
 
     desplazamiento = direccion%tam_pag;
@@ -411,6 +417,7 @@ void exe_COPY_STRING(int tamaño){
         int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
         int vDirecciones[pagNecesarias];
         vDirecciones[0]=MMU(direccion);
+        DF=vDirecciones[0];
         for(i=0; i<pagNecesarias-1; i++)
             vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
         enviar_string(cadena, memoria, ESCRITURA_STRING);
@@ -424,6 +431,7 @@ void exe_COPY_STRING(int tamaño){
         enviar_operacion(memoria, (tamaño-espacioEnPag)%tam_pag);
         enviar_operacion(memoria, vDirecciones[i]);
     }
+    log_rws(pcb.pid, "ESCRIBIR", DF, cadena);
     free (cadena);
 }
 //LOGS OBLIGATORIOS
@@ -435,3 +443,14 @@ void log_execute (int pid, char* instruccion, char* parametros){
     log_info(logger, "PID: %d - Ejecutando: %s - %s", pid, instruccion, parametros);
 }
 
+void log_marco(int pid, int pag, int marco){
+    log_info(logger, "PID: %d - Página: %d - Marco: %d", pid, pag, marco);
+}
+
+void log_rw(int pid, char* operacion, int direccion, int valor){
+    log_info(logger, "PID: %d - Acción: %s - Dirección Física: %d - Valor: %d", pid, operacion, direccion, valor);
+}
+
+void log_rws(int pid, char* operacion, int direccion, char* valor){
+    log_info(logger, "PID: %d - Acción: %s - Dirección Física: %d - Valor: %s", pid, operacion, direccion, valor);
+}

@@ -171,9 +171,17 @@ void exe_SIGNAL(char*);
  * @param nombre Nombre del dispositivo I/O
  * @param tiempo Tiempo de espera
  */ 
-void exe_IO_GEN_SLEEP(char*, char*);
+void exe_IO_GEN(char**);
 
+void exe_IO_STD(char**);
 
+void exe_MOV_IN(char*, char*);
+
+void exe_MOV_OUT(char*, char*);
+
+void exe_RESIZE(int);
+
+void exe_COPY_STRING(int);
 
 //LOGS OBLIGATORIOS
 /**
@@ -192,3 +200,9 @@ void log_fetch (int, int);
 *@param     parametros Parametros de la instruccion
 */
 void log_execute(int, char*, char*);
+
+void log_marco(int, int, int);
+
+void log_rw(int, char*, int, int);
+
+void log_rws(int, char*, int, char*);
