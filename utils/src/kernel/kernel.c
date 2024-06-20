@@ -624,6 +624,7 @@ void planificadorCP_VRR() {
 	pthread_t hilo_timer;
 	struct timespec tiempoInicio;
 	struct timespec tiempoVuelta;
+	int tiempoTranscurrido;
 
 	while (1) {
 		sem_wait(&semPCP);
@@ -676,7 +677,14 @@ void planificadorCP_VRR() {
 
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
 				proceso->pcb.estado = BLOCKED;
-				proceso->pcb.quantum -= (tiempoVuelta.tv_sec - tiempoInicio.tv_sec) * 1000 + (tiempoVuelta.tv_nsec - tiempoInicio.tv_nsec) / 1000000;
+				tiempoTranscurrido = (tiempoVuelta.tv_sec - tiempoInicio.tv_sec) * 1000 + (tiempoVuelta.tv_nsec - tiempoInicio.tv_nsec) / 1000000;
+				
+				if (proceso->pcb.quantum >= tiempoTranscurrido) {
+					proceso->pcb.quantum -= tiempoTranscurrido;
+				} else {
+					proceso->pcb.quantum = 0; // caso borde, evitamos quantums negativos
+				}
+
 				// actualizo el quantum restante
 				
 				if(recibir_operacion(conexion_cpu_dispatch) != IO)
@@ -710,7 +718,13 @@ void planificadorCP_VRR() {
 
 						log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
 						proceso->pcb.estado = BLOCKED;
-						proceso->pcb.quantum -= (tiempoVuelta.tv_sec - tiempoInicio.tv_sec) * 1000 + (tiempoVuelta.tv_nsec - tiempoInicio.tv_nsec) / 1000000;	
+						tiempoTranscurrido = (tiempoVuelta.tv_sec - tiempoInicio.tv_sec) * 1000 + (tiempoVuelta.tv_nsec - tiempoInicio.tv_nsec) / 1000000;
+				
+						if (proceso->pcb.quantum >= tiempoTranscurrido) {
+							proceso->pcb.quantum -= tiempoTranscurrido;
+						} else {
+							proceso->pcb.quantum = 0; // caso borde, evitamos quantums negativos
+						}	
 
 						pthread_mutex_lock(&mBLOCKED);
 						queue_push(recursos[indiceRecurso].cBloqueados, proceso);
