@@ -92,6 +92,10 @@ void interactuar_IO (int IO){
 		switch (cod_op) {
 		case ESCRITURA_STRING:
 			escribir_string(IO);
+			break;
+		case LECTURA_STRING:
+			leer_string(IO);
+			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
 			return EXIT_FAILURE;
@@ -273,6 +277,7 @@ void sacar_paginas (int cpu){
 void leer(int socket_cliente){
 	int DF = recibir_int(socket_cliente);
 	int tamanio = recibir_operacion(socket_cliente);
+	log_acceso(proceso->pid, "Lectura", DF, tamanio);
 	if(tamanio == 4){
 		uint32_t valor;
 		memcpy(&valor, memoria_contigua + DF, 4);
@@ -288,6 +293,7 @@ void leer(int socket_cliente){
 void escribir(int socket_cliente){
 	int DF = recibir_int(socket_cliente);
 	int tamanio = recibir_operacion(socket_cliente);
+	log_acceso(proceso->pid, "Escritura", DF, tamanio);
 	if(tamanio == 4){
 		uint32_t valor = recibir_int(socket_cliente);
 		memcpy(memoria_contigua + DF, &valor, tamanio);
@@ -299,50 +305,34 @@ void escribir(int socket_cliente){
 }
 
 void leer_string(int socket_cliente){
-	int* direcciones;
-	int i, direccion;
-	char* cadena = string_new();
-	char caracterLeido;
-
-	if(recibir_operacion(socket_cliente)==VECTOR)
-		direcciones = recibir_vector(socket_cliente);
-	else
-		log_info(logger, "Error en el envio de direcciones");
-
-	direccion=direcciones[0];
-	for(i=0; caracterLeido!='\0'; i++){
-		memcpy(&caracterLeido, memoria_contigua+direccion, 1);
-		strcat(cadena, &caracterLeido);
-		direccion++;
-		if(direccion%TAM_PAG == TAM_PAG-1){
-			direcciones++;
-			direccion=*direcciones;
-		}
+	int cantPag, tamaño, i, direccion;
+	int desplazamiento = 0;
+	cantPag = recibir_operacion(socket_cliente);
+	char* cadena = malloc(cantPag*TAM_PAG+1);
+	for(i=0; i<cantPag; i++){
+		tamaño = recibir_operacion(socket_cliente);
+		direccion = recibir_operacion(socket_cliente);
+		log_acceso(proceso->pid, "Lectura", direccion, tamaño);
+		memcpy(cadena+desplazamiento, memoria_contigua+direccion, tamaño);
+		desplazamiento += tamaño;
 	}
+	cadena[desplazamiento] = '\0';
 	enviar_string(cadena, socket_cliente, LECTURA_STRING);
+	free(cadena);
 }
 
 void escribir_string(int socket_cliente){
-	int size, i, direccion;
-	char* cadena = recibir_buffer(&size, socket_cliente);
-	int* direcciones;
-
-	if(recibir_operacion(socket_cliente)==VECTOR)
-		direcciones = recibir_vector(socket_cliente);
-	else
-		log_info(logger, "Error en el envio de direcciones");
-
-	direccion=direcciones[0];
-	for(i=0; cadena[i]!='\0'; i++){
-		memcpy(memoria_contigua+direccion, &cadena[i], 1);
-		direccion++;
-		if(direccion%TAM_PAG == TAM_PAG-1){
-			direcciones++;
-			direccion=*direcciones;
-		}
+	int cantPag, tamaño, i, direccion;
+	int deslplazamiento = 0;
+	char* cadena = recibir_buffer(&tamaño, socket_cliente);
+	cantPag = recibir_operacion(socket_cliente);
+	for(i=0; i<cantPag; i++){
+		tamaño = recibir_operacion(socket_cliente);
+		direccion = recibir_operacion(socket_cliente);
+		log_acceso(proceso->pid, "Escritura", direccion, tamaño);
+		memcpy(memoria_contigua+direccion, cadena+deslplazamiento, tamaño);
+		deslplazamiento += tamaño;
 	}
-
-	free(direcciones);
 	free(cadena);
 }
 
@@ -374,9 +364,13 @@ void log_TdP(int pid){
 }
 
 void log_pagina(int pid, int pagina, int marco){
-	log_info(logger, "PID: %d - Pagina: %d - Marco: %d", pid, pagina, marco);
+	log_info(logger, "PID: %d - Página: %d - Marco: %d", pid, pagina, marco);
 }
 
 void log_camTam(int pid, int tamActual, char* cambio, int tamNuevo){
 	log_info(logger, "PID: %d - Tamaño Actual: %d - Tamaño a %s: %d", pid, tamActual, cambio, tamNuevo);
+}
+
+void log_acceso(int pid, char* accion, int DF, int tamaño){
+	log_info(logger, "PID: %d - Accion: %s - Dirección Física: %d - Tamaño: %d", pid, accion, DF, tamaño);
 }

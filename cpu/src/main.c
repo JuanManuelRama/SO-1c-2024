@@ -88,11 +88,14 @@ int main() {
 			pthread_mutex_unlock(&mIntr);
 		}
 		enviar_pcb(pcb, socket_dispatch, seVa);
-		if(seVa == IO_GEN || seVa == DARRECURSO || seVa == PEDIRRECURSO){
+		if(seVa == DARRECURSO || seVa == PEDIRRECURSO){
+			enviar_string(aEnviar, socket_dispatch, seVa);
+		}else if(seVa == IO_GEN){
 			enviar_string(aEnviar, socket_dispatch, IO);
 		}else if(seVa == IO_STD){
 			enviar_string(aEnviar, socket_dispatch, IO);
 			enviar_vector(vectorDirecciones, tamañoVector, socket_dispatch);
+			free(vectorDirecciones);
 		}
 
 		seVa=false;

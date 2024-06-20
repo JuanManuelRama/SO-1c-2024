@@ -51,6 +51,8 @@ extern t_bitarray* bitmap;
 
 void inicializar_memoria();
 
+void inicializar_bitmap();
+
 void interactuar_cpu (int socket_cliente);
 void interactuar_Kernel (int socket_cliente);
 void interactuar_IO (int socket_IO);
@@ -127,7 +129,17 @@ void sacar_paginas(int);
 */
 void tamanio_proceso(int);
 
+int tam_proc();
+
 void traducir_pagina(int);
+
+void leer(int);
+
+void escribir(int);
+
+void leer_string(int);
+
+void escribir_string(int);
 
 void liberar_proceso(int);
 
@@ -137,3 +149,5 @@ void finalizar_memoria();
 //LOGS OBLIGATORIOS
 void log_TdP(int);
 void log_pagina(int, int, int);
+void log_camTam(int, int, char*, int);
+void log_acceso(int, char*, int, int);

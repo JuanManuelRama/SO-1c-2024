@@ -52,41 +52,43 @@ void crear_interfaz_stdin (char* nombre){
 		if (cod_op == OPERACION_IO) {
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
-			char** instruccion = string_n_split(buffer, 3, " ");
+			char** instruccion = string_split(buffer, " ");
 
-			int direccion = atoi(instruccion[2]);
-			int tamaño = atoi(instruccion[3]);
+			int tamaño = atoi(instruccion[2]);
+			int tamañoVector = atoi(instruccion[3]);
 			
-			int* vectorDirecciones;
-			int tamañoVector = tamaño/tam_pagina+2;
-			if (recibir_operacion(socket_kernel) == VECTOR)
-				vectorDirecciones = recibir_vector(socket_kernel);
-			else
-				log_info(logger, "Error en el envio de direcciones");
-
-
+			int* vectorDirecciones = recibir_vector(socket_kernel, tamañoVector);
 			log_info(logger, "Operacion: %s", instruccion[0]);
-
 			if (!strcmp(instruccion[0], "IO_STDIN_READ")){
-
-				
 				char valor[tamaño];
-
-				int i;
-
-				printf("Ingrese hasta %i caracteres", tamaño);
-				for(i=0; i<tamaño; i++)
+				printf("Ingrese hasta %i caracteres \n", tamaño);
+				for(int i=0; i<tamaño; i++)
 					valor[i] = getchar();
 				valor[tamaño]='\0';
 				getchar();
 
 				log_info(logger, "Valor ingresado: %s", valor);
-
-				enviar_string(valor, socket_memoria, ESCRITURA_STRING);
-				enviar_vector(vectorDirecciones, tamañoVector, socket_memoria);
-
-
-				free(valor);
+		int espacioEnPag = tam_pagina-vectorDirecciones[0]%tam_pagina;
+		float tam = tamaño;
+		if(tamaño<=espacioEnPag){
+        enviar_string(valor, socket_memoria, ESCRITURA_STRING);
+        enviar_operacion(socket_memoria, 1);
+        enviar_operacion(socket_memoria, tamaño);
+        enviar_operacion(socket_memoria, vectorDirecciones[0]);
+    }
+    else{
+        int i;
+        enviar_string(valor, socket_memoria, ESCRITURA_STRING);
+        enviar_operacion(socket_memoria, tamañoVector);
+        enviar_operacion(socket_memoria, espacioEnPag);
+        enviar_operacion(socket_memoria, vectorDirecciones[0]);
+        for(i=1; i<tamañoVector-1; i++){
+            enviar_operacion(socket_memoria, tam_pagina);
+            enviar_operacion(socket_memoria, vectorDirecciones[i]);
+        }
+        enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
+        enviar_operacion(socket_memoria, vectorDirecciones[i]);
+    }
 
 				log_info(logger, "Resultado de %s: io_success", nombre);
 				enviar_operacion(socket_kernel, IO_SUCCESS);
@@ -106,8 +108,6 @@ void crear_interfaz_stdin (char* nombre){
 }
 
 void crear_interfaz_stdout (char* nombre){
-
-	int unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
 	int socket_kernel = conectar_kernel (nombre);
 	int socket_memoria = conectar_memoria (nombre); 
 
@@ -119,39 +119,41 @@ void crear_interfaz_stdout (char* nombre){
 		if (cod_op == OPERACION_IO) {
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
-			char** instruccion = string_n_split(buffer, 3, " ");
+			char** instruccion = string_split(buffer, " ");
 
-			int direccion = atoi(instruccion[2]);
-			int tamaño = atoi(instruccion[3]);
-
-			int* vectorDirecciones;
-			int tamañoVector = tamaño/tam_pagina+2;
-			if (recibir_operacion(socket_kernel) == VECTOR)
-				vectorDirecciones = recibir_vector(socket_kernel);
-			else
-				log_info(logger, "Error en el envio de direcciones");
-
+			int tamaño = atoi(instruccion[2]);
+			int tamañoVector = atoi(instruccion[3]);
+			
+			int* vectorDirecciones = recibir_vector(socket_kernel, tamañoVector);
 			log_info(logger, "Operacion: %s", instruccion[0]);
-
 			if (!strcmp(instruccion[0], "IO_STDOUT_WRITE")){
-				char* stringLeido;
+				float tam = tamaño;
 				int size;
-
-
-				sleep(unidad_trabajo/1000);
-				log_info(logger, "Trabajo muy duro como un esclavo");
-
-				enviar_operacion(socket_memoria, LECTURA_STRING);
-				enviar_vector(vectorDirecciones, tamañoVector,  socket_memoria);
-
-				if(recibir_operacion(socket_memoria)==LECTURA_STRING){
-					stringLeido = recibir_buffer(&size, socket_memoria);
-				} else{
-					log_info(logger, "Error en el envio del string");
+				int desplazamiento = vectorDirecciones[0]%tam_pagina;
+				int espacioEnPag = tam_pagina-(desplazamiento);
+				if(tamaño<=espacioEnPag){
+					enviar_operacion(socket_memoria, LECTURA_STRING);
+					enviar_operacion(socket_memoria, 1);
+					enviar_operacion(socket_memoria, tamaño);
+					enviar_operacion(socket_memoria, vectorDirecciones[0]);
 				}
-
-				printf("%s", stringLeido);
-
+				else{
+					int i;
+					enviar_operacion(socket_memoria, LECTURA_STRING);
+					enviar_operacion(socket_memoria, tamañoVector);
+					enviar_operacion(socket_memoria, espacioEnPag);
+					enviar_operacion(socket_memoria, vectorDirecciones[0]);
+					for(i=1; i<tamañoVector-1; i++){
+						enviar_operacion(socket_memoria, tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+					enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
+					enviar_operacion(socket_memoria, vectorDirecciones[i]);
+				}
+				recibir_operacion(socket_memoria);
+				char* cadena = recibir_buffer(&size,socket_memoria);
+				printf("%s \n", cadena);
+				free(cadena);
 				log_info(logger, "Resultado de %s: io_success", nombre);
 				enviar_operacion(socket_kernel, IO_SUCCESS);
 
@@ -166,7 +168,6 @@ void crear_interfaz_stdout (char* nombre){
 			log_error(logger, "Operación inválida");
 		}
 	}
-	
 }
 
 int conectar_kernel (char* nombre){

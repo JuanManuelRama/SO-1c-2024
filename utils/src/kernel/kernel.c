@@ -25,11 +25,12 @@ void inicializar_kernel(){
 	planificacion_activa = true;
 	pidRunning = -1;
 
+	instanciasUtilizadas = 0;
+	recursoPedido = string_new(); // para probar la liberacion de recursos
+
 	char** arrayRecursos = config_get_array_value(config, "RECURSOS");
 	char** instanciasRecursos = config_get_array_value(config, "INSTANCIAS_RECURSOS");
-
 	cantRecursos = string_array_size(arrayRecursos);
-
 	recursos = malloc(cantRecursos*sizeof(t_recurso));
 
 	for (int i = 0; i < cantRecursos; i++) {
@@ -65,6 +66,10 @@ void finalizar_kernel(){
 	sem_destroy(&semPCP);
 	sem_destroy(&semEXIT);
 	sem_destroy(&sMultiprogramacion);
+	for (int i = 0; i < cantRecursos; i++) {
+        queue_destroy(recursos[i].cBloqueados);
+    }
+	free(recursos);
 	exit(0);
 }
 int get_terminal(char* comando){
@@ -285,12 +290,16 @@ void carnicero(){
 	enviar_puntero(proceso->pcb.instrucciones, conexion_memoria, FINALIZACION);
 	log_finalizacion(proceso->pcb.pid, proceso->multifuncion);
 	free(proceso);
+	liberar_recursos(instanciasUtilizadas);
 	sem_post(&sMultiprogramacion);
 	}
 }
 
 void planificadorCP_FIFO(){
 	sProceso* proceso;
+	t_paquete* paquete;
+	int indiceRecurso;
+	char* recursoRecibido;
 	int motivo;
 	int size;
 	pthread_t hilo_IO; //usamos para crearle un hilo a cada instancia de IO
@@ -331,6 +340,94 @@ void planificadorCP_FIFO(){
 
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
 				break;
+			case PEDIRRECURSO:
+				paquete = recibir_recurso(conexion_cpu_dispatch);
+				recursoRecibido = (char*) paquete->buffer->stream;
+				strcpy(recursoPedido, recursoRecibido);
+				indiceRecurso = buscar_recurso(recursoRecibido);
+
+				if(indiceRecurso != -1){
+
+					pthread_mutex_lock(&mRUNNING);
+					recursos[indiceRecurso].instancias -= 1;
+					instanciasUtilizadas += 1;
+					pthread_mutex_unlock(&mRUNNING);
+
+        			if (recursos[indiceRecurso].instancias < 0) {
+
+						log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
+						proceso->pcb.estado = BLOCKED;	
+
+						pthread_mutex_lock(&mBLOCKED);
+						queue_push(recursos[indiceRecurso].cBloqueados, proceso);
+						pthread_mutex_unlock(&mBLOCKED);
+            			
+						log_info(logger, "PID: %d - Bloqueado por PEDIR RECURSO %s", proceso->pcb.pid, recursos[indiceRecurso].nombre);
+        			}
+					else {
+						log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
+						proceso->pcb.estado=READY;
+
+						pthread_mutex_lock(&mREADY);
+						queue_push(cREADY, proceso);
+						log_ingresoReady(cREADY->elements, "Normal");
+						pthread_mutex_unlock(&mREADY);
+
+						sem_post(&semPCP);
+					}
+				}	
+				else {
+					matadero(proceso, "Pidio un recurso no existente");
+					break;
+				}		
+				break;
+			case DARRECURSO:
+				paquete = recibir_recurso(conexion_cpu_dispatch);
+				recursoRecibido = (char*) paquete->buffer->stream;
+				strcpy(recursoPedido, recursoRecibido);
+				indiceRecurso = buscar_recurso(recursoRecibido);
+
+				if(indiceRecurso != -1){
+
+					pthread_mutex_lock(&mRUNNING);
+					recursos[indiceRecurso].instancias += 1;
+					instanciasUtilizadas -= 1;
+					pthread_mutex_unlock(&mRUNNING);
+        
+        			if (recursos[indiceRecurso].instancias <= 0) {
+
+						pthread_mutex_lock(&mBLOCKED);
+						sProceso* procesoDesbloqueado = queue_pop(recursos[indiceRecurso].cBloqueados);
+						pthread_mutex_unlock(&mBLOCKED);
+
+						log_cambioEstado(proceso->pcb.pid, BLOCKED, READY);
+						procesoDesbloqueado->pcb.estado=READY;
+
+						pthread_mutex_lock(&mREADY);
+						queue_push(cREADY, procesoDesbloqueado);
+						log_ingresoReady(cREADY->elements, "Normal");
+						pthread_mutex_unlock(&mREADY);
+
+						sem_post(&semPCP);
+
+        			}
+					else {
+						log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
+						proceso->pcb.estado=READY;
+
+						pthread_mutex_lock(&mREADY);
+						queue_push(cREADY, proceso);
+						log_ingresoReady(cREADY->elements, "Normal");
+						pthread_mutex_unlock(&mREADY);
+
+						sem_post(&semPCP);
+					}
+    			}	
+				else {
+					matadero(proceso, "Pidio un recurso no existente");
+					break;
+				}	
+				break;
 			default:
 				matadero(proceso, "Envio codigo de salida no valido");
 				break;
@@ -358,6 +455,9 @@ void setear_timer(sProceso* proceso) {
 
 void planificadorCP_RR(){
 	sProceso* proceso;
+	t_paquete* paquete;
+	int indiceRecurso;
+	char* recursoRecibido;
 	int motivo;
 	int size;
 	pthread_t hilo_IO; //usamos para crearle un hilo a cada instancia de IO
@@ -406,6 +506,94 @@ void planificadorCP_RR(){
 				
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
 				break;
+			case PEDIRRECURSO:
+				paquete = recibir_recurso(conexion_cpu_dispatch);
+				recursoRecibido = (char*) paquete->buffer->stream;
+				strcpy(recursoPedido, recursoRecibido);
+				indiceRecurso = buscar_recurso(recursoRecibido);
+
+				if(indiceRecurso != -1){
+
+					pthread_mutex_lock(&mRUNNING);
+					recursos[indiceRecurso].instancias -= 1;
+					instanciasUtilizadas += 1;
+					pthread_mutex_unlock(&mRUNNING);
+
+        			if (recursos[indiceRecurso].instancias < 0) {
+
+						log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
+						proceso->pcb.estado = BLOCKED;	
+
+						pthread_mutex_lock(&mBLOCKED);
+						queue_push(recursos[indiceRecurso].cBloqueados, proceso);
+						pthread_mutex_unlock(&mBLOCKED);
+            			
+						log_info(logger, "PID: %d - Bloqueado por PEDIR RECURSO %s", proceso->pcb.pid, recursos[indiceRecurso].nombre);
+        			}
+					else {
+						log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
+						proceso->pcb.estado=READY;
+
+						pthread_mutex_lock(&mREADY);
+						queue_push(cREADY, proceso);
+						log_ingresoReady(cREADY->elements, "Normal");
+						pthread_mutex_unlock(&mREADY);
+
+						sem_post(&semPCP);
+					}
+				}	
+				else {
+					matadero(proceso, "Pidio un recurso no existente");
+					break;
+				}		
+				break;
+			case DARRECURSO:
+				paquete = recibir_recurso(conexion_cpu_dispatch);
+				recursoRecibido = (char*) paquete->buffer->stream;
+				strcpy(recursoPedido, recursoRecibido);
+				indiceRecurso = buscar_recurso(recursoRecibido);
+
+				if(indiceRecurso != -1){
+
+					pthread_mutex_lock(&mRUNNING);
+					recursos[indiceRecurso].instancias += 1;
+					instanciasUtilizadas -= 1;
+					pthread_mutex_unlock(&mRUNNING);
+        
+        			if (recursos[indiceRecurso].instancias <= 0) {
+
+						pthread_mutex_lock(&mBLOCKED);
+						sProceso* procesoDesbloqueado = queue_pop(recursos[indiceRecurso].cBloqueados);
+						pthread_mutex_unlock(&mBLOCKED);
+
+						log_cambioEstado(proceso->pcb.pid, BLOCKED, READY);
+						procesoDesbloqueado->pcb.estado=READY;
+
+						pthread_mutex_lock(&mREADY);
+						queue_push(cREADY, procesoDesbloqueado);
+						log_ingresoReady(cREADY->elements, "Normal");
+						pthread_mutex_unlock(&mREADY);
+
+						sem_post(&semPCP);
+
+        			}
+					else {
+						log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
+						proceso->pcb.estado=READY;
+
+						pthread_mutex_lock(&mREADY);
+						queue_push(cREADY, proceso);
+						log_ingresoReady(cREADY->elements, "Normal");
+						pthread_mutex_unlock(&mREADY);
+
+						sem_post(&semPCP);
+					}
+    			}	
+				else {
+					matadero(proceso, "Pidio un recurso no existente");
+					break;
+				}	
+				break;
 			case FIN_DE_QUANTUM:
 				log_finDeQuantum(proceso->pcb.pid);
 				log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
@@ -427,6 +615,7 @@ void planificadorCP_RR(){
 
 void planificadorCP_VRR() {
 	sProceso* proceso;
+	t_paquete* paquete;
 	int motivo;
 	int size;
 	int indiceRecurso;
@@ -502,18 +691,35 @@ void planificadorCP_VRR() {
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
 				break;
 			case PEDIRRECURSO:
-				log_info(logger, "pedirrecurso");
-				recursoRecibido = recibir_buffer(&size, conexion_cpu_dispatch);
-				indiceRecurso = buscarRecurso(recursoRecibido);
+				paquete = recibir_recurso(conexion_cpu_dispatch);
+				recursoRecibido = (char*) paquete->buffer->stream;
+				strcpy(recursoPedido, recursoRecibido);
+				indiceRecurso = buscar_recurso(recursoRecibido);
 
 				if(indiceRecurso != -1){
+
+					pthread_mutex_lock(&mRUNNING);
 					recursos[indiceRecurso].instancias -= 1;
-        
+					instanciasUtilizadas += 1;
+					pthread_mutex_unlock(&mRUNNING);
+
         			if (recursos[indiceRecurso].instancias < 0) {
-            			queue_push(recursos[indiceRecurso].cBloqueados, proceso);
+
+						clock_gettime(CLOCK_MONOTONIC_RAW, &tiempoVuelta);
+						pthread_cancel(hilo_timer);
+
+						log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
+						proceso->pcb.estado = BLOCKED;
+						proceso->pcb.quantum -= (tiempoVuelta.tv_sec - tiempoInicio.tv_sec) * 1000 + (tiempoVuelta.tv_nsec - tiempoInicio.tv_nsec) / 1000000;	
+
+						pthread_mutex_lock(&mBLOCKED);
+						queue_push(recursos[indiceRecurso].cBloqueados, proceso);
+						pthread_mutex_unlock(&mBLOCKED);
+            			
 						log_info(logger, "PID: %d - Bloqueado por PEDIR RECURSO %s", proceso->pcb.pid, recursos[indiceRecurso].nombre);
         			}
 					else {
+						log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
 						proceso->pcb.estado=READY;
 
 						pthread_mutex_lock(&mREADY);
@@ -526,19 +732,29 @@ void planificadorCP_VRR() {
 				}	
 				else {
 					matadero(proceso, "Pidio un recurso no existente");
+					break;
 				}		
 				break;
 			case DARRECURSO:
-				log_info(logger, "darrecurso");
-				recursoRecibido = recibir_buffer(&size, conexion_cpu_dispatch);
-				indiceRecurso = buscarRecurso(recursoRecibido);
+				paquete = recibir_recurso(conexion_cpu_dispatch);
+				recursoRecibido = (char*) paquete->buffer->stream;
+				strcpy(recursoPedido, recursoRecibido);
+				indiceRecurso = buscar_recurso(recursoRecibido);
 
 				if(indiceRecurso != -1){
-        			recursos[indiceRecurso].instancias += 1;
+
+					pthread_mutex_lock(&mRUNNING);
+					recursos[indiceRecurso].instancias += 1;
+					instanciasUtilizadas -= 1;
+					pthread_mutex_unlock(&mRUNNING);
         
         			if (recursos[indiceRecurso].instancias <= 0) {
-            			sProceso* procesoDesbloqueado = queue_pop(recursos[indiceRecurso].cBloqueados);
 
+						pthread_mutex_lock(&mBLOCKED);
+						sProceso* procesoDesbloqueado = queue_pop(recursos[indiceRecurso].cBloqueados);
+						pthread_mutex_unlock(&mBLOCKED);
+
+						log_cambioEstado(proceso->pcb.pid, BLOCKED, READY);
 						procesoDesbloqueado->pcb.estado=READY;
 
 						pthread_mutex_lock(&mREADY);
@@ -549,16 +765,21 @@ void planificadorCP_VRR() {
 						sem_post(&semPCP);
 
         			}
+					else {
+						log_cambioEstado(proceso->pcb.pid, RUNNING, READY);
+						proceso->pcb.estado=READY;
 
-					pthread_mutex_lock(&mREADY);
-					queue_push(cREADY, proceso);
-					log_ingresoReady(cREADY->elements, "Normal");
-					pthread_mutex_unlock(&mREADY);
+						pthread_mutex_lock(&mREADY);
+						queue_push(cREADY, proceso);
+						log_ingresoReady(cREADY->elements, "Normal");
+						pthread_mutex_unlock(&mREADY);
 
-					sem_post(&semPCP);
+						sem_post(&semPCP);
+					}
     			}	
 				else {
 					matadero(proceso, "Pidio un recurso no existente");
+					break;
 				}	
 				break;
 			case FIN_DE_QUANTUM:
@@ -615,21 +836,13 @@ void escuchar_conexiones_IO(int socket_server) {
 }
 
 void atender_solicitud_IO(sProceso* proceso){
-	char** instruccionIO = string_split(proceso->multifuncion, " ");
-	int tamaño = atoi(instruccionIO[3]);
+	char** instruccionIO = string_n_split(proceso->multifuncion, 4, " ");
+	int tamañoVector = atoi(instruccionIO[3]);
 	
 	int* vectorDirecciones;
-	int tamañoVector = tamaño/tam_pagina+2;
-	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
-		if (recibir_operacion(conexion_cpu_dispatch) == VECTOR){
-			vectorDirecciones = recibir_vector(conexion_cpu_dispatch);
-			int i;
-			for(i=0; i<tamañoVector; i++)
-				printf("%i", vectorDirecciones[i]);
-		}
-		else
-			log_info(logger, "CPU me mando cualquier cosa");
-	}
+	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE"))
+		vectorDirecciones = recibir_vector(conexion_cpu_dispatch, tamañoVector);
+
 
 	// funcionalidad propia de gcc, inner function
 	bool existe_conexion(void* elem) {
@@ -655,8 +868,11 @@ void atender_solicitud_IO(sProceso* proceso){
 	// le mandamos a la instancia encontrada la operacion
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
 
-	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE"))
-		enviar_vector(vectorDirecciones, tamañoVector, IO_seleccionada);
+	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
+		enviar_vector(vectorDirecciones, tamañoVector, IO_seleccionada->socket);
+		free(vectorDirecciones);
+	}
+		
 
 	// nos quedamos escuchando la respuesta
 	int codOp = recibir_operacion (IO_seleccionada->socket);
@@ -760,10 +976,19 @@ void listar_procesos(t_list* lista, int estado){
 	free(listado);
 }
 
-int buscarRecurso(char* nombre){
+int buscar_recurso(char* nombre){
 	for (int i = 0; i < cantRecursos; i++) {
     	if (!strcmp(nombre, recursos[i].nombre)) {
 			return i;
 		}
 	}
+	return -1;
+}
+
+void liberar_recursos(int instanciasLiberables){
+	for (int i = 0; i < instanciasLiberables; i++){
+		int indiceRecurso = buscar_recurso(recursoPedido);
+		recursos[indiceRecurso].instancias += 1;
+	}
+	free(recursoPedido);
 }

@@ -247,8 +247,10 @@ t_pcb pcb_deserializar(int);
 
 void enviar_vector(int*, int, int);
 
-int* recibir_vector(int);
+int* recibir_vector(int, int);
 
 int recibir_int (int);
 
 void* recibir_puntero(int);
+
+t_paquete* recibir_recurso(int);

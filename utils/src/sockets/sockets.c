@@ -96,6 +96,19 @@ t_list* recibir_paquete(int socket_cliente)
 	free(buffer);
 	return valores;
 }
+
+t_paquete* recibir_recurso(int socket_cliente) {
+    t_paquete* paquete = malloc(sizeof(t_paquete));
+    
+    recv(socket_cliente, &(paquete->codigo_operacion), sizeof(int), MSG_WAITALL);
+    paquete->buffer = malloc(sizeof(t_buffer));
+    recv(socket_cliente, &(paquete->buffer->size), sizeof(int), MSG_WAITALL);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, MSG_WAITALL);
+
+    return paquete;
+}
+
 void* serializar_paquete(t_paquete* paquete, int bytes)
 {
 	void * magic = malloc(bytes);
@@ -329,44 +342,14 @@ void enviar_pcb(t_pcb pcb, int socket_cliente, int codigo_op)
 }
 
 void enviar_vector(int* vector, int tamaño, int socket_cliente){
-	int i;
-
-	enviar_int(tamaño, socket_cliente, VECTOR);
-	for (i=0; i < tamaño; i++){
+	for (int i=0; i < tamaño; i++)
         enviar_operacion(socket_cliente, vector[i]);
-	}
-
-/*
-	paquete->codigo_operacion = PAQUETE;
-	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->stream = malloc (tamaño*sizeof(int));
-	paquete->buffer->size=0;
-
-    for (i=0; i < tamaño; i++){
-        //agregar_a_paquete(paquete, vector[i], sizeof(int));
-		//memcpy(paquete->buffer->stream + paquete->buffer->size, &sizeof(int), sizeof(int));
-		memcpy(paquete->buffer->stream + paquete->buffer->size, &vector[i], sizeof(int));
-		paquete->buffer->size += sizeof(int);
-	}
-	
-	int bytes = paquete->buffer->size + 2*sizeof(int);
-
-	void* a_enviar = serializar_paquete(paquete, bytes);
-
-	send(socket_cliente, a_enviar, bytes, 0);
-
-	free(a_enviar);
-
-*/
 }
 
-int* recibir_vector(int socket_cliente){
-	int tamañoVector, i;
-	int vector[tamañoVector];
-
-	for(i=0; i<tamañoVector; i++){
+int* recibir_vector(int socket_cliente, int tamañoVector){
+	int* vector = calloc(tamañoVector, sizeof(int));
+	for(int i=0; i<tamañoVector; i++)
 		vector[i]=recibir_operacion(socket_cliente);
-	}
 	return vector;
 }
 

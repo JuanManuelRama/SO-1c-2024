@@ -52,3 +52,4 @@ typedef struct
 	int instancias;
 	t_queue* cBloqueados;
 } t_recurso;
+
