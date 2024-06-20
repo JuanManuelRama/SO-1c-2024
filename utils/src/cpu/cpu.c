@@ -182,9 +182,9 @@ void execute(sInstruccion instruccion){
             exe_IO_GEN(instruccion.componentes);
             break;
         case IO_STDOUT_WRITE:
-        //case IO_STDIN_READ:
-        //    exe_IO_STD(instruccion.componentes);
-        //    break;
+        case IO_STDIN_READ:
+            exe_IO_STD(instruccion.componentes);
+            break;
         case EXIT:
             exe_EXIT();
             break;
@@ -285,7 +285,7 @@ void exe_IO_GEN (char** componentes){
     seVa=IO_GEN;
 }
 
-/*void exe_IO_STD(char** componentes){
+void exe_IO_STD(char** componentes){
     int direccion = get_registro(componentes[2]);
     sprintf(componentes[2], "%i", direccion);
 
@@ -316,7 +316,7 @@ void exe_IO_GEN (char** componentes){
     strcat(aEnviar, " ");
     string_append_with_format(&aEnviar, "%d %d", tamaño, tamañoVector);
     seVa=IO_STD;
-}*/
+}
 
 void exe_MOV_IN(char* reg_datos, char* reg_direccion){
     int DF = MMU(get_registro(reg_direccion));
