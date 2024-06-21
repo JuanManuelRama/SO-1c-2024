@@ -42,7 +42,7 @@ typedef struct
 	int pc;
 	int quantum;
 	t_registros registros;
-	int estado;
+	estados estado;
 	void* instrucciones;
 } t_pcb;
 

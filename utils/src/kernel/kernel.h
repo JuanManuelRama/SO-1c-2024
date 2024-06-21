@@ -109,7 +109,7 @@ void interactuar_consola(char*);
  * @param 	comando Comando a evaluar 
  * @return 	Valor de la terminal
  */
-int get_terminal(char*);
+fConsola get_terminal(char*);
 /**
 *@fn 		crear_proceso
 *@brief		Crea un proceso

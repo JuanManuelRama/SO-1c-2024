@@ -72,7 +72,7 @@ void finalizar_kernel(){
 	free(recursos);
 	exit(0);
 }
-int get_terminal(char* comando){
+fConsola get_terminal(char* comando){
 	if(!strcmp(comando, "INICIAR_PROCESO"))
 		return INICIAR_PROCESO;
 	if(!strcmp(comando, "FINALIZAR_PROCESO"))
@@ -115,7 +115,7 @@ char* get_estado(int estado){
 
 void interactuar_consola(char* buffer){
 	char** mensaje = string_split(buffer, " ");
-	int consola = get_terminal(mensaje[0]);
+	fConsola consola = get_terminal(mensaje[0]);
 	switch (consola){
 		case INICIAR_PROCESO:
 			crear_proceso (mensaje[1]);
@@ -201,6 +201,8 @@ sProceso* buscar_proceso_en_lista(t_list* lista, int pid){
 	if(!proceso)
 		return NULL;
 	list_remove_element(lista, proceso);
+	if(proceso->pcb.estado!=READY && proceso->pcb.estado!=READY_PLUS)
+		free(proceso->multifuncion);
 	iniciar_planificacion();
 	matadero(proceso, "Interrumpido por Usuario");
 	return 1;
@@ -258,10 +260,11 @@ void cambiar_multiprogramacion(int grado){
 }
 void proceso_estado(){
 	detener_planificacion();
+	printf("Proceso en estado:\n");
 	listar_procesos(cNEW->elements, NEW);
 	listar_procesos(cREADY->elements, READY);
 	if(pidRunning != -1)
-		log_info(logger,"Procesos en estado %s: %d", get_estado(RUNNING), pidRunning);
+		printf("%s: %d\n", get_estado(RUNNING), pidRunning);
 	listar_procesos(lBlocked, BLOCKED);
 	listar_procesos(cEXIT->elements, FINISHED);
 	iniciar_planificacion();
@@ -303,6 +306,8 @@ char** enviar_proceso(sProceso proceso){
 
 void matadero (sProceso* proceso, char* motivo){
 	log_cambioEstado(proceso->pcb.pid, proceso->pcb.estado, FINISHED);
+	if(proceso->pcb.estado != NEW)
+		sem_post(&sMultiprogramacion);
 	proceso->pcb.estado=FINISHED;
 	proceso->multifuncion = motivo;
 	pthread_mutex_lock(&mEXIT);
@@ -322,7 +327,6 @@ void carnicero(){
 	log_finalizacion(proceso->pcb.pid, proceso->multifuncion);
 	free(proceso);
 	//liberar_recursos(instanciasUtilizadas);
-	sem_post(&sMultiprogramacion);
 	}
 }
 
@@ -1014,13 +1018,18 @@ void log_bloqueo(int pid, char* motivo){
 
 void listar_procesos(t_list* lista, int estado){
 	sProceso* proceso;
-	char* listado = string_new();
-	for(int i=0; i<list_size(lista); i++){
+	int tamLista = list_size(lista);
+	printf("%s: ", get_estado(estado));
+	for(int i=0; i<tamLista-1; i++){
 		proceso = list_get(lista, i);
-		string_append_with_format(&listado, "PID: %d ", proceso->pcb.pid);
+		printf("%d, ", proceso->pcb.pid);
 	}
-	log_info(logger, "Procesos en estado %s: %s", get_estado(estado), listado);
-	free(listado);
+	if(tamLista){
+	proceso = list_get(lista, tamLista-1);
+	printf("%d\n", proceso->pcb.pid);
+	}
+	else
+		printf("\n");
 }
 
 int buscar_recurso(char* nombre){
