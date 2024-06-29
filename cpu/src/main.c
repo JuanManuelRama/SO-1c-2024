@@ -5,6 +5,7 @@ t_log* logger;
 t_config* config;
 t_pcb pcb;
 t_queue *cIntr;
+t_queue tlb;
 pthread_mutex_t mIntr;
 int seVa;
 int memoria;
@@ -13,8 +14,10 @@ int tam_memoria;
 int* vectorDirecciones;
 int tamañoVector;
 char* aEnviar;
-
-
+char* algoritmo_TLB;
+int cant_entradas_TLB;
+t_entradaTLB entrada_TLB;
+sem_t entradas_actuales_tlb;
 
 int main() {
 	int socket_servidor;
@@ -33,6 +36,7 @@ int main() {
 	aEnviar = string_new();
 	seVa = false;
 	cIntr = queue_create();
+	tlb = queue_create();
 	pthread_mutex_init(&mIntr, NULL);
 	// buscamos datos en config y conectamos con memoria
 	ip = buscar("IP_MEMORIA");
@@ -42,6 +46,11 @@ int main() {
 	log_info(logger, "tam_pag = %i", tam_pag);
 	tam_memoria = recibir_operacion(memoria);
 	enviar_mensaje("Saludos desde la cpu", memoria);
+
+	// Antes de conectarse con el kernel, preparo la TLB
+	algoritmo_TLB = buscar("ALGORITMO_TLB");
+	cant_entradas_TLB = buscar("CANTIDAD_ENTRADAS_TLB");
+	entradas_actuales_tlb = cant_entradas_TLB;
 
 	//tambien sera servidor, con el kernel como cliente
 	puerto = buscar("PUERTO_ESCUCHA_DISPATCH");

@@ -1,6 +1,5 @@
 #include "cpu.h"
 
-
 void finalizar_cpu(){
     log_info(logger, "Kernel desconectado, finalizando CPU");
     liberar_conexion(memoria);
@@ -14,6 +13,7 @@ void finalizar_cpu(){
 }
 
 int MMU(int DL){
+    /*
     int pag = DL/tam_pag;
     int desplazamiento = DL - pag*tam_pag;
     if(desplazamiento>tam_pag)
@@ -27,6 +27,83 @@ int MMU(int DL){
     int DF = marco*tam_pag + desplazamiento;
     log_marco(pcb.pid, pag, marco);
     return DF;
+    */
+   
+    int pag = DL/tam_pag;
+    int desplazamiento = DL - pag*tam_pag;
+    int DF;
+    int marco;
+    bool TLB_hit;
+
+    if(desplazamiento>tam_pag)
+        return -1;
+
+    if(!cant_entradas_TLB){
+        enviar_int(pag, memoria, PAGINA);
+        if(recibir_operacion(memoria)!=PAGINA){
+            log_error(logger, "La memoria me envió cualquier cosa...");
+            return -1;
+        }
+        marco = recibir_int(memoria);
+        DF = marco*tam_pag + desplazamiento;
+        log_marco(pcb.pid, pag, marco);
+        return DF;
+    }else{
+
+        bool buscar_pagina_TLB(void* elem){
+            t_entradaTLB *una_entrada_TLB = (t_entradaTLB*) elem;
+            return (una_entrada_TLB->pagina == pag);
+        }
+
+        entrada_TLB = list_find(tlb->elements, buscar_pagina_TLB);
+
+        if(entrada_TLB->pagina == pag){
+            log_tlb_hit(pcb->pid, pag);
+
+            if(!strcmp(algoritmo_TLB, "LRU")){
+                list_remove_by_condition(tlb->elements, buscar_pagina_TLB);
+                queue_push(tlb, entrada_TLB);
+            }
+
+            DF = entrada_TLB->marco;
+
+            return DF;
+        }else{
+            log_tlb_miss(pcb->pid, pag);
+
+            enviar_int(pag, memoria, PAGINA);
+
+            if(recibir_operacion(memoria)!=PAGINA){
+                log_error(logger, "La memoria me envió cualquier cosa...");
+                return -1;
+            }
+
+            marco = recibir_int(memoria);
+            DF = marco*tam_pag + desplazamiento;
+            log_marco(pcb.pid, pag, marco);
+
+            entrada_TLB->pid = pcb->pid;
+            entrada_TLB->pagina = pag;
+            entrada_TLB->marco = DF;
+
+            acomodar_entradas_TLB(entrada_TLB);
+
+            return DF;
+        }
+    }
+}
+
+void acomodar_entradas_TLB(t_entradaTLB una_entrada_TLB){
+    t_entradaTLB entrada_aux;
+
+    if(entradas_actuales_tlb){
+        entradas_actuales_tlb--;
+        queue_push(tlb, una_entrada_TLB);
+    }else{
+        entrada_aux = queue_pop(tlb);
+        queue_push(tlb, una_entrada_TLB);
+    }
+
 }
 
 int cuanto_leo(char* registro){
@@ -467,4 +544,12 @@ void log_rw(int pid, char* operacion, int direccion, int valor){
 
 void log_rws(int pid, char* operacion, int direccion, char* valor){
     log_info(logger, "PID: %d - Acción: %s - Dirección Física: %d - Valor: %s", pid, operacion, direccion, valor);
+}
+
+void log_tlb_hit(int pid, int pagina){
+    log_info(logger, "PID: %d - TLB HIT - Página: %d", pid, pagina);
+}
+
+void log_tlb_miss(int pid, int pagina){
+    log_info(logger, "PID: %d - TLB MISS - Página: %d", pid, pagina);
 }
