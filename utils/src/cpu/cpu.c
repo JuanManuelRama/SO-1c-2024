@@ -319,37 +319,72 @@ void exe_IO_STD(char** componentes){
 }
 
 void exe_MOV_IN(char* reg_datos, char* reg_direccion){
-    int DF = MMU(get_registro(reg_direccion));
-    int leer = cuanto_leo(reg_datos);
-
-    if(DF == -1){
-        seVa=SEG_FAULT;
-        return;
+    int tamaño=cuanto_leo(reg_datos);
+    float tam = tamaño;
+    int DF, size;
+    int direccion = get_registro(reg_direccion);
+    int desplazamiento = direccion%tam_pag;
+    int espacioEnPag = tam_pag-desplazamiento;
+    if(tamaño==1 || tamaño<=espacioEnPag){
+        DF = MMU(direccion);
+        enviar_operacion(memoria, LECTURA);
+        enviar_operacion(memoria, DF);
+        enviar_operacion(memoria, tamaño);
+        enviar_operacion(memoria, 1);
     }
-
-    enviar_int(DF, memoria, LECTURA);
-    enviar_operacion(memoria, leer);
-    if(recibir_operacion(memoria)!=LECTURA){
-        log_error(logger, "La memoria me envió cualquier cosa...");
-        return;
+    else{        
+        int i;
+        int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
+        int vDirecciones[pagNecesarias];
+        vDirecciones[0]=MMU(direccion);
+        DF=vDirecciones[0];
+        for(i=0; i<pagNecesarias-1; i++)
+           vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
+        enviar_operacion(memoria, LECTURA);
+        enviar_operacion(memoria, vDirecciones[0]);
+        enviar_operacion(memoria, tamaño);
+        enviar_operacion(memoria, pagNecesarias);
+        for(i=1; i<pagNecesarias; i++)
+            enviar_operacion(memoria, vDirecciones[i]);
     }
-    int valor = recibir_int(memoria);
+    int valor = recibir_operacion(memoria);
     log_rw(pcb.pid, "LEER", DF, valor);
-    set_registro(reg_datos,memoria);
+    set_registro(reg_datos, valor);
 }
 
 void exe_MOV_OUT(char* reg_direccion, char* reg_datos){
-    int DF = MMU(get_registro(reg_direccion));
-    int cantBytes = cuanto_leo(reg_datos);
-    int valor = get_registro(reg_datos);
 
-    if(DF == -1){
-        seVa=SEG_FAULT;
-        return;
+    int tamaño=cuanto_leo(reg_datos);
+    float tam = tamaño;
+    int DF, size;
+    int direccion = get_registro(reg_direccion);
+    int desplazamiento = direccion%tam_pag;
+    int espacioEnPag = tam_pag-desplazamiento;
+    if(tamaño==1 || tamaño<=espacioEnPag){
+        DF = MMU(direccion);
+        enviar_operacion(memoria, ESCRITURA);
+        enviar_operacion(memoria, DF);
+        enviar_operacion(memoria, tamaño);
+        enviar_operacion(memoria, 1);
+        enviar_operacion(memoria, get_registro(reg_datos));
     }
-    log_rw(pcb.pid, "ESCRIBIR", DF, valor);
-    enviar_int(DF, memoria, ESCRITURA);
-    enviar_int(valor, memoria, cantBytes);
+    else{        
+        int i;
+        int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
+        int vDirecciones[pagNecesarias];
+        vDirecciones[0]=MMU(direccion);
+        DF=vDirecciones[0];
+        for(i=0; i<pagNecesarias-1; i++)
+           vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
+        enviar_operacion(memoria, ESCRITURA);
+        enviar_operacion(memoria, vDirecciones[0]);
+        enviar_operacion(memoria, tamaño);
+        enviar_operacion(memoria, pagNecesarias);
+        enviar_operacion(memoria, get_registro(reg_datos));
+        for(i=1; i<pagNecesarias; i++)
+            enviar_operacion(memoria, vDirecciones[i]);
+    }
+  log_rw(pcb.pid, "ESCRIBIR", DF, get_registro(reg_datos));
 }
 
 void exe_RESIZE(int tamanio){

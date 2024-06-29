@@ -40,7 +40,7 @@ void interactuar_Kernel(int kernel){
 
 void interactuar_cpu(int cpu){
 	while (1) {
-		int cod_op = recibir_operacion(cpu);
+		op_code cod_op = recibir_operacion(cpu);
 		switch (cod_op) {
 		case MENSAJE:
 			recibir_mensaje(cpu);
@@ -275,34 +275,66 @@ void sacar_paginas (int cpu){
 }
 
 void leer(int socket_cliente){
-	int DF = recibir_int(socket_cliente);
+	int DF = recibir_operacion(socket_cliente);
 	int tamanio = recibir_operacion(socket_cliente);
-	usleep(RETARDO*1000);
-	log_acceso(proceso->pid, "Lectura", DF, tamanio);
-	if(tamanio == 4){
-		uint32_t valor;
-		memcpy(&valor, memoria_contigua + DF, 4);
-		enviar_int(valor, socket_cliente, LECTURA);
+	int cantPag = recibir_operacion(socket_cliente);
+	if(cantPag==1){
+		if(tamanio == 4){
+			uint32_t valor;
+			memcpy(&valor, memoria_contigua + DF, tamanio);
+			log_acceso(proceso->pid, "Lectura", DF, tamanio);
+			enviar_operacion(socket_cliente, valor);
+		}
+		else{
+			uint8_t valor;
+			memcpy(&valor, memoria_contigua + DF, tamanio);
+			log_acceso(proceso->pid, "Lectura", DF, tamanio);
+			enviar_operacion(socket_cliente, valor);
+		}
 	}
 	else{
-		uint8_t valor;
+		uint32_t valor;
+		int aux = DF;
 		memcpy(&valor, memoria_contigua + DF, 1);
-		enviar_int(valor, socket_cliente, LECTURA);
+		DF++;
+		for(int i=1; i<4; i++){
+			if(!(DF%TAM_PAG))
+				DF=recibir_operacion(socket_cliente);
+			memcpy((uint8_t*)&valor+i, memoria_contigua + DF, 1);
+			DF++;
+		}
+		log_acceso(proceso->pid, "Lectura", aux, tamanio);
+		enviar_operacion(socket_cliente, valor);
 	}
+	usleep(RETARDO*1000);
 }
 
 void escribir(int socket_cliente){
-	int DF = recibir_int(socket_cliente);
+	int DF = recibir_operacion(socket_cliente);
 	int tamanio = recibir_operacion(socket_cliente);
 	log_acceso(proceso->pid, "Escritura", DF, tamanio);
+	int cantPag = recibir_operacion(socket_cliente);
 	usleep(RETARDO*1000);
-	if(tamanio == 4){
-		uint32_t valor = recibir_int(socket_cliente);
-		memcpy(memoria_contigua + DF, &valor, tamanio);
+	if(cantPag==1){
+		if(tamanio == 4){
+			uint32_t valor = recibir_operacion(socket_cliente);
+			memcpy(memoria_contigua + DF, &valor, tamanio);
+		}
+		else{
+			uint8_t valor = recibir_operacion(socket_cliente);
+			memcpy(memoria_contigua + DF, &valor, tamanio);
+		}
 	}
 	else{
-		uint8_t valor = recibir_int(socket_cliente);
-		memcpy(memoria_contigua + DF, &valor, tamanio);
+		uint32_t valor = recibir_operacion(socket_cliente);
+		memcpy(memoria_contigua + DF, &valor, 1);
+		DF++;
+		for(int i=1; i<4; i++){
+			if(!(DF%TAM_PAG))
+				DF=recibir_operacion(socket_cliente);
+			memcpy(memoria_contigua + DF, (uint8_t*)&valor+1, 1);
+			DF++;
+		}
 	}
 }
 
