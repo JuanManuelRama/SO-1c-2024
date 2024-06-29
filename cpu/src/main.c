@@ -49,7 +49,7 @@ int main() {
 
 	// Antes de conectarse con el kernel, preparo la TLB
 	algoritmo_TLB = buscar("ALGORITMO_TLB");
-	cant_entradas_TLB = buscar("CANTIDAD_ENTRADAS_TLB");
+	cant_entradas_TLB = atoi(buscar("CANTIDAD_ENTRADAS_TLB"));
 	entradas_actuales_tlb = cant_entradas_TLB;
 
 	//tambien sera servidor, con el kernel como cliente

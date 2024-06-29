@@ -12,23 +12,7 @@ void finalizar_cpu(){
 	exit(0);
 }
 
-int MMU(int DL){
-    /*
-    int pag = DL/tam_pag;
-    int desplazamiento = DL - pag*tam_pag;
-    if(desplazamiento>tam_pag)
-        return -1;
-    enviar_int(pag, memoria, PAGINA);
-    if(recibir_operacion(memoria)!=PAGINA){
-        log_error(logger, "La memoria me envió cualquier cosa...");
-        return -1;
-    }
-    int marco = recibir_int(memoria);
-    int DF = marco*tam_pag + desplazamiento;
-    log_marco(pcb.pid, pag, marco);
-    return DF;
-    */
-   
+int MMU(int DL){   
     int pag = DL/tam_pag;
     int desplazamiento = DL - pag*tam_pag;
     int DF;
