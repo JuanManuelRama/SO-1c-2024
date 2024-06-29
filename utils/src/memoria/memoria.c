@@ -17,7 +17,7 @@ void recibir_proceso(int socket_cliente){
 
 void interactuar_Kernel(int kernel){
 		while (1) {
-		int cod_op = recibir_operacion(kernel);
+		op_code cod_op = recibir_operacion(kernel);
 		switch (cod_op) {
 		case MENSAJE:
 			recibir_mensaje(kernel);
@@ -40,6 +40,7 @@ void interactuar_Kernel(int kernel){
 
 void interactuar_cpu(int cpu){
 	while (1) {
+		int size;
 		op_code cod_op = recibir_operacion(cpu);
 		switch (cod_op) {
 		case MENSAJE:
@@ -70,10 +71,10 @@ void interactuar_cpu(int cpu){
 			escribir(cpu);
 			break;
 		case LECTURA_STRING:
-			leer_string(cpu);
+			leer_string(cpu, proceso->pid);
 			break;	
 		case ESCRITURA_STRING:
-			escribir_string(cpu);
+			escribir_string(cpu, recibir_buffer(&size, cpu), proceso->pid);
 			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
@@ -87,14 +88,16 @@ void interactuar_cpu(int cpu){
 
 void interactuar_IO (int IO){
 	while (1) {
-
-		int cod_op = recibir_operacion(IO);
+		int size;
+		op_code cod_op = recibir_operacion(IO);
 		switch (cod_op) {
 		case ESCRITURA_STRING:
-			escribir_string(IO);
+			char* cadena = recibir_buffer(&size, IO);
+			int pid = recibir_operacion(IO);
+			escribir_string(IO, cadena, pid);
 			break;
 		case LECTURA_STRING:
-			leer_string(IO);
+			leer_string(IO, recibir_operacion(IO));
 			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
@@ -338,7 +341,7 @@ void escribir(int socket_cliente){
 	}
 }
 
-void leer_string(int socket_cliente){
+void leer_string(int socket_cliente, int pid){
 	int cantPag, tamaño, i, direccion;
 	int desplazamiento = 0;
 	cantPag = recibir_operacion(socket_cliente);
@@ -346,7 +349,7 @@ void leer_string(int socket_cliente){
 	for(i=0; i<cantPag; i++){
 		tamaño = recibir_operacion(socket_cliente);
 		direccion = recibir_operacion(socket_cliente);
-		log_acceso(proceso->pid, "Lectura", direccion, tamaño);
+		log_acceso(pid, "Lectura", direccion, tamaño);
 		memcpy(cadena+desplazamiento, memoria_contigua+direccion, tamaño);
 		desplazamiento += tamaño;
 	}
@@ -356,15 +359,14 @@ void leer_string(int socket_cliente){
 	free(cadena);
 }
 
-void escribir_string(int socket_cliente){
+void escribir_string(int socket_cliente, char* cadena, int pid){
 	int cantPag, tamaño, i, direccion;
 	int deslplazamiento = 0;
-	char* cadena = recibir_buffer(&tamaño, socket_cliente);
 	cantPag = recibir_operacion(socket_cliente);
 	for(i=0; i<cantPag; i++){
 		tamaño = recibir_operacion(socket_cliente);
 		direccion = recibir_operacion(socket_cliente);
-		log_acceso(proceso->pid, "Escritura", direccion, tamaño);
+		log_acceso(pid, "Escritura", direccion, tamaño);
 		memcpy(memoria_contigua+direccion, cadena+deslplazamiento, tamaño);
 		deslplazamiento += tamaño;
 	}

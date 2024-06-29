@@ -74,6 +74,7 @@ void crear_interfaz_stdin (char* nombre){
 		float tam = tamaño;
 		if(tamaño<=espacioEnPag){
         enviar_string(valor, socket_memoria, ESCRITURA_STRING);
+		enviar_operacion(socket_memoria, pid);
         enviar_operacion(socket_memoria, 1);
         enviar_operacion(socket_memoria, tamaño);
         enviar_operacion(socket_memoria, vectorDirecciones[0]);
@@ -81,6 +82,7 @@ void crear_interfaz_stdin (char* nombre){
     else{
         int i;
         enviar_string(valor, socket_memoria, ESCRITURA_STRING);
+		enviar_operacion(socket_memoria, pid);
         enviar_operacion(socket_memoria, tamañoVector);
         enviar_operacion(socket_memoria, espacioEnPag);
         enviar_operacion(socket_memoria, vectorDirecciones[0]);
@@ -142,6 +144,7 @@ void crear_interfaz_stdout (char* nombre){
 				int espacioEnPag = tam_pagina-(desplazamiento);
 				if(tamaño<=espacioEnPag){
 					enviar_operacion(socket_memoria, LECTURA_STRING);
+					enviar_operacion(socket_memoria, pid);
 					enviar_operacion(socket_memoria, 1);
 					enviar_operacion(socket_memoria, tamaño);
 					enviar_operacion(socket_memoria, vectorDirecciones[0]);
@@ -149,6 +152,7 @@ void crear_interfaz_stdout (char* nombre){
 				else{
 					int i;
 					enviar_operacion(socket_memoria, LECTURA_STRING);
+					enviar_operacion(socket_memoria, pid);
 					enviar_operacion(socket_memoria, tamañoVector);
 					enviar_operacion(socket_memoria, espacioEnPag);
 					enviar_operacion(socket_memoria, vectorDirecciones[0]);
