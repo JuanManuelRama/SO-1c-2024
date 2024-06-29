@@ -929,6 +929,7 @@ void atender_solicitud_IO(sProceso* proceso){
 	list_add(lBlocked, proceso);
 	// le mandamos a la instancia encontrada la operacion
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
+	enviar_operacion(IO_seleccionada->socket, proceso->pcb.pid);
 
 	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
 		enviar_vector(vectorDirecciones, tamañoVector, IO_seleccionada->socket);

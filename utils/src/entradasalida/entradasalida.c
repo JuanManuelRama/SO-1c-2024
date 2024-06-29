@@ -1,5 +1,7 @@
 #include "entradasalida.h"
 
+int pid;
+
 void crear_interfaz_generica(char* nombre) {
     
 	int unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
@@ -12,8 +14,8 @@ void crear_interfaz_generica(char* nombre) {
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_n_split(buffer, 3, " ");
-
-			log_info(logger, "Operacion: %s", instruccion[0]);
+			pid = recibir_operacion(socket_kernel);
+			log_operacion(pid, instruccion[0]);
 
 			if (!strcmp(instruccion[0], "IO_GEN_SLEEP")){
 				
@@ -52,7 +54,8 @@ void crear_interfaz_stdin (char* nombre){
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_split(buffer, " ");
-
+			pid = recibir_operacion(socket_kernel);
+			log_operacion(pid, instruccion[0]);
 			int tamaño = atoi(instruccion[2]);
 			int tamañoVector = atoi(instruccion[3]);
 			
@@ -125,7 +128,8 @@ void crear_interfaz_stdout (char* nombre){
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_split(buffer, " ");
-
+			pid = recibir_operacion(socket_kernel);
+			log_operacion(pid, instruccion[0]);
 			int tamaño = atoi(instruccion[2]);
 			int tamañoVector = atoi(instruccion[3]);
 			
@@ -216,15 +220,15 @@ void crear_interfaz_fs(char* nombre){
 }
 
 void crear_fs(char* nombre){
-	log_info(logger, "archivo %s creado (en realidad no)", nombre);
+	log_creacion(pid, nombre);
 }
 
 void eliminar_fs(char* nombre){
-	log_info(logger, "archivo %s eliminado (en realidad no)", nombre);
+	log_eliminacion(pid, nombre);
 }
 
 void truncar_fs(char* nombre, int tamaño){
-	log_info(logger, "archivo %s truncado a %d (en realidad no)", nombre, tamaño);
+	log_truncamiento(pid, nombre, tamaño);
 }
 
 void escribir_fs(char** instruccion){
@@ -263,4 +267,22 @@ int conectar_memoria (char* nombre){
 	enviar_operacion(socket, NUEVA_IO);
 
 	return socket;
+}
+
+
+//LOGS OBLIGATORIOS
+void log_operacion(int pid, char* operacion){
+	log_info(logger, "PID: %d - Operación: %s", pid, operacion);
+}
+
+void log_creacion(int pid, char* nombre){
+	log_info(logger, "PID: %d - Crear Archivo %s", pid, nombre);
+}
+
+void log_eliminacion(int pid, char* nombre){
+	log_info(logger, "PID: %d - Eliminar Archivo %s", pid, nombre);
+}
+
+void log_truncamiento(int pid, char* nombre, int tamaño){
+	log_info(logger, "PID: %d - Truncar Archivo: %s - Tamaño: %d", pid, nombre, tamaño);
 }
