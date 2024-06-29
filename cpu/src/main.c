@@ -99,7 +99,7 @@ int main() {
 		enviar_pcb(pcb, socket_dispatch, seVa);
 		if(seVa == DARRECURSO || seVa == PEDIRRECURSO){
 			enviar_string(aEnviar, socket_dispatch, seVa);
-		}else if(seVa == IO_GEN){
+		}else if(seVa == IO_GEN || seVa == IO_FS){
 			enviar_string(aEnviar, socket_dispatch, IO);
 		}else if(seVa == IO_STD){
 			enviar_string(aEnviar, socket_dispatch, IO);

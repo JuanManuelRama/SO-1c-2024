@@ -33,7 +33,7 @@ void crear_interfaz_generica(char* nombre) {
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
-			log_error(logger, "Operación inválida");
+			return;
 		}
 	}
 
@@ -107,7 +107,7 @@ void crear_interfaz_stdin (char* nombre){
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
-			log_error(logger, "Operación inválida");
+			return;
 		}
 	}
 	
@@ -176,10 +176,66 @@ void crear_interfaz_stdout (char* nombre){
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
-			log_error(logger, "Operación inválida");
+			return;
 		}
 	}
 }
+
+void crear_interfaz_fs(char* nombre){
+	int socket_kernel = conectar_kernel (nombre);
+	int socket_memoria = conectar_memoria (nombre); 
+	while(1){
+		op_code cod_op = recibir_operacion(socket_kernel);
+		if(cod_op == OPERACION_IO){
+			int size;
+			char* buffer = recibir_buffer(&size, socket_kernel);
+			char** instruccion = string_split(buffer, " ");
+			log_info(logger, "Operacion: %s", instruccion[0]);
+			if(!strcmp(instruccion[0], "IO_FS_CREATE"))
+				crear_fs(instruccion[2]);
+			else if(!strcmp(instruccion[0], "IO_FS_DELETE"))
+				eliminar_fs(instruccion[2]);
+			else if(!strcmp(instruccion[0], "IO_FS_TRUNCATE"))
+				truncar_fs(instruccion[2], atoi(instruccion[3]));
+			else if(!strcmp(instruccion[0], "IO_FS_WRITE"))
+				escribir_fs(instruccion);
+			else if(!strcmp(instruccion[0], "IO_FS_READ"))
+				leer_fs(instruccion);
+			else{
+				log_info(logger, "Resultado de %s: io_failure", nombre);
+				enviar_operacion(socket_kernel, IO_FAILURE);
+				string_array_destroy(instruccion);
+				continue;
+			}
+			enviar_operacion(socket_kernel, IO_SUCCESS);
+			string_array_destroy(instruccion);
+		}
+		else
+			return;
+	}
+}
+
+void crear_fs(char* nombre){
+	log_info(logger, "archivo %s creado (en realidad no)", nombre);
+}
+
+void eliminar_fs(char* nombre){
+	log_info(logger, "archivo %s eliminado (en realidad no)", nombre);
+}
+
+void truncar_fs(char* nombre, int tamaño){
+	log_info(logger, "archivo %s truncado a %d (en realidad no)", nombre, tamaño);
+}
+
+void escribir_fs(char** instruccion){
+	log_info(logger, "archivo escrito (en realidad no)");
+}
+
+void leer_fs(char** instruccion){
+	log_info(logger, "archivo leido (en realidad no)");
+}
+
+
 
 int conectar_kernel (char* nombre){
 	int socket;
