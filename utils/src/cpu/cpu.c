@@ -33,43 +33,47 @@ int MMU(int DL){
     int desplazamiento = DL - pag*tam_pag;
     int DF;
     int marco;
-    bool TLB_hit;
 
     if(desplazamiento>tam_pag)
         return -1;
 
     if(!cant_entradas_TLB){
         enviar_int(pag, memoria, PAGINA);
+
         if(recibir_operacion(memoria)!=PAGINA){
             log_error(logger, "La memoria me envió cualquier cosa...");
             return -1;
         }
+
         marco = recibir_int(memoria);
         DF = marco*tam_pag + desplazamiento;
         log_marco(pcb.pid, pag, marco);
+
         return DF;
     }else{
 
         bool buscar_pagina_TLB(void* elem){
             t_entradaTLB *una_entrada_TLB = (t_entradaTLB*) elem;
-            return (una_entrada_TLB->pagina == pag);
+            return (una_entrada_TLB->pid == pcb.pid && una_entrada_TLB->pagina == pag);
         }
 
         entrada_TLB = list_find(tlb->elements, buscar_pagina_TLB);
-
-        if(entrada_TLB->pagina == pag){
-            log_tlb_hit(pcb->pid, pag);
+        
+        if(entrada_TLB){
+            log_tlb_hit(pcb.pid, pag);
 
             if(!strcmp(algoritmo_TLB, "LRU")){
-                list_remove_by_condition(tlb->elements, buscar_pagina_TLB);
+                list_remove_element(tlb->elements, entrada_TLB);
                 queue_push(tlb, entrada_TLB);
             }
 
-            DF = entrada_TLB->marco;
+            DF = entrada_TLB->marco * tam_pag + desplazamiento;
 
             return DF;
         }else{
-            log_tlb_miss(pcb->pid, pag);
+            log_tlb_miss(pcb.pid, pag);
+
+            entrada_TLB = malloc(sizeof *entrada_TLB);
 
             enviar_int(pag, memoria, PAGINA);
 
@@ -82,9 +86,9 @@ int MMU(int DL){
             DF = marco*tam_pag + desplazamiento;
             log_marco(pcb.pid, pag, marco);
 
-            entrada_TLB->pid = pcb->pid;
+            entrada_TLB->pid = pcb.pid;
             entrada_TLB->pagina = pag;
-            entrada_TLB->marco = DF;
+            entrada_TLB->marco = marco;
 
             acomodar_entradas_TLB(entrada_TLB);
 
@@ -93,8 +97,8 @@ int MMU(int DL){
     }
 }
 
-void acomodar_entradas_TLB(t_entradaTLB una_entrada_TLB){
-    t_entradaTLB entrada_aux;
+void acomodar_entradas_TLB(t_entradaTLB *una_entrada_TLB){
+    t_entradaTLB *entrada_aux;
 
     if(entradas_actuales_tlb){
         entradas_actuales_tlb--;

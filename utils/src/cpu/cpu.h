@@ -52,6 +52,11 @@ extern char* aEnviar;
 extern int* vectorDirecciones;
 extern int tamañoVector;
 extern t_queue *cIntr;
+extern char* algoritmo_TLB;
+extern int cant_entradas_TLB;
+extern int entradas_actuales_tlb;
+extern t_queue *tlb;
+extern t_entradaTLB *entrada_TLB;
 
 void finalizar_cpu();
 void interrupciones(int);

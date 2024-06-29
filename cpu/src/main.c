@@ -5,7 +5,7 @@ t_log* logger;
 t_config* config;
 t_pcb pcb;
 t_queue *cIntr;
-t_queue tlb;
+t_queue *tlb;
 pthread_mutex_t mIntr;
 int seVa;
 int memoria;
@@ -16,8 +16,8 @@ int tamañoVector;
 char* aEnviar;
 char* algoritmo_TLB;
 int cant_entradas_TLB;
-t_entradaTLB entrada_TLB;
-sem_t entradas_actuales_tlb;
+int entradas_actuales_tlb;
+t_entradaTLB *entrada_TLB;
 
 int main() {
 	int socket_servidor;
