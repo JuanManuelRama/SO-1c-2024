@@ -185,6 +185,13 @@ void execute(sInstruccion instruccion){
         case IO_STDIN_READ:
             exe_IO_STD(instruccion.componentes);
             break;
+        case IO_FS_CREATE:
+        case IO_FS_DELETE:
+            exe_IO_FS_CD(instruccion.componentes);
+            break;
+        case IO_FS_TRUNCATE:
+            exe_IO_FS_TRUNCATE(instruccion.componentes);
+            break;
         case EXIT:
             exe_EXIT();
             break;
@@ -200,6 +207,8 @@ void execute(sInstruccion instruccion){
         case COPY_STRING:
             exe_COPY_STRING(atoi(instruccion.componentes[1]));
             break;
+        default:
+            seVa=500;
 	}
 }
 
@@ -221,6 +230,16 @@ int get_cod_instruccion(char* instruccion){
         return IO_STDIN_READ;
     else if (!strcmp(instruccion, "IO_STDOUT_WRITE"))
         return IO_STDOUT_WRITE;
+    else if (!strcmp(instruccion, "IO_FS_CREATE"))
+        return IO_FS_CREATE;
+    else if (!strcmp(instruccion, "IO_FS_DELETE"))
+        return IO_FS_DELETE;
+    else if (!strcmp(instruccion, "IO_FS_TRUNCATE"))
+        return IO_FS_TRUNCATE;
+    else if (!strcmp(instruccion, "IO_FS_WRITE"))
+        return IO_FS_WRITE;
+    else if (!strcmp(instruccion, "IO_FS_READ"))
+        return IO_FS_READ;
     else if (!strcmp(instruccion, "WAIT"))
         return WAIT;
     else if (!strcmp(instruccion, "SIGNAL"))
@@ -317,6 +336,19 @@ void exe_IO_STD(char** componentes){
     string_append_with_format(&aEnviar, "%d %d", tamaño, tamañoVector);
     seVa=IO_STD;
 }
+
+void exe_IO_FS_CD(char** componentes){
+    strcpy (aEnviar, componentes[0]);
+    string_append_with_format(&aEnviar, " %s %s", componentes[1], componentes[2]);
+    seVa=IO_FS;
+}
+
+void exe_IO_FS_TRUNCATE(char** componentes){
+    strcpy (aEnviar, componentes[0]);
+    string_append_with_format(&aEnviar, " %s %s %d", componentes[1], componentes[2], get_registro(componentes[3]));
+    seVa=IO_FS;
+}
+
 
 void exe_MOV_IN(char* reg_datos, char* reg_direccion){
     int tamaño=cuanto_leo(reg_datos);

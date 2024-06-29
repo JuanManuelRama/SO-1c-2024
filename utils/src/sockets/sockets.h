@@ -38,6 +38,7 @@ typedef enum
 	IO,
 	IO_GEN,
 	IO_STD,
+	IO_FS,
 	VECTOR,
 	IO_FAILURE,
 	IO_SUCCESS,

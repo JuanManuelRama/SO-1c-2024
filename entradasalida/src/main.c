@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 	} else if (!strcmp(tipo, "STDOUT")) {
 		crear_interfaz_stdout(nombre);
 	} else if (!strcmp(tipo, "DIALFS")) {
-		;
+		crear_interfaz_fs(nombre);
 	} else {
 		log_error(logger, "TIPO DE INTERFAZ NO RECONOCIDO");
 	}
