@@ -137,9 +137,9 @@ void leer(int);
 
 void escribir(int);
 
-void leer_string(int);
+void leer_string(int, int);
 
-void escribir_string(int);
+void escribir_string(int, char*, int);
 
 void liberar_proceso(int);
 

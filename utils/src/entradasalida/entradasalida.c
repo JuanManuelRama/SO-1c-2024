@@ -1,5 +1,7 @@
 #include "entradasalida.h"
 
+int pid;
+
 void crear_interfaz_generica(char* nombre) {
     
 	int unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
@@ -12,8 +14,8 @@ void crear_interfaz_generica(char* nombre) {
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_n_split(buffer, 3, " ");
-
-			log_info(logger, "Operacion: %s", instruccion[0]);
+			pid = recibir_operacion(socket_kernel);
+			log_operacion(pid, instruccion[0]);
 
 			if (!strcmp(instruccion[0], "IO_GEN_SLEEP")){
 				
@@ -33,7 +35,7 @@ void crear_interfaz_generica(char* nombre) {
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
-			log_error(logger, "Operación inválida");
+			return;
 		}
 	}
 
@@ -52,7 +54,8 @@ void crear_interfaz_stdin (char* nombre){
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_split(buffer, " ");
-
+			pid = recibir_operacion(socket_kernel);
+			log_operacion(pid, instruccion[0]);
 			int tamaño = atoi(instruccion[2]);
 			int tamañoVector = atoi(instruccion[3]);
 			
@@ -71,6 +74,7 @@ void crear_interfaz_stdin (char* nombre){
 		float tam = tamaño;
 		if(tamaño<=espacioEnPag){
         enviar_string(valor, socket_memoria, ESCRITURA_STRING);
+		enviar_operacion(socket_memoria, pid);
         enviar_operacion(socket_memoria, 1);
         enviar_operacion(socket_memoria, tamaño);
         enviar_operacion(socket_memoria, vectorDirecciones[0]);
@@ -78,6 +82,7 @@ void crear_interfaz_stdin (char* nombre){
     else{
         int i;
         enviar_string(valor, socket_memoria, ESCRITURA_STRING);
+		enviar_operacion(socket_memoria, pid);
         enviar_operacion(socket_memoria, tamañoVector);
         enviar_operacion(socket_memoria, espacioEnPag);
         enviar_operacion(socket_memoria, vectorDirecciones[0]);
@@ -107,7 +112,7 @@ void crear_interfaz_stdin (char* nombre){
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
-			log_error(logger, "Operación inválida");
+			return;
 		}
 	}
 	
@@ -125,7 +130,8 @@ void crear_interfaz_stdout (char* nombre){
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_split(buffer, " ");
-
+			pid = recibir_operacion(socket_kernel);
+			log_operacion(pid, instruccion[0]);
 			int tamaño = atoi(instruccion[2]);
 			int tamañoVector = atoi(instruccion[3]);
 			
@@ -138,6 +144,7 @@ void crear_interfaz_stdout (char* nombre){
 				int espacioEnPag = tam_pagina-(desplazamiento);
 				if(tamaño<=espacioEnPag){
 					enviar_operacion(socket_memoria, LECTURA_STRING);
+					enviar_operacion(socket_memoria, pid);
 					enviar_operacion(socket_memoria, 1);
 					enviar_operacion(socket_memoria, tamaño);
 					enviar_operacion(socket_memoria, vectorDirecciones[0]);
@@ -145,6 +152,7 @@ void crear_interfaz_stdout (char* nombre){
 				else{
 					int i;
 					enviar_operacion(socket_memoria, LECTURA_STRING);
+					enviar_operacion(socket_memoria, pid);
 					enviar_operacion(socket_memoria, tamañoVector);
 					enviar_operacion(socket_memoria, espacioEnPag);
 					enviar_operacion(socket_memoria, vectorDirecciones[0]);
@@ -176,10 +184,66 @@ void crear_interfaz_stdout (char* nombre){
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
-			log_error(logger, "Operación inválida");
+			return;
 		}
 	}
 }
+
+void crear_interfaz_fs(char* nombre){
+	int socket_kernel = conectar_kernel (nombre);
+	int socket_memoria = conectar_memoria (nombre); 
+	while(1){
+		op_code cod_op = recibir_operacion(socket_kernel);
+		if(cod_op == OPERACION_IO){
+			int size;
+			char* buffer = recibir_buffer(&size, socket_kernel);
+			char** instruccion = string_split(buffer, " ");
+			log_info(logger, "Operacion: %s", instruccion[0]);
+			if(!strcmp(instruccion[0], "IO_FS_CREATE"))
+				crear_fs(instruccion[2]);
+			else if(!strcmp(instruccion[0], "IO_FS_DELETE"))
+				eliminar_fs(instruccion[2]);
+			else if(!strcmp(instruccion[0], "IO_FS_TRUNCATE"))
+				truncar_fs(instruccion[2], atoi(instruccion[3]));
+			else if(!strcmp(instruccion[0], "IO_FS_WRITE"))
+				escribir_fs(instruccion);
+			else if(!strcmp(instruccion[0], "IO_FS_READ"))
+				leer_fs(instruccion);
+			else{
+				log_info(logger, "Resultado de %s: io_failure", nombre);
+				enviar_operacion(socket_kernel, IO_FAILURE);
+				string_array_destroy(instruccion);
+				continue;
+			}
+			enviar_operacion(socket_kernel, IO_SUCCESS);
+			string_array_destroy(instruccion);
+		}
+		else
+			return;
+	}
+}
+
+void crear_fs(char* nombre){
+	log_creacion(pid, nombre);
+}
+
+void eliminar_fs(char* nombre){
+	log_eliminacion(pid, nombre);
+}
+
+void truncar_fs(char* nombre, int tamaño){
+	log_truncamiento(pid, nombre, tamaño);
+}
+
+void escribir_fs(char** instruccion){
+	log_info(logger, "archivo escrito (en realidad no)");
+}
+
+void leer_fs(char** instruccion){
+	log_info(logger, "archivo leido (en realidad no)");
+}
+
+
 
 int conectar_kernel (char* nombre){
 	int socket;
@@ -207,4 +271,22 @@ int conectar_memoria (char* nombre){
 	enviar_operacion(socket, NUEVA_IO);
 
 	return socket;
+}
+
+
+//LOGS OBLIGATORIOS
+void log_operacion(int pid, char* operacion){
+	log_info(logger, "PID: %d - Operación: %s", pid, operacion);
+}
+
+void log_creacion(int pid, char* nombre){
+	log_info(logger, "PID: %d - Crear Archivo %s", pid, nombre);
+}
+
+void log_eliminacion(int pid, char* nombre){
+	log_info(logger, "PID: %d - Eliminar Archivo %s", pid, nombre);
+}
+
+void log_truncamiento(int pid, char* nombre, int tamaño){
+	log_info(logger, "PID: %d - Truncar Archivo: %s - Tamaño: %d", pid, nombre, tamaño);
 }

@@ -53,3 +53,9 @@ typedef struct
 	t_queue* cBloqueados;
 } t_recurso;
 
+typedef struct
+{
+	int pid;
+	int marco;
+	int pagina;
+} t_entradaTLB;

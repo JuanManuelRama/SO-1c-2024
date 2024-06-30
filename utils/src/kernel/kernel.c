@@ -704,8 +704,9 @@ void planificadorCP_VRR() {
 				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
 				matadero(proceso, "Éxito");
 				break;
+			case IO_GEN:
 			case IO_STD:
-			case IO:
+			case IO_FS:
 				clock_gettime(CLOCK_MONOTONIC_RAW, &tiempoVuelta); // marco la hora q volvio
 
 				pthread_cancel(hilo_timer); // cancelo el hilo de timer pq volvio antes de tiempo
@@ -726,6 +727,7 @@ void planificadorCP_VRR() {
 					matadero(proceso, "No coinciden los códigos de salida");
 
 				proceso->multifuncion = recibir_buffer(&size, conexion_cpu_dispatch);
+				printf(proceso->multifuncion);
 
 				pthread_mutex_lock(&mBLOCKED);
 				list_add(lBlocked, proceso);
@@ -872,11 +874,10 @@ void escuchar_conexiones_IO(int socket_server) {
 			case NUEVA_IO:
 				int size;
 				char* nombre = recibir_buffer(&size, socket);
-
 				t_conexion *conexion = malloc(sizeof(t_conexion));
-				conexion->nombre = string_new();
-				strcpy(conexion->nombre, nombre);
+				conexion->nombre = nombre;
 				conexion->socket = socket;
+				pthread_mutex_init(&(conexion->mutex), NULL);
 
 				pthread_mutex_lock(&mCONEXIONES);
 				list_add(lista_conexiones_IO, conexion);
@@ -890,11 +891,13 @@ void escuchar_conexiones_IO(int socket_server) {
 
 void atender_solicitud_IO(sProceso* proceso){
 	char** instruccionIO = string_n_split(proceso->multifuncion, 4, " ");
-	int tamañoVector = atoi(instruccionIO[3]);
-	
+	int tamañoVector;
 	int* vectorDirecciones;
-	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE"))
-		vectorDirecciones = recibir_vector(conexion_cpu_dispatch, tamañoVector);
+
+	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
+	tamañoVector = atoi(instruccionIO[3]);
+	vectorDirecciones = recibir_vector(conexion_cpu_dispatch, tamañoVector);
+	}
 
 
 	// funcionalidad propia de gcc, inner function
@@ -914,10 +917,19 @@ void atender_solicitud_IO(sProceso* proceso){
 		string_array_destroy(instruccionIO);
 		return;
 	}
-	log_bloqueo(proceso->pcb.pid, instruccionIO[0]);
-	
+	log_bloqueo(proceso->pcb.pid, IO_seleccionada->nombre);
+	pthread_mutex_lock(&(IO_seleccionada->mutex));
+	if(list_remove_element(lBlocked, proceso)==false){
+		pthread_mutex_unlock(&(IO_seleccionada->mutex));
+		if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE"))
+			free(vectorDirecciones);
+		string_array_destroy(instruccionIO);
+		return;
+	}
+	list_add(lBlocked, proceso);
 	// le mandamos a la instancia encontrada la operacion
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
+	enviar_operacion(IO_seleccionada->socket, proceso->pcb.pid);
 
 	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
 		enviar_vector(vectorDirecciones, tamañoVector, IO_seleccionada->socket);
@@ -927,6 +939,7 @@ void atender_solicitud_IO(sProceso* proceso){
 
 	// nos quedamos escuchando la respuesta
 	int codOp = recibir_operacion (IO_seleccionada->socket);
+	pthread_mutex_unlock(&(IO_seleccionada->mutex));
 
 	if (codOp == IO_FAILURE) { // en caso de que la operacion no sea valida
 		pthread_mutex_lock(&mBLOCKED);
@@ -945,7 +958,8 @@ void atender_solicitud_IO(sProceso* proceso){
 		free(proceso->multifuncion);
 		matadero(proceso, "Se intento comunicar con una IO no conectada");
 		string_array_destroy(instruccionIO);
-
+		free(IO_seleccionada->nombre);
+		pthread_mutex_destroy(&(IO_seleccionada->mutex));
 		pthread_mutex_lock(&mCONEXIONES);
 		list_remove_element(lista_conexiones_IO, IO_seleccionada);
 		pthread_mutex_unlock(&mCONEXIONES);
@@ -956,8 +970,12 @@ void atender_solicitud_IO(sProceso* proceso){
 	// LO VOLVEMOS A READY DESPUES DE SU IO
 
 	// lo sacamos de blocked
+	string_array_destroy(instruccionIO);
 	pthread_mutex_lock(&mBLOCKED);
-	list_remove_element(lBlocked, proceso);
+	if(list_remove_element(lBlocked, proceso) == false){
+		pthread_mutex_unlock(&mBLOCKED);
+		return;
+	}
 	pthread_mutex_unlock(&mBLOCKED);
 
 	free(proceso->multifuncion);
@@ -981,7 +999,6 @@ void atender_solicitud_IO(sProceso* proceso){
 	}
 
 	sem_post(&semPCP); //avisamos al dispatcher q hay proceso listo
-	string_array_destroy(instruccionIO);
 }
 
 
@@ -990,7 +1007,7 @@ void log_nuevoProceso (int pid){
 	log_info(logger, "Se creo el proceso %d en NEW", pid);
 }
 
-void log_cambioEstado (int pid, int eAnterior, int eActual){
+void log_cambioEstado (int pid, estados eAnterior, estados eActual){
 	log_info(logger, "PID: %d - Estado Anterior: %s - Estado Actual: %s", pid, get_estado(eAnterior), get_estado(eActual));
 }
 void log_finalizacion(int pid, char* motivo){
@@ -1016,7 +1033,7 @@ void log_bloqueo(int pid, char* motivo){
 	log_info(logger, "PID: %d - Bloqueado por: %s", pid, motivo);
 }
 
-void listar_procesos(t_list* lista, int estado){
+void listar_procesos(t_list* lista, estados estado){
 	sProceso* proceso;
 	int tamLista = list_size(lista);
 	printf("%s: ", get_estado(estado));

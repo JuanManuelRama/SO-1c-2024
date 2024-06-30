@@ -156,8 +156,7 @@ void enviar_operacion(int socket_cliente, int codigo_op){
 
 	memcpy(codigo, &codigo_op, sizeof(int));
 
-	send(socket_cliente, codigo, sizeof(op_code), 0);
-
+	send(socket_cliente, codigo, sizeof(op_code), MSG_NOSIGNAL);
 	free(codigo);
 }
 
@@ -182,8 +181,7 @@ void enviar_string(char* string, int socket_cliente, int codigo_op)
 
 	void* a_enviar = serializar_paquete(paquete, bytes);
 
-	send(socket_cliente, a_enviar, bytes, 0);
-
+	send(socket_cliente, a_enviar, bytes, MSG_NOSIGNAL);
 	free(a_enviar);
 	eliminar_paquete(paquete);
 }

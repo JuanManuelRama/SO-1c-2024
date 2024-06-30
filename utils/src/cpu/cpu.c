@@ -1,6 +1,5 @@
 #include "cpu.h"
 
-
 void finalizar_cpu(){
     log_info(logger, "Kernel desconectado, finalizando CPU");
     liberar_conexion(memoria);
@@ -13,20 +12,86 @@ void finalizar_cpu(){
 	exit(0);
 }
 
-int MMU(int DL){
+int MMU(int DL){   
     int pag = DL/tam_pag;
     int desplazamiento = DL - pag*tam_pag;
+    int DF;
+    int marco;
+
     if(desplazamiento>tam_pag)
         return -1;
-    enviar_int(pag, memoria, PAGINA);
-    if(recibir_operacion(memoria)!=PAGINA){
-        log_error(logger, "La memoria me envió cualquier cosa...");
-        return -1;
+
+    if(!cant_entradas_TLB){
+        enviar_int(pag, memoria, PAGINA);
+
+        if(recibir_operacion(memoria)!=PAGINA){
+            log_error(logger, "La memoria me envió cualquier cosa...");
+            return -1;
+        }
+
+        marco = recibir_int(memoria);
+        DF = marco*tam_pag + desplazamiento;
+        log_marco(pcb.pid, pag, marco);
+
+        return DF;
+    }else{
+
+        bool buscar_pagina_TLB(void* elem){
+            t_entradaTLB *una_entrada_TLB = (t_entradaTLB*) elem;
+            return (una_entrada_TLB->pid == pcb.pid && una_entrada_TLB->pagina == pag);
+        }
+
+        entrada_TLB = list_find(tlb->elements, buscar_pagina_TLB);
+        
+        if(entrada_TLB){
+            log_tlb_hit(pcb.pid, pag);
+
+            if(!strcmp(algoritmo_TLB, "LRU")){
+                list_remove_element(tlb->elements, entrada_TLB);
+                queue_push(tlb, entrada_TLB);
+            }
+
+            DF = entrada_TLB->marco * tam_pag + desplazamiento;
+
+            return DF;
+        }else{
+            log_tlb_miss(pcb.pid, pag);
+
+            entrada_TLB = malloc(sizeof *entrada_TLB);
+
+            enviar_int(pag, memoria, PAGINA);
+
+            if(recibir_operacion(memoria)!=PAGINA){
+                log_error(logger, "La memoria me envió cualquier cosa...");
+                return -1;
+            }
+
+            marco = recibir_int(memoria);
+            DF = marco*tam_pag + desplazamiento;
+            log_marco(pcb.pid, pag, marco);
+
+            entrada_TLB->pid = pcb.pid;
+            entrada_TLB->pagina = pag;
+            entrada_TLB->marco = marco;
+
+            acomodar_entradas_TLB(entrada_TLB);
+
+            return DF;
+        }
     }
-    int marco = recibir_int(memoria);
-    int DF = marco*tam_pag + desplazamiento;
-    log_marco(pcb.pid, pag, marco);
-    return DF;
+}
+
+void acomodar_entradas_TLB(t_entradaTLB *una_entrada_TLB){
+    t_entradaTLB *entrada_aux;
+
+    if(entradas_actuales_tlb){
+        entradas_actuales_tlb--;
+        queue_push(tlb, una_entrada_TLB);
+    }else{
+        entrada_aux = queue_pop(tlb);
+        queue_push(tlb, una_entrada_TLB);
+    }
+
 }
 
 int cuanto_leo(char* registro){
@@ -185,6 +250,13 @@ void execute(sInstruccion instruccion){
         case IO_STDIN_READ:
             exe_IO_STD(instruccion.componentes);
             break;
+        case IO_FS_CREATE:
+        case IO_FS_DELETE:
+            exe_IO_FS_CD(instruccion.componentes);
+            break;
+        case IO_FS_TRUNCATE:
+            exe_IO_FS_TRUNCATE(instruccion.componentes);
+            break;
         case EXIT:
             exe_EXIT();
             break;
@@ -200,6 +272,8 @@ void execute(sInstruccion instruccion){
         case COPY_STRING:
             exe_COPY_STRING(atoi(instruccion.componentes[1]));
             break;
+        default:
+            seVa=500;
 	}
 }
 
@@ -221,6 +295,16 @@ int get_cod_instruccion(char* instruccion){
         return IO_STDIN_READ;
     else if (!strcmp(instruccion, "IO_STDOUT_WRITE"))
         return IO_STDOUT_WRITE;
+    else if (!strcmp(instruccion, "IO_FS_CREATE"))
+        return IO_FS_CREATE;
+    else if (!strcmp(instruccion, "IO_FS_DELETE"))
+        return IO_FS_DELETE;
+    else if (!strcmp(instruccion, "IO_FS_TRUNCATE"))
+        return IO_FS_TRUNCATE;
+    else if (!strcmp(instruccion, "IO_FS_WRITE"))
+        return IO_FS_WRITE;
+    else if (!strcmp(instruccion, "IO_FS_READ"))
+        return IO_FS_READ;
     else if (!strcmp(instruccion, "WAIT"))
         return WAIT;
     else if (!strcmp(instruccion, "SIGNAL"))
@@ -318,38 +402,86 @@ void exe_IO_STD(char** componentes){
     seVa=IO_STD;
 }
 
+void exe_IO_FS_CD(char** componentes){
+    strcpy (aEnviar, componentes[0]);
+    string_append_with_format(&aEnviar, " %s %s", componentes[1], componentes[2]);
+    seVa=IO_FS;
+}
+
+void exe_IO_FS_TRUNCATE(char** componentes){
+    strcpy (aEnviar, componentes[0]);
+    string_append_with_format(&aEnviar, " %s %s %d", componentes[1], componentes[2], get_registro(componentes[3]));
+    seVa=IO_FS;
+}
+
+
 void exe_MOV_IN(char* reg_datos, char* reg_direccion){
-    int DF = MMU(get_registro(reg_direccion));
-    int leer = cuanto_leo(reg_datos);
-
-    if(DF == -1){
-        seVa=SEG_FAULT;
-        return;
+    int tamaño=cuanto_leo(reg_datos);
+    float tam = tamaño;
+    int DF, size;
+    int direccion = get_registro(reg_direccion);
+    int desplazamiento = direccion%tam_pag;
+    int espacioEnPag = tam_pag-desplazamiento;
+    if(tamaño==1 || tamaño<=espacioEnPag){
+        DF = MMU(direccion);
+        enviar_operacion(memoria, LECTURA);
+        enviar_operacion(memoria, DF);
+        enviar_operacion(memoria, tamaño);
+        enviar_operacion(memoria, 1);
     }
-
-    enviar_int(DF, memoria, LECTURA);
-    enviar_operacion(memoria, leer);
-    if(recibir_operacion(memoria)!=LECTURA){
-        log_error(logger, "La memoria me envió cualquier cosa...");
-        return;
+    else{        
+        int i;
+        int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
+        int vDirecciones[pagNecesarias];
+        vDirecciones[0]=MMU(direccion);
+        DF=vDirecciones[0];
+        for(i=0; i<pagNecesarias-1; i++)
+           vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
+        enviar_operacion(memoria, LECTURA);
+        enviar_operacion(memoria, vDirecciones[0]);
+        enviar_operacion(memoria, tamaño);
+        enviar_operacion(memoria, pagNecesarias);
+        for(i=1; i<pagNecesarias; i++)
+            enviar_operacion(memoria, vDirecciones[i]);
     }
-    int valor = recibir_int(memoria);
+    int valor = recibir_operacion(memoria);
     log_rw(pcb.pid, "LEER", DF, valor);
-    set_registro(reg_datos,memoria);
+    set_registro(reg_datos, valor);
 }
 
 void exe_MOV_OUT(char* reg_direccion, char* reg_datos){
-    int DF = MMU(get_registro(reg_direccion));
-    int cantBytes = cuanto_leo(reg_datos);
-    int valor = get_registro(reg_datos);
 
-    if(DF == -1){
-        seVa=SEG_FAULT;
-        return;
+    int tamaño=cuanto_leo(reg_datos);
+    float tam = tamaño;
+    int DF, size;
+    int direccion = get_registro(reg_direccion);
+    int desplazamiento = direccion%tam_pag;
+    int espacioEnPag = tam_pag-desplazamiento;
+    if(tamaño==1 || tamaño<=espacioEnPag){
+        DF = MMU(direccion);
+        enviar_operacion(memoria, ESCRITURA);
+        enviar_operacion(memoria, DF);
+        enviar_operacion(memoria, tamaño);
+        enviar_operacion(memoria, 1);
+        enviar_operacion(memoria, get_registro(reg_datos));
     }
-    log_rw(pcb.pid, "ESCRIBIR", DF, valor);
-    enviar_int(DF, memoria, ESCRITURA);
-    enviar_int(valor, memoria, cantBytes);
+    else{        
+        int i;
+        int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
+        int vDirecciones[pagNecesarias];
+        vDirecciones[0]=MMU(direccion);
+        DF=vDirecciones[0];
+        for(i=0; i<pagNecesarias-1; i++)
+           vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
+        enviar_operacion(memoria, ESCRITURA);
+        enviar_operacion(memoria, vDirecciones[0]);
+        enviar_operacion(memoria, tamaño);
+        enviar_operacion(memoria, pagNecesarias);
+        enviar_operacion(memoria, get_registro(reg_datos));
+        for(i=1; i<pagNecesarias; i++)
+            enviar_operacion(memoria, vDirecciones[i]);
+    }
+  log_rw(pcb.pid, "ESCRIBIR", DF, get_registro(reg_datos));
 }
 
 void exe_RESIZE(int tamanio){
@@ -467,4 +599,12 @@ void log_rw(int pid, char* operacion, int direccion, int valor){
 
 void log_rws(int pid, char* operacion, int direccion, char* valor){
     log_info(logger, "PID: %d - Acción: %s - Dirección Física: %d - Valor: %s", pid, operacion, direccion, valor);
+}
+
+void log_tlb_hit(int pid, int pagina){
+    log_info(logger, "PID: %d - TLB HIT - Página: %d", pid, pagina);
+}
+
+void log_tlb_miss(int pid, int pagina){
+    log_info(logger, "PID: %d - TLB MISS - Página: %d", pid, pagina);
 }

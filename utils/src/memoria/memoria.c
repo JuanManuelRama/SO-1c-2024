@@ -17,7 +17,7 @@ void recibir_proceso(int socket_cliente){
 
 void interactuar_Kernel(int kernel){
 		while (1) {
-		int cod_op = recibir_operacion(kernel);
+		op_code cod_op = recibir_operacion(kernel);
 		switch (cod_op) {
 		case MENSAJE:
 			recibir_mensaje(kernel);
@@ -40,7 +40,8 @@ void interactuar_Kernel(int kernel){
 
 void interactuar_cpu(int cpu){
 	while (1) {
-		int cod_op = recibir_operacion(cpu);
+		int size;
+		op_code cod_op = recibir_operacion(cpu);
 		switch (cod_op) {
 		case MENSAJE:
 			recibir_mensaje(cpu);
@@ -70,10 +71,10 @@ void interactuar_cpu(int cpu){
 			escribir(cpu);
 			break;
 		case LECTURA_STRING:
-			leer_string(cpu);
+			leer_string(cpu, proceso->pid);
 			break;	
 		case ESCRITURA_STRING:
-			escribir_string(cpu);
+			escribir_string(cpu, recibir_buffer(&size, cpu), proceso->pid);
 			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
@@ -87,14 +88,16 @@ void interactuar_cpu(int cpu){
 
 void interactuar_IO (int IO){
 	while (1) {
-
-		int cod_op = recibir_operacion(IO);
+		int size;
+		op_code cod_op = recibir_operacion(IO);
 		switch (cod_op) {
 		case ESCRITURA_STRING:
-			escribir_string(IO);
+			char* cadena = recibir_buffer(&size, IO);
+			int pid = recibir_operacion(IO);
+			escribir_string(IO, cadena, pid);
 			break;
 		case LECTURA_STRING:
-			leer_string(IO);
+			leer_string(IO, recibir_operacion(IO));
 			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto");
@@ -275,38 +278,70 @@ void sacar_paginas (int cpu){
 }
 
 void leer(int socket_cliente){
-	int DF = recibir_int(socket_cliente);
+	int DF = recibir_operacion(socket_cliente);
 	int tamanio = recibir_operacion(socket_cliente);
-	usleep(RETARDO*1000);
-	log_acceso(proceso->pid, "Lectura", DF, tamanio);
-	if(tamanio == 4){
-		uint32_t valor;
-		memcpy(&valor, memoria_contigua + DF, 4);
-		enviar_int(valor, socket_cliente, LECTURA);
+	int cantPag = recibir_operacion(socket_cliente);
+	if(cantPag==1){
+		if(tamanio == 4){
+			uint32_t valor;
+			memcpy(&valor, memoria_contigua + DF, tamanio);
+			log_acceso(proceso->pid, "Lectura", DF, tamanio);
+			enviar_operacion(socket_cliente, valor);
+		}
+		else{
+			uint8_t valor;
+			memcpy(&valor, memoria_contigua + DF, tamanio);
+			log_acceso(proceso->pid, "Lectura", DF, tamanio);
+			enviar_operacion(socket_cliente, valor);
+		}
 	}
 	else{
-		uint8_t valor;
+		uint32_t valor;
+		int aux = DF;
 		memcpy(&valor, memoria_contigua + DF, 1);
-		enviar_int(valor, socket_cliente, LECTURA);
+		DF++;
+		for(int i=1; i<4; i++){
+			if(!(DF%TAM_PAG))
+				DF=recibir_operacion(socket_cliente);
+			memcpy((uint8_t*)&valor+i, memoria_contigua + DF, 1);
+			DF++;
+		}
+		log_acceso(proceso->pid, "Lectura", aux, tamanio);
+		enviar_operacion(socket_cliente, valor);
 	}
+	usleep(RETARDO*1000);
 }
 
 void escribir(int socket_cliente){
-	int DF = recibir_int(socket_cliente);
+	int DF = recibir_operacion(socket_cliente);
 	int tamanio = recibir_operacion(socket_cliente);
 	log_acceso(proceso->pid, "Escritura", DF, tamanio);
+	int cantPag = recibir_operacion(socket_cliente);
 	usleep(RETARDO*1000);
-	if(tamanio == 4){
-		uint32_t valor = recibir_int(socket_cliente);
-		memcpy(memoria_contigua + DF, &valor, tamanio);
+	if(cantPag==1){
+		if(tamanio == 4){
+			uint32_t valor = recibir_operacion(socket_cliente);
+			memcpy(memoria_contigua + DF, &valor, tamanio);
+		}
+		else{
+			uint8_t valor = recibir_operacion(socket_cliente);
+			memcpy(memoria_contigua + DF, &valor, tamanio);
+		}
 	}
 	else{
-		uint8_t valor = recibir_int(socket_cliente);
-		memcpy(memoria_contigua + DF, &valor, tamanio);
+		uint32_t valor = recibir_operacion(socket_cliente);
+		memcpy(memoria_contigua + DF, &valor, 1);
+		DF++;
+		for(int i=1; i<4; i++){
+			if(!(DF%TAM_PAG))
+				DF=recibir_operacion(socket_cliente);
+			memcpy(memoria_contigua + DF, (uint8_t*)&valor+1, 1);
+			DF++;
+		}
 	}
 }
 
-void leer_string(int socket_cliente){
+void leer_string(int socket_cliente, int pid){
 	int cantPag, tamaño, i, direccion;
 	int desplazamiento = 0;
 	cantPag = recibir_operacion(socket_cliente);
@@ -314,7 +349,7 @@ void leer_string(int socket_cliente){
 	for(i=0; i<cantPag; i++){
 		tamaño = recibir_operacion(socket_cliente);
 		direccion = recibir_operacion(socket_cliente);
-		log_acceso(proceso->pid, "Lectura", direccion, tamaño);
+		log_acceso(pid, "Lectura", direccion, tamaño);
 		memcpy(cadena+desplazamiento, memoria_contigua+direccion, tamaño);
 		desplazamiento += tamaño;
 	}
@@ -324,15 +359,14 @@ void leer_string(int socket_cliente){
 	free(cadena);
 }
 
-void escribir_string(int socket_cliente){
+void escribir_string(int socket_cliente, char* cadena, int pid){
 	int cantPag, tamaño, i, direccion;
 	int deslplazamiento = 0;
-	char* cadena = recibir_buffer(&tamaño, socket_cliente);
 	cantPag = recibir_operacion(socket_cliente);
 	for(i=0; i<cantPag; i++){
 		tamaño = recibir_operacion(socket_cliente);
 		direccion = recibir_operacion(socket_cliente);
-		log_acceso(proceso->pid, "Escritura", direccion, tamaño);
+		log_acceso(pid, "Escritura", direccion, tamaño);
 		memcpy(memoria_contigua+direccion, cadena+deslplazamiento, tamaño);
 		deslplazamiento += tamaño;
 	}

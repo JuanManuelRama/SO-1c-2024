@@ -52,6 +52,7 @@ typedef struct{
 typedef struct{
     char *nombre;
     int socket;
+    pthread_mutex_t mutex;
 }t_conexion;
 
 
@@ -182,7 +183,7 @@ void log_nuevoProceso (int);
 *@param     eAnterior Estado Anterior
 *@param     eActual Estado actual
 */
-void log_cambioEstado(int, int, int);
+void log_cambioEstado(int, estados, estados);
 
 void log_bloqueo(int, char*);
 
@@ -198,7 +199,7 @@ void log_ingresoReady(t_list*, char*);
 
 void log_finDeQuantum(int);
 
-void listar_procesos(t_list*, int);
+void listar_procesos(t_list*, estados);
 
 
 //falta agregar documentacion
