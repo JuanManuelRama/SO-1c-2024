@@ -32,11 +32,8 @@ bool planificacion_activa;
 bool planiEsVrr; // medio tosco el flag global, se puede pensar otra forma (se usa para vrr)
 int pidRunning;
 t_list *lista_conexiones_IO;
-
 t_recurso* recursos;
 int cantRecursos;
-int instanciasUtilizadas;
-char* recursoPedido;
 
 int main() {
 

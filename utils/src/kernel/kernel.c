@@ -25,9 +25,6 @@ void inicializar_kernel(){
 	planificacion_activa = true;
 	pidRunning = -1;
 
-	instanciasUtilizadas = 0;
-	recursoPedido = string_new(); // para probar la liberacion de recursos
-
 	char** arrayRecursos = config_get_array_value(config, "RECURSOS");
 	char** instanciasRecursos = config_get_array_value(config, "INSTANCIAS_RECURSOS");
 	cantRecursos = string_array_size(arrayRecursos);
@@ -167,6 +164,8 @@ void crear_proceso (char* path){
 	strcpy(proceso->multifuncion, path);
 	proceso->pcb.pid=idPCB;
 	idPCB++;
+	proceso->recursoPedido=string_new();
+	proceso->instanciasUtilizadas=0;
 	log_nuevoProceso(proceso->pcb.pid);
 	pthread_mutex_lock(&mNEW);
 	queue_push(cNEW, proceso);
@@ -324,9 +323,10 @@ void carnicero(){
 	proceso = queue_pop(cEXIT);
 	pthread_mutex_unlock(&mEXIT);
 	enviar_puntero(proceso->pcb.instrucciones, conexion_memoria, FINALIZACION);
+	liberar_recursos(proceso->recursoPedido, proceso->instanciasUtilizadas);
 	log_finalizacion(proceso->pcb.pid, proceso->multifuncion);
+	free(proceso->recursoPedido);
 	free(proceso);
-	//liberar_recursos(instanciasUtilizadas);
 	}
 }
 
@@ -378,14 +378,14 @@ void planificadorCP_FIFO(){
 			case PEDIRRECURSO:
 				paquete = recibir_recurso(conexion_cpu_dispatch);
 				recursoRecibido = (char*) paquete->buffer->stream;
-				strcpy(recursoPedido, recursoRecibido);
+				strcpy(proceso->recursoPedido, recursoRecibido);
 				indiceRecurso = buscar_recurso(recursoRecibido);
 
 				if(indiceRecurso != -1){
 
 					pthread_mutex_lock(&mRUNNING);
 					recursos[indiceRecurso].instancias -= 1;
-					instanciasUtilizadas += 1;
+					proceso->instanciasUtilizadas += 1;
 					pthread_mutex_unlock(&mRUNNING);
 
         			if (recursos[indiceRecurso].instancias < 0) {
@@ -419,14 +419,14 @@ void planificadorCP_FIFO(){
 			case DARRECURSO:
 				paquete = recibir_recurso(conexion_cpu_dispatch);
 				recursoRecibido = (char*) paquete->buffer->stream;
-				strcpy(recursoPedido, recursoRecibido);
+				strcpy(proceso->recursoPedido, recursoRecibido);
 				indiceRecurso = buscar_recurso(recursoRecibido);
 
 				if(indiceRecurso != -1){
 
 					pthread_mutex_lock(&mRUNNING);
 					recursos[indiceRecurso].instancias += 1;
-					instanciasUtilizadas -= 1;
+					proceso->instanciasUtilizadas -= 1;
 					pthread_mutex_unlock(&mRUNNING);
         
         			if (recursos[indiceRecurso].instancias <= 0) {
@@ -544,14 +544,14 @@ void planificadorCP_RR(){
 			case PEDIRRECURSO:
 				paquete = recibir_recurso(conexion_cpu_dispatch);
 				recursoRecibido = (char*) paquete->buffer->stream;
-				strcpy(recursoPedido, recursoRecibido);
+				strcpy(proceso->recursoPedido, recursoRecibido);
 				indiceRecurso = buscar_recurso(recursoRecibido);
 
 				if(indiceRecurso != -1){
 
 					pthread_mutex_lock(&mRUNNING);
 					recursos[indiceRecurso].instancias -= 1;
-					instanciasUtilizadas += 1;
+					proceso->instanciasUtilizadas += 1;
 					pthread_mutex_unlock(&mRUNNING);
 
         			if (recursos[indiceRecurso].instancias < 0) {
@@ -585,14 +585,14 @@ void planificadorCP_RR(){
 			case DARRECURSO:
 				paquete = recibir_recurso(conexion_cpu_dispatch);
 				recursoRecibido = (char*) paquete->buffer->stream;
-				strcpy(recursoPedido, recursoRecibido);
+				strcpy(proceso->recursoPedido, recursoRecibido);
 				indiceRecurso = buscar_recurso(recursoRecibido);
 
 				if(indiceRecurso != -1){
 
 					pthread_mutex_lock(&mRUNNING);
 					recursos[indiceRecurso].instancias += 1;
-					instanciasUtilizadas -= 1;
+					proceso->instanciasUtilizadas -= 1;
 					pthread_mutex_unlock(&mRUNNING);
         
         			if (recursos[indiceRecurso].instancias <= 0) {
@@ -736,14 +736,14 @@ void planificadorCP_VRR() {
 			case PEDIRRECURSO:
 				paquete = recibir_recurso(conexion_cpu_dispatch);
 				recursoRecibido = (char*) paquete->buffer->stream;
-				strcpy(recursoPedido, recursoRecibido);
+				strcpy(proceso->recursoPedido, recursoRecibido);
 				indiceRecurso = buscar_recurso(recursoRecibido);
 
 				if(indiceRecurso != -1){
 
 					pthread_mutex_lock(&mRUNNING);
 					recursos[indiceRecurso].instancias -= 1;
-					instanciasUtilizadas += 1;
+					proceso->instanciasUtilizadas += 1;
 					pthread_mutex_unlock(&mRUNNING);
 
         			if (recursos[indiceRecurso].instancias < 0) {
@@ -787,14 +787,14 @@ void planificadorCP_VRR() {
 			case DARRECURSO:
 				paquete = recibir_recurso(conexion_cpu_dispatch);
 				recursoRecibido = (char*) paquete->buffer->stream;
-				strcpy(recursoPedido, recursoRecibido);
+				strcpy(proceso->recursoPedido, recursoRecibido);
 				indiceRecurso = buscar_recurso(recursoRecibido);
 
 				if(indiceRecurso != -1){
 
 					pthread_mutex_lock(&mRUNNING);
 					recursos[indiceRecurso].instancias += 1;
-					instanciasUtilizadas -= 1;
+					proceso->instanciasUtilizadas -= 1;
 					pthread_mutex_unlock(&mRUNNING);
         
         			if (recursos[indiceRecurso].instancias <= 0) {
@@ -1060,10 +1060,28 @@ int buscar_recurso(char* nombre){
 	return -1;
 }
 
-void liberar_recursos(int instanciasLiberables){
-	for (int i = 0; i < instanciasLiberables; i++){
-		int indiceRecurso = buscar_recurso(recursoPedido);
-		recursos[indiceRecurso].instancias += 1;
-	}
-	free(recursoPedido);
+void liberar_recursos(char* recursoPedido, int instanciasUtilizadas) {
+    if (instanciasUtilizadas > 0) {
+        int indiceRecurso = buscar_recurso(recursoPedido);
+        
+        pthread_mutex_lock(&mRUNNING);
+        recursos[indiceRecurso].instancias += instanciasUtilizadas;
+        pthread_mutex_unlock(&mRUNNING);
+        
+        while (recursos[indiceRecurso].instancias <= 0 && !queue_is_empty(recursos[indiceRecurso].cBloqueados)) {
+            pthread_mutex_lock(&mBLOCKED);
+            sProceso* procesoDesbloqueado = queue_pop(recursos[indiceRecurso].cBloqueados);
+            pthread_mutex_unlock(&mBLOCKED);
+
+            log_cambioEstado(procesoDesbloqueado->pcb.pid, BLOCKED, READY);
+            procesoDesbloqueado->pcb.estado = READY;
+
+            pthread_mutex_lock(&mREADY);
+            queue_push(cREADY, procesoDesbloqueado);
+            log_ingresoReady(cREADY->elements, "Normal");
+            pthread_mutex_unlock(&mREADY);
+
+            sem_post(&semPCP);
+        }
+    }
 }
