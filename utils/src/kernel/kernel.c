@@ -359,7 +359,7 @@ void planificadorCP_FIFO(){
 			case FINALIZACION:
 				matadero(proceso, "Finalizo");
 				break;
-			case IO_STD:
+			case IO_VECTOR:
 			case IO:
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
 				proceso->pcb.estado=BLOCKED;
@@ -524,7 +524,7 @@ void planificadorCP_RR(){
 				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
 				matadero(proceso, "Finalizo");
 				break;
-			case IO_STD:
+			case IO_VECTOR:
 			case IO:
 				pthread_cancel(hilo_timer);
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
@@ -704,9 +704,8 @@ void planificadorCP_VRR() {
 				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
 				matadero(proceso, "Éxito");
 				break;
-			case IO_GEN:
-			case IO_STD:
-			case IO_FS:
+			case IO:
+			case IO_VECTOR:
 				clock_gettime(CLOCK_MONOTONIC_RAW, &tiempoVuelta); // marco la hora q volvio
 
 				pthread_cancel(hilo_timer); // cancelo el hilo de timer pq volvio antes de tiempo
@@ -727,7 +726,6 @@ void planificadorCP_VRR() {
 					matadero(proceso, "No coinciden los códigos de salida");
 
 				proceso->multifuncion = recibir_buffer(&size, conexion_cpu_dispatch);
-				printf(proceso->multifuncion);
 
 				pthread_mutex_lock(&mBLOCKED);
 				list_add(lBlocked, proceso);
@@ -890,7 +888,7 @@ void escuchar_conexiones_IO(int socket_server) {
 }
 
 void atender_solicitud_IO(sProceso* proceso){
-	char** instruccionIO = string_n_split(proceso->multifuncion, 4, " ");
+	char** instruccionIO = string_split(proceso->multifuncion, " ");
 	int tamañoVector;
 	int* vectorDirecciones;
 
@@ -899,6 +897,10 @@ void atender_solicitud_IO(sProceso* proceso){
 	vectorDirecciones = recibir_vector(conexion_cpu_dispatch, tamañoVector);
 	}
 
+	if(!strcmp(instruccionIO[0], "IO_FS_WRITE") || !strcmp(instruccionIO[0], "IO_FS_READ")){
+		tamañoVector = atoi(instruccionIO[4]);
+		vectorDirecciones = recibir_vector(conexion_cpu_dispatch, tamañoVector);
+	}
 
 	// funcionalidad propia de gcc, inner function
 	bool existe_conexion(void* elem) {
@@ -921,7 +923,7 @@ void atender_solicitud_IO(sProceso* proceso){
 	pthread_mutex_lock(&(IO_seleccionada->mutex));
 	if(list_remove_element(lBlocked, proceso)==false){
 		pthread_mutex_unlock(&(IO_seleccionada->mutex));
-		if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE"))
+		if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE") || !strcmp(instruccionIO[0], "IO_FS_WRITE") || !strcmp(instruccionIO[0], "IO_FS_READ"))
 			free(vectorDirecciones);
 		string_array_destroy(instruccionIO);
 		return;
@@ -931,7 +933,7 @@ void atender_solicitud_IO(sProceso* proceso){
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
 	enviar_operacion(IO_seleccionada->socket, proceso->pcb.pid);
 
-	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
+	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE") || !strcmp(instruccionIO[0], "IO_FS_WRITE") || !strcmp(instruccionIO[0], "IO_FS_READ")){
 		enviar_vector(vectorDirecciones, tamañoVector, IO_seleccionada->socket);
 		free(vectorDirecciones);
 	}

@@ -257,6 +257,10 @@ void execute(sInstruccion instruccion){
         case IO_FS_TRUNCATE:
             exe_IO_FS_TRUNCATE(instruccion.componentes);
             break;
+        case IO_FS_WRITE:
+        case IO_FS_READ:
+            exe_IO_FS_RW(instruccion.componentes);
+            break;
         case EXIT:
             exe_EXIT();
             break;
@@ -366,7 +370,7 @@ void exe_IO_GEN (char** componentes){
         strcat (aEnviar, componentes[i]);
         i++;
     }
-    seVa=IO_GEN;
+    seVa=IO;
 }
 
 void exe_IO_STD(char** componentes){
@@ -399,21 +403,48 @@ void exe_IO_STD(char** componentes){
     strcat (aEnviar, componentes[1]);
     strcat(aEnviar, " ");
     string_append_with_format(&aEnviar, "%d %d", tamaño, tamañoVector);
-    seVa=IO_STD;
+    seVa=IO_VECTOR;
 }
 
 void exe_IO_FS_CD(char** componentes){
     strcpy (aEnviar, componentes[0]);
     string_append_with_format(&aEnviar, " %s %s", componentes[1], componentes[2]);
-    seVa=IO_FS;
+    seVa=IO;
 }
 
 void exe_IO_FS_TRUNCATE(char** componentes){
     strcpy (aEnviar, componentes[0]);
     string_append_with_format(&aEnviar, " %s %s %d", componentes[1], componentes[2], get_registro(componentes[3]));
-    seVa=IO_FS;
+    seVa=IO;
 }
 
+void exe_IO_FS_RW(char** componentes){
+    int direccion = get_registro(componentes[3]);
+
+    int tamaño = get_registro(componentes[4]);
+    float tam = tamaño;
+    int desplazamiento = direccion%tam_pag;
+    int espacioEnPag = tam_pag-(desplazamiento);
+    if(tamaño<=espacioEnPag){
+        int* vDirecciones = calloc(1, sizeof(int));
+        vDirecciones[0] = MMU(direccion);
+        vectorDirecciones = vDirecciones;
+        tamañoVector = 1;
+    }
+    else{
+        int i;
+        int pagNecesarias = ceil((tam-espacioEnPag)/tam_pag)+1;
+        int* vDirecciones = calloc(pagNecesarias, sizeof(int));
+        vDirecciones[0]=MMU(direccion);
+        for(i=0; i<pagNecesarias-1; i++)
+            vDirecciones[i+1]=MMU(direccion+espacioEnPag+i*tam_pag);
+        vectorDirecciones = vDirecciones;
+        tamañoVector = pagNecesarias;
+    }
+    strcpy (aEnviar, componentes[0]);
+    string_append_with_format(&aEnviar, " %s %s %d %d %d", componentes[1], componentes[2], tamaño, tamañoVector, get_registro(componentes[5]));
+    seVa=IO_VECTOR;
+}
 
 void exe_MOV_IN(char* reg_datos, char* reg_direccion){
     int tamaño=cuanto_leo(reg_datos);

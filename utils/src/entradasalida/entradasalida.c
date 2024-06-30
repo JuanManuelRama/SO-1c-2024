@@ -192,21 +192,60 @@ void crear_interfaz_stdout (char* nombre){
 void crear_interfaz_fs(char* nombre){
 	int socket_kernel = conectar_kernel (nombre);
 	int socket_memoria = conectar_memoria (nombre); 
+		tam_pagina = recibir_operacion(socket_memoria);
 	while(1){
 		op_code cod_op = recibir_operacion(socket_kernel);
 		if(cod_op == OPERACION_IO){
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_split(buffer, " ");
-			log_info(logger, "Operacion: %s", instruccion[0]);
+			pid = recibir_operacion(socket_kernel);
+			log_operacion(pid, instruccion[0]);
 			if(!strcmp(instruccion[0], "IO_FS_CREATE"))
 				crear_fs(instruccion[2]);
 			else if(!strcmp(instruccion[0], "IO_FS_DELETE"))
 				eliminar_fs(instruccion[2]);
 			else if(!strcmp(instruccion[0], "IO_FS_TRUNCATE"))
 				truncar_fs(instruccion[2], atoi(instruccion[3]));
-			else if(!strcmp(instruccion[0], "IO_FS_WRITE"))
-				escribir_fs(instruccion);
+			else if(!strcmp(instruccion[0], "IO_FS_WRITE")){
+				int tamaño = atoi(instruccion[3]);
+				int tamañoVector = atoi(instruccion[4]);
+				int* vectorDirecciones = recibir_vector(socket_kernel, tamañoVector);
+				int desplazamiento = vectorDirecciones[0]%tam_pagina;
+				int espacioEnPag = tam_pagina-(desplazamiento);
+				if(tamaño<=espacioEnPag){
+					enviar_operacion(socket_memoria, LECTURA_STRING);
+					enviar_operacion(socket_memoria, pid);
+					enviar_operacion(socket_memoria, 1);
+					enviar_operacion(socket_memoria, tamaño);
+					enviar_operacion(socket_memoria, vectorDirecciones[0]);
+				}
+				else{
+					int i;
+					enviar_operacion(socket_memoria, LECTURA_STRING);
+					enviar_operacion(socket_memoria, pid);
+					enviar_operacion(socket_memoria, tamañoVector);
+					enviar_operacion(socket_memoria, espacioEnPag);
+					enviar_operacion(socket_memoria, vectorDirecciones[0]);
+					for(i=1; i<tamañoVector-1; i++){
+						enviar_operacion(socket_memoria, tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+					if((tamaño-espacioEnPag)%tam_pagina){
+					enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
+					enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+					else{
+						enviar_operacion(socket_memoria, tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+				}
+				recibir_operacion(socket_memoria);
+				char* cadena = recibir_buffer(&size,socket_memoria);
+				escribir_fs(instruccion[2], cadena, atoi(instruccion[5]));
+				free(cadena);
+				free(vectorDirecciones);
+			}
 			else if(!strcmp(instruccion[0], "IO_FS_READ"))
 				leer_fs(instruccion);
 			else{
@@ -235,8 +274,9 @@ void truncar_fs(char* nombre, int tamaño){
 	log_truncamiento(pid, nombre, tamaño);
 }
 
-void escribir_fs(char** instruccion){
-	log_info(logger, "archivo escrito (en realidad no)");
+void escribir_fs(char* archivo, char* cadena, int DF){
+	printf("Escribiendo en archivo %s: %s\n", archivo, cadena);
+	log_escritura(pid, archivo, strlen(cadena), DF);
 }
 
 void leer_fs(char** instruccion){
@@ -289,4 +329,8 @@ void log_eliminacion(int pid, char* nombre){
 
 void log_truncamiento(int pid, char* nombre, int tamaño){
 	log_info(logger, "PID: %d - Truncar Archivo: %s - Tamaño: %d", pid, nombre, tamaño);
+}
+
+void log_escritura(int pid, char* archivo, int tamaño, int DF){
+	log_info(logger, "PID: %d - Escribir en Archivo: %s - Tamaño: %d - Puntero Archivo: %d", pid, archivo, tamaño, DF);
 }

@@ -23,7 +23,7 @@ extern int tam_pagina;
 void crear_fs(char* nombre);
 void eliminar_fs(char* nombre);
 void truncar_fs(char* nombre, int tamaño);
-void escribir_fs(char** instruccion);
+void escribir_fs(char* archivo, char* cadena, int DF);
 void leer_fs(char** instruccion);
 
 //LOGS OBLIGATORIOS
