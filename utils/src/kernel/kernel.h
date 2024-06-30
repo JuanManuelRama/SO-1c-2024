@@ -39,14 +39,14 @@ extern int kernel_servidor;
 extern int pidRunning;
 extern int tam_pagina;
 extern int cantRecursos;
-extern int instanciasUtilizadas;
 extern bool planificacion_activa;
 extern bool planiEsVrr; // vrr (se usa para ver a donde mandas a un proceso q vuelve de IO, ready/ready+)
-extern char* recursoPedido;
 
 typedef struct{
     t_pcb pcb;
     char* multifuncion;
+    char* recursoPedido;
+    int instanciasUtilizadas;
 }sProceso;
 
 typedef struct{
@@ -219,4 +219,4 @@ void setear_timer(sProceso*);
 
 int buscar_recurso(char*);
 
-void liberar_recursos(int);
+void liberar_recursos(char*, int);
