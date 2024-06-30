@@ -176,16 +176,23 @@ void crear_proceso (char* path){
 void finalizar_proceso(int pid){
 	if(pid==pidRunning){
 		enviar_int(pid, conexion_cpu_interrupt, INTERRUPCION);
-		iniciar_planificacion();
 		return;
 	}
 	detener_planificacion();
-	if(!buscar_proceso_en_lista(cNEW->elements, pid))
-		if(!buscar_proceso_en_lista(cREADY->elements, pid))
-			if(!buscar_proceso_en_lista(lBlocked, pid)){
-				log_warning(logger, "No se encontro el proceso");
-				iniciar_planificacion();
-			}
+	if(buscar_proceso_en_lista(cNEW->elements, pid))
+		return;
+	if(buscar_proceso_en_lista(cREADY->elements, pid))
+		return;
+	if(buscar_proceso_en_lista(cREADY_PLUS->elements, pid))
+		return;
+	if(buscar_proceso_en_lista(lBlocked, pid))
+		return;
+	for(int i=0; i<cantRecursos; i++){
+		if(buscar_proceso_en_lista(recursos[i].cBloqueados->elements, pid))
+			return;
+	}
+	iniciar_planificacion();
+	log_warning(logger, "No se encontro el proceso");
 }
 
 sProceso* buscar_proceso_en_lista(t_list* lista, int pid){
@@ -265,6 +272,8 @@ void proceso_estado(){
 	if(pidRunning != -1)
 		printf("%s: %d\n", get_estado(RUNNING), pidRunning);
 	listar_procesos(lBlocked, BLOCKED);
+	for(int i=0; i<cantRecursos; i++)
+		listar_procesos(recursos[i].cBloqueados->elements, BLOCKED);
 	listar_procesos(cEXIT->elements, FINISHED);
 	iniciar_planificacion();
 }
