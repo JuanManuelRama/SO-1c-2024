@@ -6,6 +6,9 @@
 #include <commons/string.h>
 #include <readline/readline.h>
 #include <unistd.h>
+#include <commons/bitarray.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 //extern t_log* logger;
 //extern t_config* config;

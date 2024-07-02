@@ -1,6 +1,11 @@
 #include "entradasalida.h"
 
 int pid;
+int CANT_BLOQUES;
+int TAM_BLOQUE;
+char* DIR;
+t_bitarray* bitmap;
+FILE* BLOQUES;
 
 void crear_interfaz_generica(char* nombre) {
     
@@ -192,7 +197,8 @@ void crear_interfaz_stdout (char* nombre){
 void crear_interfaz_fs(char* nombre){
 	int socket_kernel = conectar_kernel (nombre);
 	int socket_memoria = conectar_memoria (nombre); 
-		tam_pagina = recibir_operacion(socket_memoria);
+	tam_pagina = recibir_operacion(socket_memoria);
+	iniciar_fs();
 	while(1){
 		op_code cod_op = recibir_operacion(socket_kernel);
 		if(cod_op == OPERACION_IO){
@@ -313,6 +319,35 @@ int conectar_memoria (char* nombre){
 	return socket;
 }
 
+void iniciar_fs(){
+	//VARIABLES DEL CONFIG
+	CANT_BLOQUES = config_get_int_value(config, "BLOCK_COUNT");
+	TAM_BLOQUE = config_get_int_value(config, "BLOCK_SIZE");
+	DIR = config_get_string_value(config, "PATH_BASE_DIALFS");
+	//CREO BITMAPP
+	char* path = malloc(strlen(DIR) + strlen("bitmap.dat") + 2);
+	mkdir(DIR, 0777);
+	strcpy(path, DIR);
+	strcat(path, "/");
+	strcat(path, "bitmap.dat");
+	FILE* archivo = fopen(path, "w+b");
+    truncate(path, CANT_BLOQUES/8);	
+
+    bitmap = bitarray_create_with_mode(mmap(0 , CANT_BLOQUES/8, PROT_WRITE, MAP_SHARED, archivo->_fileno, 0), CANT_BLOQUES, LSB_FIRST);
+	for(int i = 0; i < CANT_BLOQUES; i++)
+		bitarray_clean_bit(bitmap, i);
+
+	free(path);
+
+	//CREO ARCHIVO DE BLOQUES
+	malloc(strlen(DIR) + strlen("bloques.dat") + 2);
+	strcpy(path, DIR);
+	strcat(path, "/");
+	strcat(path, "bloques.dat");
+	archivo = fopen(path, "w+b");
+	truncate(path, CANT_BLOQUES*TAM_BLOQUE);
+	free(path);
+}
 
 //LOGS OBLIGATORIOS
 void log_operacion(int pid, char* operacion){
