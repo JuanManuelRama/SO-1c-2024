@@ -148,7 +148,7 @@ void inicializar_memoria(){
 
 	CANT_PAG = TAM_MEMORIA/TAM_PAG;
 	memoria_contigua = malloc(TAM_MEMORIA);
-	bitmap = bitarray_create(malloc(CANT_PAG/8), CANT_PAG/8);
+	bitmap = bitarray_create_with_mode(malloc(CANT_PAG/8), CANT_PAG, LSB_FIRST);
 	inicializar_bitmap();
 }
 
