@@ -88,7 +88,7 @@ void acomodar_entradas_TLB(t_entradaTLB *una_entrada_TLB){
         entradas_actuales_tlb--;
         queue_push(tlb, una_entrada_TLB);
     }else{
-        entrada_aux = queue_pop(tlb);
+        free(queue_pop(tlb));
         queue_push(tlb, una_entrada_TLB);
     }
 
