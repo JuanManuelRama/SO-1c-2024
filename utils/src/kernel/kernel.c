@@ -403,9 +403,10 @@ void planificadorCP_FIFO(){
 
 				pthread_mutex_lock(&mBLOCKED);
 				list_add(lBlocked, proceso);
-				pthread_mutex_unlock(&mBLOCKED);
 				
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
+				pthread_mutex_lock(&mBLOCKED);
+				pthread_mutex_unlock(&mBLOCKED);
 				break;
 			case PEDIRRECURSO:
 				if(recibir_operacion(conexion_cpu_dispatch) != PEDIRRECURSO){
@@ -515,9 +516,10 @@ void planificadorCP_RR(){
 
 				pthread_mutex_lock(&mBLOCKED);
 				list_add(lBlocked, proceso);
-				pthread_mutex_unlock(&mBLOCKED);
 				
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
+				pthread_mutex_lock(&mBLOCKED);
+				pthread_mutex_unlock(&mBLOCKED);
 				break;
 			case PEDIRRECURSO:
 				pthread_cancel(hilo_timer); // cancelo el hilo de timer pq volvio antes de tiempo
@@ -646,9 +648,10 @@ void planificadorCP_VRR() {
 
 				pthread_mutex_lock(&mBLOCKED);
 				list_add(lBlocked, proceso);
-				pthread_mutex_unlock(&mBLOCKED);
 				
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
+				pthread_mutex_lock(&mBLOCKED);
+				pthread_mutex_unlock(&mBLOCKED);
 				break;
 			case PEDIRRECURSO:
 				pthread_cancel(hilo_timer); // cancelo el hilo de timer pq volvio antes de tiempo
@@ -848,6 +851,7 @@ void atender_solicitud_IO(sProceso* proceso){
 		tamañoVector = atoi(instruccionIO[4]);
 		vectorDirecciones = recibir_vector(conexion_cpu_dispatch, tamañoVector);
 	}
+	pthread_mutex_unlock(&mBLOCKED);
 
 	// funcionalidad propia de gcc, inner function
 	bool existe_conexion(void* elem) {
