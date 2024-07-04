@@ -33,7 +33,7 @@ int main() {
 
 	logger = log_create("logCpu.log", "LOGS CPU", 1, LOG_LEVEL_INFO);
 	config = config_create("cpu.config");
-	aEnviar = string_new();
+	aEnviar = malloc(100);
 	seVa = false;
 	cIntr = queue_create();
 	tlb = queue_create();
