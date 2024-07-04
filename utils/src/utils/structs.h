@@ -51,6 +51,7 @@ typedef struct
 	char* nombre;
 	int instancias;
 	t_queue* cBloqueados;
+	pthread_mutex_t mutex;
 } t_recurso;
 
 typedef struct

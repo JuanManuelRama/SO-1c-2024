@@ -45,8 +45,7 @@ extern bool planiEsVrr; // vrr (se usa para ver a donde mandas a un proceso q vu
 typedef struct{
     t_pcb pcb;
     char* multifuncion;
-    char* recursoPedido;
-    int instanciasUtilizadas;
+    t_list* recursos;
 }sProceso;
 
 typedef struct{
@@ -220,4 +219,4 @@ void setear_timer(sProceso*);
 
 int buscar_recurso(char*);
 
-void liberar_recursos(char*, int);
+void liberar_recurso(char*);
