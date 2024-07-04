@@ -517,15 +517,15 @@ void exe_MOV_OUT(char* reg_direccion, char* reg_datos){
 
 void exe_RESIZE(int tamanio){
     enviar_operacion(memoria, TAM_PROCESO);
-    int tamanioActual = recibir_operacion(memoria);
+    float tamanioActual = recibir_operacion(memoria);
 
     if(tamanioActual == tamanio){
         return;
     } else if(tamanioActual > tamanio){
-        enviar_int((tamanioActual-tamanio)/tam_pag,memoria, MENOS_PAGINA);
+        enviar_int(ceil((tamanioActual-tamanio)/tam_pag),memoria, MENOS_PAGINA);
     }
     else{
-        enviar_int((tamanio-tamanioActual)/tam_pag,memoria, MAS_PAGINA);
+        enviar_int(ceil((tamanio-tamanioActual)/tam_pag),memoria, MAS_PAGINA);
         if(recibir_operacion(memoria) == OOM)
             seVa=OOM;
     }
