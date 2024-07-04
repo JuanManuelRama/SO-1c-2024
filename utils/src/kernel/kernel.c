@@ -375,21 +375,27 @@ void planificadorCP_FIFO(){
 
 		log_cambioEstado(proceso->pcb.pid, READY, RUNNING);
 		proceso->pcb.estado=RUNNING;
+		pthread_mutex_lock(&mRUNNING);
+		pidRunning = proceso->pcb.pid;
+		pthread_mutex_unlock(&mRUNNING);
 		enviar_pcb(proceso->pcb, conexion_cpu_dispatch, PCB);
+
 
 		//me quedo esperando que vuelva y veo porque volvio
 		motivo = recibir_operacion(conexion_cpu_dispatch);
+		pthread_mutex_lock(&mRUNNING);
+		pidRunning = -1;
+		pthread_mutex_unlock(&mRUNNING);
 		proceso->pcb=pcb_deserializar(conexion_cpu_dispatch);
 
 		switch(motivo){
 			case FINALIZACION:
 				matadero(proceso, "Éxito");
 				break;
-			case IO_VECTOR:
 			case IO:
+			case IO_VECTOR:
 				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
-				proceso->pcb.estado=BLOCKED;
-
+				proceso->pcb.estado = BLOCKED;				
 				if(recibir_operacion(conexion_cpu_dispatch) != IO)
 					matadero(proceso, "No coinciden los códigos de salida");
 
@@ -398,7 +404,7 @@ void planificadorCP_FIFO(){
 				pthread_mutex_lock(&mBLOCKED);
 				list_add(lBlocked, proceso);
 				pthread_mutex_unlock(&mBLOCKED);
-
+				
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
 				break;
 			case PEDIRRECURSO:
@@ -429,7 +435,16 @@ void planificadorCP_FIFO(){
 				pthread_mutex_unlock(&mREADY);
 				sem_post(&semPCP);
 				break;
-		}	
+			case INTERRUPCION:
+				matadero(proceso, "Interrumpido por Usuario");
+				break;
+			case OOM:
+				matadero(proceso, "Out of Memory");
+				break;
+			default:
+				matadero(proceso, "Envio codigo de salida no valido");
+				break;
+		}		
 	}
 }
 
@@ -484,14 +499,15 @@ void planificadorCP_RR(){
 		switch(motivo){
 			case FINALIZACION:
 				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
-				matadero(proceso, "Finalizo");
+				matadero(proceso, "Éxito");
 				break;
-			case IO_VECTOR:
 			case IO:
-				pthread_cancel(hilo_timer);
-				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
-				proceso->pcb.estado=BLOCKED;
+			case IO_VECTOR:
+				pthread_cancel(hilo_timer); // cancelo el hilo de timer pq volvio antes de tiempo
 
+				log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
+				proceso->pcb.estado = BLOCKED;
+				
 				if(recibir_operacion(conexion_cpu_dispatch) != IO)
 					matadero(proceso, "No coinciden los códigos de salida");
 
@@ -543,12 +559,20 @@ void planificadorCP_RR(){
 				log_ingresoReady(cREADY->elements, "Normal");
 				pthread_mutex_unlock(&mREADY);
 
-				sem_post(&semPCP); // aviso que ya se puede despachar otro
+				sem_post(&semPCP); // pasa a estar esperando, aviso al dispatcher
+				break;
+			case INTERRUPCION:
+				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
+				matadero(proceso, "Interrumpido por Usuario");
+				break;
+			case OOM:
+				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
+				matadero(proceso, "Out of Memory");
 				break;
 			default:
 				matadero(proceso, "Envio codigo de salida no valido");
 				break;
-		}
+		}		
 	}
 }
 
@@ -675,6 +699,10 @@ void planificadorCP_VRR() {
 				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
 				matadero(proceso, "Interrumpido por Usuario");
 				break;
+			case OOM:
+				pthread_cancel(hilo_timer); //cancelamos el hilo de timer pq volvimos por otro motivo
+				matadero(proceso, "Out of Memory");
+				break;
 			default:
 				matadero(proceso, "Envio codigo de salida no valido");
 				break;
@@ -709,7 +737,7 @@ void pedir_recurso(sProceso* proceso){
 		return;
 	}
 	pthread_mutex_lock((&(recursos[recurso].mutex)));
-	recursos->instancias--;
+	recursos[recurso].instancias--;
 	pthread_mutex_unlock((&(recursos[recurso].mutex)));
 	if (recursos[recurso].instancias < 0) {
 		log_cambioEstado(proceso->pcb.pid, RUNNING, BLOCKED);
