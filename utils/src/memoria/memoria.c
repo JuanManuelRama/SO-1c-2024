@@ -3,9 +3,13 @@
 void recibir_proceso(int socket_cliente){
 		int size;
 		t_proceso* proceso = malloc(sizeof(t_proceso));
-		char* path = recibir_buffer (&size, socket_cliente);
+		char* buffer = recibir_buffer (&size, socket_cliente);
 		proceso->pid = recibir_operacion(socket_cliente);
+		char* path = malloc(strlen(PATH_INSTRUCCIONES) + strlen(buffer) + 1);
+		strcpy(path, PATH_INSTRUCCIONES);
+		strcat(path, buffer);
 		proceso->instrucciones = cargar_proceso(path);
+		free (buffer);
 		free (path);
 		usleep(RETARDO*1000);
 		if(proceso->instrucciones)
@@ -135,6 +139,7 @@ void inicializar_memoria(){
 	logger = log_create ("logM.log", "LOGS MEMORIA",1, LOG_LEVEL_INFO); 
 	config = config_create("memoria.config"); 
 
+	PATH_INSTRUCCIONES = buscar("PATH_INSTRUCCIONES");
 	TAM_PAG = config_get_int_value(config,"TAM_PAGINA");
 	TAM_MEMORIA = config_get_int_value(config,"TAM_MEMORIA");
 	RETARDO = config_get_int_value(config,"RETARDO_RESPUESTA");
