@@ -208,6 +208,8 @@ sProceso* buscar_proceso_en_lista(t_list* lista, int pid){
 	list_remove_element(lista, proceso);
 	if(proceso->pcb.estado!=READY && proceso->pcb.estado!=READY_PLUS)
 		free(proceso->multifuncion);
+	else
+		sem_wait(&semPCP);
 	iniciar_planificacion();
 	matadero(proceso, "Interrumpido por Usuario");
 	return 1;
@@ -268,6 +270,7 @@ void cambiar_multiprogramacion(int grado){
 	multiprogramacion = grado;
 }
 void proceso_estado(){
+	bool planiEstabaAcitba = planificacion_activa;
 	detener_planificacion();
 	printf("Proceso en estado:\n");
 	listar_procesos(cNEW->elements, NEW);
@@ -278,7 +281,8 @@ void proceso_estado(){
 	for(int i=0; i<cantRecursos; i++)
 		listar_procesos(recursos[i].cBloqueados->elements, BLOCKED);
 	listar_procesos(cEXIT->elements, FINISHED);
-	iniciar_planificacion();
+	if(planiEstabaAcitba)
+		iniciar_planificacion();
 }
 void listar_procesos(t_list* lista, estados estado){
 	sProceso* proceso;
