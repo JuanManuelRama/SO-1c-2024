@@ -212,8 +212,13 @@ void crear_interfaz_fs(char* nombre){
 			pid = recibir_operacion(socket_kernel);
 			log_operacion(pid, instruccion[0]);
 
-			if(!strcmp(instruccion[0], "IO_FS_CREATE"))
-				crear_fs(instruccion[2]);
+			if(!strcmp(instruccion[0], "IO_FS_CREATE")){
+				if(!crear_fs(instruccion[2])){
+					log_info(logger, "No hay espacio libre en disco para crear archivo");
+					enviar_operacion(socket_kernel, IO_FAILURE);
+				}
+			}
+
 			else if(!strcmp(instruccion[0], "IO_FS_DELETE"))
 				eliminar_fs(instruccion[2]);
 			else if(!strcmp(instruccion[0], "IO_FS_TRUNCATE"))
@@ -273,19 +278,31 @@ void crear_interfaz_fs(char* nombre){
 	}
 }
 
-void crear_fs(char* nombre){
-	int i = 0, direccion;
+bool crear_fs(char* nombre){
+	int direccion = -1;
 	log_creacion(pid, nombre);
 
-	while (i < bitarray_get_max_bit(bitmap)){
+	for(int i = 0; i < CANT_BLOQUES; i++){
 		if (!bitarray_test_bit(bitmap, i)){
+			bitarray_set_bit(bitmap, i);
 			direccion = i;
 			break;
 		}
-		i++;
 	}
 
+	if (i == -1)
+		return false;
+	
+	t_dictionary* parametros = dictionary_create();
+	dictionary_put(parametros, "BLOQUE_INICIAL", direccion);
+	dictionary_put(parametros, TAMANIO_ARCHIVO, 0);
 
+
+	t_config* metadata = malloc(sizeof(t_config));
+	metadata->path = armarPathMetadata(nombre);
+	metadata->properties = parametros;
+
+	return true;
 }
 
 void eliminar_fs(char* nombre){
