@@ -290,13 +290,12 @@ bool crear_fs(char* nombre){
 		}
 	}
 
-	if (i == -1)
+	if (direccion == -1)
 		return false;
 	
 	t_dictionary* parametros = dictionary_create();
 	dictionary_put(parametros, "BLOQUE_INICIAL", direccion);
-	dictionary_put(parametros, TAMANIO_ARCHIVO, 0);
-
+	dictionary_put(parametros, "TAMANIO_ARCHIVO", 0);
 
 	t_config* metadata = malloc(sizeof(t_config));
 	metadata->path = armarPathMetadata(nombre);
@@ -408,10 +407,10 @@ void iniciar_fs(){
 	fclose(archivo_bitmap);
 
 	// Creamos carpeta de metadata
-	DIR_METADATA = malloc(strlen(DIR) + srlen("metadata") + 2);
+	DIR_METADATA = malloc(strlen(DIR) + strlen("metadata") + 2);
 
 	strcpy(DIR_METADATA, DIR);
-	strcat(DIR_METADATA, "/metada");
+	strcat(DIR_METADATA, "/metadata");
 
 	mkdir(DIR_METADATA, 0777);
 	

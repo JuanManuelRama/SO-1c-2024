@@ -23,11 +23,15 @@ void crear_interfaz_fs (char* nombre);
 extern int tam_pagina;
 
 //OPERACIONES
-void crear_fs(char* nombre);
+bool crear_fs(char* nombre);
 void eliminar_fs(char* nombre);
 void truncar_fs(char* nombre, int tamaño);
 void escribir_fs(char* archivo, char* cadena, int DF);
 void leer_fs(char** instruccion);
+
+// UTILS
+char* armarPathMetadata (char* nombre);
+void iniciar_fs();
 
 //LOGS OBLIGATORIOS
 void log_operacion(int, char*);
