@@ -5,7 +5,7 @@ int CANT_BLOQUES;
 int TAM_BLOQUE;
 char* DIR;
 t_bitarray* bitmap;
-FILE* BLOQUES;
+void* BLOQUES;
 
 void crear_interfaz_generica(char* nombre) {
     
@@ -324,30 +324,47 @@ void iniciar_fs(){
 	CANT_BLOQUES = config_get_int_value(config, "BLOCK_COUNT");
 	TAM_BLOQUE = config_get_int_value(config, "BLOCK_SIZE");
 	DIR = config_get_string_value(config, "PATH_BASE_DIALFS");
-	//CREO BITMAPP
+
+	FILE *archivo_bitmap;
+	FILE *archivo_bloques;
+
+	//CREO BITMAP
 	char* path = malloc(strlen(DIR) + strlen("bitmap.dat") + 2);
+
 	mkdir(DIR, 0777);
 	strcpy(path, DIR);
 	strcat(path, "/");
 	strcat(path, "bitmap.dat");
-	FILE* archivo = fopen(path, "w+b");
-    truncate(path, CANT_BLOQUES/8);	
 
-    bitmap = bitarray_create_with_mode(mmap(0 , CANT_BLOQUES/8, PROT_WRITE, MAP_SHARED, archivo->_fileno, 0), CANT_BLOQUES, LSB_FIRST);
+	archivo_bitmap = fopen(path, "w+b");
+
+    truncate(path, CANT_BLOQUES/8);	// un bit por bloque
+
+    bitmap = bitarray_create_with_mode(mmap(0 , CANT_BLOQUES/8, PROT_WRITE, MAP_SHARED, archivo_bitmap->_fileno, 0), CANT_BLOQUES/8, LSB_FIRST);
+	
 	for(int i = 0; i < CANT_BLOQUES; i++)
 		bitarray_clean_bit(bitmap, i);
 
 	free(path);
+
+	fclose(archivo_bitmap);
 
 	//CREO ARCHIVO DE BLOQUES
 	malloc(strlen(DIR) + strlen("bloques.dat") + 2);
 	strcpy(path, DIR);
 	strcat(path, "/");
 	strcat(path, "bloques.dat");
-	archivo = fopen(path, "w+b");
+	archivo_bloques = fopen(path, "w+b");
 	truncate(path, CANT_BLOQUES*TAM_BLOQUE);
+
+	BLOQUES = mmap(0 , CANT_BLOQUES*TAM_BLOQUE, PROT_WRITE, MAP_SHARED, archivo_bloques->_fileno, 0);
+
+	fclose(archivo_bloques);
+	
 	free(path);
 }
+
+
 
 //LOGS OBLIGATORIOS
 void log_operacion(int pid, char* operacion){
