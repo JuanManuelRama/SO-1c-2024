@@ -307,6 +307,30 @@ bool crear_fs(char* nombre){
 
 void eliminar_fs(char* nombre){
 	log_eliminacion(pid, nombre);
+	
+	// armamos el path absoluto (siempre deben estar en la carpeta de metadata)
+	char* path = armarPathMetadata(nombre);
+
+	// usamos las commons de config para sacar la metadata del archivo
+	t_config* archivo = config_create(path);
+
+	int base = config_get_int_value(archivo, "BLOQUE_INICIAL");
+	int tamanio = config_get_int_value(archivo, "TAMANIO_ARCHIVO");
+	
+	int bloques_ocupados = tamanio / TAM_BLOQUE + 1;
+
+	// liberamos los bloques que ocupaba
+	for (int i = 0; i < bloques_ocupados; i++) {
+		bitarray_clean_bit(bitmap, base + i);
+	}
+
+	// eliminamos el archivo
+	remove(path);
+
+	// liberamos la estructurita de config
+	config_destroy(archivo);
+
+	free(path);
 }
 
 void truncar_fs(char* nombre, int tamaño){
