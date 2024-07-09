@@ -294,12 +294,20 @@ bool crear_fs(char* nombre){
 		return false;
 	
 	t_dictionary* parametros = dictionary_create();
-	dictionary_put(parametros, "BLOQUE_INICIAL", direccion);
-	dictionary_put(parametros, "TAMANIO_ARCHIVO", 0);
+
+	char buffer1[100];
+	char buffer2[100];
+
+    sprintf(buffer1, "%d", direccion);
+	dictionary_put(parametros, "BLOQUE_INICIAL", buffer1);
+
+	sprintf(buffer2, "%d", 0);
+	dictionary_put(parametros, "TAMANIO_ARCHIVO", buffer2);
 
 	t_config* metadata = malloc(sizeof(t_config));
 	metadata->path = armarPathMetadata(nombre);
 	metadata->properties = parametros;
+
 	config_save(metadata);
 
 	return true;
@@ -397,7 +405,7 @@ void iniciar_fs(){
 
     truncate(path, CANT_BLOQUES/8);	// un bit por bloque
 
-    bitmap = bitarray_create_with_mode(mmap(0 , CANT_BLOQUES/8, PROT_WRITE, MAP_SHARED, archivo_bitmap->_fileno, 0), CANT_BLOQUES/8, LSB_FIRST);
+    bitmap = bitarray_create_with_mode(mmap(0 , CANT_BLOQUES/8, PROT_WRITE, MAP_SHARED, archivo_bitmap->_fileno, 0), CANT_BLOQUES/8, MSB_FIRST);
 	
 	for(int i = 0; i < CANT_BLOQUES; i++)
 		bitarray_clean_bit(bitmap, i);
@@ -415,7 +423,7 @@ void iniciar_fs(){
 	mkdir(DIR_METADATA, 0777);
 	
 	//CREO ARCHIVO DE BLOQUES
-	malloc(strlen(DIR) + strlen("bloques.dat") + 2);
+	path = malloc(strlen(DIR) + strlen("bloques.dat") + 2);
 	strcpy(path, DIR);
 	strcat(path, "/");
 	strcat(path, "bloques.dat");
