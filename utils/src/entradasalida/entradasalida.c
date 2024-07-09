@@ -301,6 +301,7 @@ bool crear_fs(char* nombre){
 	t_config* metadata = malloc(sizeof(t_config));
 	metadata->path = armarPathMetadata(nombre);
 	metadata->properties = parametros;
+	config_save(metadata);
 
 	return true;
 }
