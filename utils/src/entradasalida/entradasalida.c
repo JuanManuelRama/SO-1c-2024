@@ -4,6 +4,7 @@ int pid;
 int CANT_BLOQUES;
 int TAM_BLOQUE;
 char* DIR;
+char* DIR_METADATA;
 t_bitarray* bitmap;
 void* BLOQUES;
 
@@ -197,8 +198,11 @@ void crear_interfaz_stdout (char* nombre){
 void crear_interfaz_fs(char* nombre){
 	int socket_kernel = conectar_kernel (nombre);
 	int socket_memoria = conectar_memoria (nombre); 
+
 	tam_pagina = recibir_operacion(socket_memoria);
+
 	iniciar_fs();
+
 	while(1){
 		op_code cod_op = recibir_operacion(socket_kernel);
 		if(cod_op == OPERACION_IO){
@@ -207,6 +211,7 @@ void crear_interfaz_fs(char* nombre){
 			char** instruccion = string_split(buffer, " ");
 			pid = recibir_operacion(socket_kernel);
 			log_operacion(pid, instruccion[0]);
+
 			if(!strcmp(instruccion[0], "IO_FS_CREATE"))
 				crear_fs(instruccion[2]);
 			else if(!strcmp(instruccion[0], "IO_FS_DELETE"))
@@ -349,6 +354,14 @@ void iniciar_fs(){
 
 	fclose(archivo_bitmap);
 
+	// Creamos carpeta de metadata
+	DIR_METADATA = malloc(strlen(DIR) + srlen("metadata") + 2);
+
+	strcpy(DIR_METADATA, DIR);
+	strcat(DIR_METADATA, "/metada");
+
+	mkdir(DIR_METADATA, 0777);
+	
 	//CREO ARCHIVO DE BLOQUES
 	malloc(strlen(DIR) + strlen("bloques.dat") + 2);
 	strcpy(path, DIR);
@@ -360,7 +373,7 @@ void iniciar_fs(){
 	BLOQUES = mmap(0 , CANT_BLOQUES*TAM_BLOQUE, PROT_WRITE, MAP_SHARED, archivo_bloques->_fileno, 0);
 
 	fclose(archivo_bloques);
-	
+
 	free(path);
 }
 

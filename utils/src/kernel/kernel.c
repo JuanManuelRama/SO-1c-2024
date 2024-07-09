@@ -150,7 +150,6 @@ void interactuar_consola(char* buffer){
 			string_array_destroy(mensaje);
 			break;
 	}
-
 }
 
 void crear_proceso (char* path){
@@ -654,7 +653,10 @@ void planificadorCP_VRR() {
 				list_add(lBlocked, proceso);
 				
 				pthread_create(&hilo_IO, NULL, atender_solicitud_IO, (void*)proceso);
-				pthread_mutex_lock(&mBLOCKED);
+				//me bloqueo esperando que el hilo de atender solic. reciba vector de cpu y me desbloquee (para respetar el orden de los datos enviados)
+				pthread_mutex_lock(&mBLOCKED); 
+
+				//cuando ya me desbloqueo, desbloqueo 
 				pthread_mutex_unlock(&mBLOCKED);
 				break;
 			case PEDIRRECURSO:
@@ -847,21 +849,22 @@ void atender_solicitud_IO(sProceso* proceso){
 	int* vectorDirecciones;
 
 	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE")){
-	tamañoVector = atoi(instruccionIO[3]);
-	vectorDirecciones = recibir_vector(conexion_cpu_dispatch, tamañoVector);
+		tamañoVector = atoi(instruccionIO[3]);
+		vectorDirecciones = recibir_vector(conexion_cpu_dispatch, tamañoVector);
 	}
 
 	if(!strcmp(instruccionIO[0], "IO_FS_WRITE") || !strcmp(instruccionIO[0], "IO_FS_READ")){
 		tamañoVector = atoi(instruccionIO[4]);
 		vectorDirecciones = recibir_vector(conexion_cpu_dispatch, tamañoVector);
 	}
-	pthread_mutex_unlock(&mBLOCKED);
+
+	pthread_mutex_unlock(&mBLOCKED); // una vez que ya recibi el vector de cpu, desbloque al dispatcher para que siga
 
 	// funcionalidad propia de gcc, inner function
 	bool existe_conexion(void* elem) {
 		t_conexion *conexion = (t_conexion*)elem;
 		return !strcmp(conexion->nombre, instruccionIO[1]);
-	}
+	};
 
 	t_conexion* IO_seleccionada = list_find(lista_conexiones_IO, existe_conexion);
 
@@ -869,14 +872,20 @@ void atender_solicitud_IO(sProceso* proceso){
 		pthread_mutex_lock(&mBLOCKED);
 		list_remove_element(lBlocked, proceso);
 		pthread_mutex_unlock(&mBLOCKED);
+
 		free(proceso->multifuncion);
 		matadero(proceso, "Se intento comunicar con una IO no conectada");
 		string_array_destroy(instruccionIO);
 		return;
 	}
+
 	log_bloqueo(proceso->pcb.pid, IO_seleccionada->nombre);
+
 	pthread_mutex_lock(&(IO_seleccionada->mutex));
-	if(list_remove_element(lBlocked, proceso)==false){
+	
+	// si para cuando lo atiende la IO no esta en blocked (o sea que fue asesinado) liberamos el mutex y las estructuras
+	// y no se lo atiende
+	if(list_remove_element(lBlocked, proceso)==false){ 
 		pthread_mutex_unlock(&(IO_seleccionada->mutex));
 		if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE") || !strcmp(instruccionIO[0], "IO_FS_WRITE") || !strcmp(instruccionIO[0], "IO_FS_READ"))
 			free(vectorDirecciones);
@@ -884,6 +893,7 @@ void atender_solicitud_IO(sProceso* proceso){
 		return;
 	}
 	list_add(lBlocked, proceso);
+
 	// le mandamos a la instancia encontrada la operacion
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
 	enviar_operacion(IO_seleccionada->socket, proceso->pcb.pid);
@@ -896,6 +906,7 @@ void atender_solicitud_IO(sProceso* proceso){
 
 	// nos quedamos escuchando la respuesta
 	int codOp = recibir_operacion (IO_seleccionada->socket);
+
 	pthread_mutex_unlock(&(IO_seleccionada->mutex));
 
 	if (codOp == IO_FAILURE) { // en caso de que la operacion no sea valida
