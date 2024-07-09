@@ -274,7 +274,18 @@ void crear_interfaz_fs(char* nombre){
 }
 
 void crear_fs(char* nombre){
+	int i = 0, direccion;
 	log_creacion(pid, nombre);
+
+	while (i < bitarray_get_max_bit(bitmap)){
+		if (!bitarray_test_bit(bitmap, i)){
+			direccion = i;
+			break;
+		}
+		i++;
+	}
+
+
 }
 
 void eliminar_fs(char* nombre){
@@ -375,6 +386,15 @@ void iniciar_fs(){
 	fclose(archivo_bloques);
 
 	free(path);
+}
+
+char* armarPathMetadata (char* nombre){
+	char* path = malloc(strlen(DIR_METADATA) + strlen(nombre) + 6);
+	strcpy(path, DIR_METADATA);
+	strcat(path, "/");
+	strcat(path, nombre);
+	strcat(path, ".txt");
+	return path;
 }
 
 
