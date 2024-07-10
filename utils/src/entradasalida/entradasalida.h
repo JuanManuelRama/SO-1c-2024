@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include <utils/hello.h>
 #include <pthread.h>
 #include <sockets/sockets.h>
@@ -27,7 +28,7 @@ bool crear_fs(char* nombre);
 void eliminar_fs(char* nombre);
 void truncar_fs(char* nombre, int tamaño);
 void escribir_fs(char* archivo, char* cadena, int DF);
-void leer_fs(char** instruccion);
+char *leer_fs(char *nombre, int offset, int cantALeer);
 
 // UTILS
 char* armarPathMetadata (char* nombre);
