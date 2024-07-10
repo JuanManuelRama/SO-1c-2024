@@ -233,6 +233,8 @@ void crear_interfaz_fs(char* nombre){
 			// CASO TRUNCAR
 			else if(!strcmp(instruccion[0], "IO_FS_TRUNCATE")) {
 				truncar_fs(instruccion[2], atoi(instruccion[3]));
+				// instruccion[2] = nombre, [3] = tamaño a truncar
+				log_truncamiento(pid, instruccion[2], atoi(instruccion[3]));
 			}
 			// CASO ESCRIBIR EN ARCHIVO
 			else if(!strcmp(instruccion[0], "IO_FS_WRITE")){
@@ -436,6 +438,12 @@ void eliminar_fs(char* nombre){
 }
 
 void truncar_fs(char* nombre, int tamaño){
+	// HAY CUATRO CASOS POSIBLES:
+	// - Truncar a menos tamaño (achicar): siempre se puede, facilito
+	// - Truncar a mas: - me alcanza el espacio libre contiguo, no hace falta compactar
+	// 					- me alcanza el espacio pero no esta contiguo -> compactar
+	// no me alcanza el espacio, tiro error y a otra cosa
+
 	//Inner function para buscar la entrada del archivo en la fat
 	bool esArchivo (void* elem) {
     	entradaFat* entrada = (entradaFat*)elem;
@@ -454,7 +462,7 @@ void truncar_fs(char* nombre, int tamaño){
 	bloquesActuales = ceil(entrada->largo / TAM_BLOQUE);
 	bloquesFinales = ceil(tamaño / TAM_BLOQUE);
 
-	// si me piden achicar el archivo (siempre se puede)
+	// CASO 1: ACHICAR
 	if (bloquesActuales >= bloquesFinales) {
 		// marcamos libres los bloques que le truncamos
 		int bloquesDeAchicamiento = bloquesActuales - bloquesFinales;
@@ -473,49 +481,134 @@ void truncar_fs(char* nombre, int tamaño){
 		config_set_value(metadata, "TAMANIO_ARCHIVO", bufferString);
 		config_save(metadata);
 
-		log_truncamiento(pid, nombre, tamaño);
-	// si me piden agrandarlo (hay que ver si me da el espacio)
-	} else {
-		// para facilitar la busqueda de hueco libre primero "me salgo" del bitmap y despues busco
-		for (int i = 0; i < bloquesActuales; i++) {
-			bitarray_clean_bit(bitmap, entrada->bloqueInicial + i);
-		}
+		return;
+	}
 
-		int espacioTotalLibre;
-		int huecoLibreActual;
-		int inicioHuecoLibre;
-		bool elAnteriorFue0 = false;
+	// CASOS 2: AGRANDAR
 
-		// recorremos el bitmap
-		for (int i = 0; i < CANT_BLOQUES; i++) {
-			// si me encuentro un bloque libre
-			if (!bitarray_test_bit(bitmap, i)) {
-				espacioTotalLibre++;
+	// ME FIJO SI ME DA EL ESPACIO CONTIGUO
 
-				if (elAnteriorFue0) {
-					huecoLibreActual++;
-				} else {
-					huecoLibreActual = 1;
-					inicioHuecoLibre = i;
-				}
+	// para facilitar la busqueda de hueco libre primero "me salgo" del bitmap y despues busco
+	for (int i = 0; i < bloquesActuales; i++) {
+		bitarray_clean_bit(bitmap, entrada->bloqueInicial + i);
+	}
 
-				// encontre un huequito (FIRST FIT)
-				if (huecoLibreActual >= bloquesFinales) {
-					for (int j = 0; j < bloquesFinales; j++) {
-						bitarray_set_bit(bitmap, inicioHuecoLibre + j);
-					}
+	int bloquesLibres = 0;
+	int huecoLibreActual;
+	int inicioHuecoLibre;
+	bool elAnteriorFue0 = false;
 
-					
-					break;
-				}
+	// recorremos el bitmap
+	for (int i = 0; i < CANT_BLOQUES; i++) {
+		// si me encuentro un bloque libre
+		if (!bitarray_test_bit(bitmap, i)) {
+			bloquesLibres++;
 
-				elAnteriorFue0 = true;
+			if (elAnteriorFue0) {
+				huecoLibreActual++;
 			} else {
-				elAnteriorFue0 = false;
-				
+				huecoLibreActual = 1;
+				inicioHuecoLibre = i;
 			}
+
+			// encontre un huequito (FIRST FIT)
+			if (huecoLibreActual >= bloquesFinales) {
+				// asigno los bloques
+				for (int j = 0; j < bloquesFinales; j++) {
+					bitarray_set_bit(bitmap, inicioHuecoLibre + j);
+				}
+
+				// copio los datos
+				memcpy(BLOQUES + entrada->bloqueInicial * TAM_BLOQUE, BLOQUES + inicioHuecoLibre * TAM_BLOQUE, entrada->largo);
+
+				// actualizo la gordita (aka FAT)
+				entrada->bloqueInicial = inicioHuecoLibre;
+				entrada->largo = tamaño; // actualizamos al nuevo tamaño en la tabla
+	
+				// actualizamos archivo de metadata
+				char *path = armarPathMetadata(entrada->nombre);
+				t_config *metadata = config_create(path);
+
+				char bufferString1[100];
+				sprintf(bufferString1, "%d", tamaño);
+				config_set_value(metadata, "TAMANIO_ARCHIVO", bufferString1);
+
+				char bufferString2[100];
+				sprintf(bufferString2, "%d", inicioHuecoLibre);
+				config_set_value(metadata, "BLOQUE_INICIAL", bufferString2);
+
+				config_save(metadata);
+
+				return;
+			}
+
+			elAnteriorFue0 = true;
+		} else {
+			elAnteriorFue0 = false;
 		}
 	}
+
+	// si termino de recorrer el bitmap y sigo aca es pq no retorne, ergo, no encontre hueco libre contiguo
+
+	// CASO 4: NO ME ENTRA
+	if (bloquesFinales > bloquesActuales + bloquesLibres) {
+		log_error("No se puede truncar a %d: no hay espacio", tamaño);
+		return;
+	}
+
+	// si no me dio el espacio contigua pero SI me da el espacio total, necesito compactar
+	// CASO 3: ME ENTRA PERO DEBO COMPACTAR
+
+
+	// primero levanto al archivo que quiero truncar:
+	// le desmarco los bloques
+	for (int i = 0; i < bloquesActuales; i++) {
+		bitarray_clean_bit(bitmap, entrada->bloqueInicial + i);
+	}
+
+	// me copio los datos a un buffer
+    char* bufferDatos = malloc(entrada->largo);
+    memcpy(bufferDatos, BLOQUES + entrada->bloqueInicial * TAM_BLOQUE, entrada->largo);
+
+	compactar(); // como levante al archivo del bitmap, compactara a todos los demas
+
+	// una vez que ya compacte todo el resto, pongo el archivo con su tamaño ampliado al final
+
+	for (inicioHuecoLibre = 0; bitarray_test_bit(bitmap, inicioHuecoLibre); inicioHuecoLibre++) {
+        ; // buscamos el inicio del espacio libre
+    }
+
+	// marco la nueva cantidad de bloques
+	for (int i = 0; i < bloquesFinales; i++) {
+		bitarray_set_bit(bitmap, inicioHuecoLibre + i);
+	}
+
+	// me copio los datos originales desde el buffer en el nuevo lugar
+	memcpy(BLOQUES + inicioHuecoLibre * TAM_BLOQUE, bufferDatos, entrada->largo);
+
+	free(bufferDatos); // el buffer cumplio su mision, lo dejamos descansar
+
+	// actualizamos las estructuras administrativas
+
+	// entrada FAT
+	entrada->largo = tamaño;
+	entrada->bloqueInicial = inicioHuecoLibre;
+
+	// actualizamos archivo de metadata
+	char *path = armarPathMetadata(entrada->nombre);
+	t_config *metadata = config_create(path);
+
+	char bufferString1[100];
+	sprintf(bufferString1, "%d", tamaño);
+	config_set_value(metadata, "TAMANIO_ARCHIVO", bufferString1);
+
+	char bufferString2[100];
+	sprintf(bufferString2, "%d", inicioHuecoLibre);
+	config_set_value(metadata, "BLOQUE_INICIAL", bufferString2);
+
+	config_save(metadata);
+
+	return;
 }
 
 bool escribir_fs(char* nombreArchivo, char* cadena, int offset){
@@ -541,7 +634,6 @@ bool escribir_fs(char* nombreArchivo, char* cadena, int offset){
 }
 
 char* leer_fs(char *nombreArchivo, int offset, int cantALeer){
-
 	//Inner function para buscar la entrada del archivo en la fat
 	bool esEntrada (void* elem) {
 		entradaFat* entrada = (entradaFat*)elem;
@@ -553,15 +645,15 @@ char* leer_fs(char *nombreArchivo, int offset, int cantALeer){
 	int largoArchivo = entrada->largo;
 
 	if (cantALeer > largoArchivo){
-		log_error(logger, "Tamaño a leer mayor que tamaño de archivo");
+		log_error(logger, "Tamaño a leer mayor que tamaño de archivo, leemos archivo completo");
 		cantALeer = largoArchivo;
 	}
 
 	//leo del archivo de bloques cantALeer bytes desde el offset dentro del bloque
 	char* leidoDeArchivo = malloc(cantALeer);
 	memcpy(leidoDeArchivo, BLOQUES+bloqueBase*TAM_BLOQUE+offset, cantALeer);
-	
-	log_info(logger, "archivo leido");
+
+	log_info(logger, "Archivo %s leido", nombreArchivo);
 	return leidoDeArchivo;
 }
 
@@ -711,11 +803,10 @@ void iniciar_fs(){
 }
 
 char* armarPathMetadata (char* nombre){
-	char* path = malloc(strlen(DIR_METADATA) + strlen(nombre) + 6);
+	char* path = malloc(strlen(DIR_METADATA) + strlen(nombre) + 2);
 	strcpy(path, DIR_METADATA);
 	strcat(path, "/");
 	strcat(path, nombre);
-	strcat(path, ".txt");
 	return path;
 }
 
