@@ -7,12 +7,14 @@ char* DIR;
 char* DIR_METADATA;
 t_bitarray* bitmap;
 void* BLOQUES;
-typedef struct {
+typedef struct 
+{
 	char* nombre;
 	int base;
 	int largo;
 } entradaFat;
-t_list* FAT = list_create();
+
+t_list* FAT;
 
 void crear_interfaz_generica(char* nombre) {
     
@@ -359,7 +361,7 @@ void eliminar_fs(char* nombre){
 	//Eliminamos la entrada del archivo en la fat
 	list_remove_element(FAT, entrada);
 	free (entrada->nombre);
-	free (entrada)
+	free (entrada);
 
 	// eliminamos el archivo
 	remove(path);
@@ -414,19 +416,49 @@ int conectar_memoria (char* nombre){
 }
 
 void compactar (){
-	for(int incioArchivo = 0; incioArchivo < CANT_BLOQUES; incioArchivo++){
-		static int inicioHueco = 0
+	entradaFat* entrada;
+	char* path;
+	t_config* metadata;
+	void* buffer;
+	int largoArchivo;
 
-		if(bitarray_test_bit(bitmap, incioArchivo)){
-			//busco entrada del archivo en FAT
-			//base en FAT = inicioHueco
+	for(int inicioArchivo = 0; inicioArchivo < CANT_BLOQUES; inicioArchivo++){
+		static int inicioHueco = 0;
+
+		if(bitarray_test_bit(bitmap, inicioArchivo)){
+			//Inner function para buscar la entrada del archivo en la fat
+			bool esEntrada (void* elem) {
+				entradaFat* entrada = (entradaFat*)elem;
+				return entrada->base == inicioArchivo;
+			}
+
+			entrada = list_find(FAT, esEntrada);
+			entrada->base = inicioHueco;
+			largoArchivo = entrada->largo;
+			buffer = malloc(largoArchivo);
+
 			//base en metadata = inicioHueco
+			path = armarPathMetadata(entrada->nombre);
+			metadata = config_create(path);
+			config_set_value(metadata, "BLOQUE_INICIAL", inicioHueco);
+
 			//limpio largo/TAM_BLOQUE bits desde inicioArchivo en bitmap
+			for(int i = inicioArchivo; i < (inicioArchivo + largoArchivo/TAM_BLOQUE); i++)
+				bitarray_clean_bit(bitmap, i);
+			
 			//seteo largo/TAM_BLOQUE bits desde inicioHueco en bitmap
+			for(int i = inicioHueco; i < (inicioHueco + largoArchivo/TAM_BLOQUE); i++)
+				bitarray_set_bit(bitmap, i);
+
 			//copio a buffer largo bytes desde inicioArchivo de bloques.dat
+			memcpy(buffer, BLOQUES + inicioArchivo*TAM_BLOQUE, largoArchivo);
+
 			//copio de buffer largo bytes desde inicioHueco a bloques.dat
-			//inicioHueco += largo
-			//inicioArchivo = inicioHueco
+			memcpy(BLOQUES + inicioHueco*TAM_BLOQUE, buffer, largoArchivo);
+
+			inicioHueco += largoArchivo;
+			inicioArchivo = inicioHueco;
+			free(buffer);
 		}
 	}
 		
@@ -482,6 +514,9 @@ void iniciar_fs(){
 
 	BLOQUES = mmap(0 , CANT_BLOQUES*TAM_BLOQUE, PROT_WRITE, MAP_SHARED, archivo_bloques->_fileno, 0);
 
+	//Inicializo tabla FAT
+	FAT = list_create();
+	
 	fclose(archivo_bloques);
 
 	free(path);
