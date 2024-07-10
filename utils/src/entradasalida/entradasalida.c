@@ -270,7 +270,11 @@ void crear_interfaz_fs(char* nombre){
 				}
 				recibir_operacion(socket_memoria);
 				char* cadena = recibir_buffer(&size,socket_memoria);
-				escribir_fs(instruccion[2], cadena, atoi(instruccion[5]));
+
+				if (!escribir_fs(instruccion[2], cadena, atoi(instruccion[5]))){
+					log_error(logger, "La cadena a escribir no entra en el archivo")
+				}
+				
 				free(cadena);
 				free(vectorDirecciones);
 			}
@@ -458,13 +462,53 @@ void truncar_fs(char* nombre, int tamaño){
 	log_truncamiento(pid, nombre, tamaño);
 }
 
-void escribir_fs(char* archivo, char* cadena, int DF){
+bool escribir_fs(char* nombreArchivo, char* cadena, int offset){
 	printf("Escribiendo en archivo %s: %s\n", archivo, cadena);
-	log_escritura(pid, archivo, strlen(cadena), DF);
+
+	//Inner function para buscar la entrada del archivo en la fat
+	bool esEntrada (void* elem) {
+		entradaFat* entrada = (entradaFat*)elem;
+		return (entrada->nombreArchivo == nombreArchivo);
+	}
+
+	entradaFat* entrada = list_find(FAT, esEntrada);
+	int base = entradaFat->base;
+	int largoArchivo = entradaFat->largo;
+
+	//Si la cadena no entra en el archivo retorno error
+	if (string_length(cadena) > largoArchivo-offset){
+		return 0;
+	}
+
+	memcpy(BLOQUES+base*TAM_BLOQUE+offset, cadena, string_length(cadena));
+
+	log_escritura(pid, archivo, strlen(cadena), offset);
+	return 1;
 }
 
-void leer_fs(char *nombre, int offset, int cantALeer){
-	log_info(logger, "archivo leido (en realidad no)");
+char* leer_fs(char *nombreArchivo, int offset, int cantALeer){
+
+	//Inner function para buscar la entrada del archivo en la fat
+	bool esEntrada (void* elem) {
+		entradaFat* entrada = (entradaFat*)elem;
+		return (entrada->nombreArchivo == nombreArchivo);
+	}
+
+	entradaFat* entrada = list_find(FAT, esEntrada);
+	int base = entradaFat->base;
+	int largoArchivo = entradaFat->largo;
+
+	if (cantALeer > largoArchivo){
+		log_error(logger, "Tamaño a leer mayor que tamaño de archivo");
+		cantALeer = largoArchivo;
+	}
+
+	//leo del archivo de bloques cantALeer bytes desde el offset dentro del bloque
+	char* leidoDeArchivo = malloc(cantALeer);
+	memcpy(leidoDeArchivo, BLOQUES+base*TAM_BLOQUE+offset, cantALeer);
+	
+	log_info(logger, "archivo leido");
+	return leidoDeArchivo;
 }
 
 
