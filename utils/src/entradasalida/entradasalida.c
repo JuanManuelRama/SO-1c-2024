@@ -10,7 +10,7 @@ void* BLOQUES;
 typedef struct 
 {
 	char* nombre;
-	int base;
+	int bloqueInicial;
 	int largo;
 } entradaFat;
 
@@ -272,8 +272,11 @@ void crear_interfaz_fs(char* nombre){
 				char* cadena = recibir_buffer(&size,socket_memoria);
 
 				if (!escribir_fs(instruccion[2], cadena, atoi(instruccion[5]))){
-					log_error(logger, "La cadena a escribir no entra en el archivo")
+					log_error(logger, "La cadena a escribir no entra en el archivo");
 				}
+
+				//instruccion[2] = nombre, [5] = offset a parter del cual escribir dentro del archivo
+				log_escritura(pid, instruccion[2], strlen(cadena), atoi(instruccion[5]));
 
 				free(cadena);
 				free(vectorDirecciones);
@@ -382,7 +385,7 @@ bool crear_fs(char* nombre){
 	char* nombreDeArchivo = malloc(255); //max tamaño de nombre de archivo en unix
 	strcpy(nombreDeArchivo, nombre);
 	entrada->nombre = nombreDeArchivo;
-	entrada->base = direccion;
+	entrada->bloqueInicial = direccion;
 	entrada->largo = 0;
 	list_add(FAT, entrada);
 
@@ -406,14 +409,16 @@ void eliminar_fs(char* nombre){
 
 	entradaFat* entrada = list_find(FAT, esArchivo);
 
-	int base = config_get_int_value(archivo, "BLOQUE_INICIAL");
-	float tamanio = config_get_float_value(archivo, "TAMANIO_ARCHIVO");
+	int bloqueBase = entrada->bloqueInicial;
+	float tamanio = entrada->largo; 
+	// int base = config_get_int_value(archivo, "BLOQUE_INICIAL");
+	// float tamanio = config_get_float_value(archivo, "TAMANIO_ARCHIVO");
 
 	int bloques_ocupados = ceil(tamanio / TAM_BLOQUE);
 
 	// liberamos los bloques que ocupaba
 	for (int i = 0; i < bloques_ocupados; i++) {
-		bitarray_clean_bit(bitmap, base + i);
+		bitarray_clean_bit(bitmap, bloqueBase + i);
 	}
 
 	//Eliminamos la entrada del archivo en la fat
@@ -454,7 +459,7 @@ void truncar_fs(char* nombre, int tamaño){
 		// marcamos libres los bloques que le truncamos
 		int bloquesDeAchicamiento = bloquesActuales - bloquesFinales;
 		for(int i = 0; i < bloquesDeAchicamiento; i++) {
-			bitarray_clean_bit(bitmap, entrada->base + bloquesFinales + i);
+			bitarray_clean_bit(bitmap, entrada->bloqueInicial + bloquesFinales + i);
 		}
 
 		entrada->largo = tamaño; // actualizamos al nuevo tamaño en la tabla
@@ -473,7 +478,7 @@ void truncar_fs(char* nombre, int tamaño){
 	} else {
 		// para facilitar la busqueda de hueco libre primero "me salgo" del bitmap y despues busco
 		for (int i = 0; i < bloquesActuales; i++) {
-			bitarray_clean_bit(bitmap, entrada->base + i);
+			bitarray_clean_bit(bitmap, entrada->bloqueInicial + i);
 		}
 
 		int espacioTotalLibre;
@@ -496,7 +501,7 @@ void truncar_fs(char* nombre, int tamaño){
 
 				// encontre un huequito (FIRST FIT)
 				if (huecoLibreActual >= bloquesFinales) {
-					for (j = 0; j < bloquesFinales; j++) {
+					for (int j = 0; j < bloquesFinales; j++) {
 						bitarray_set_bit(bitmap, inicioHuecoLibre + j);
 					}
 
@@ -504,7 +509,7 @@ void truncar_fs(char* nombre, int tamaño){
 					break;
 				}
 
-				alAnteriorFue0 = true;
+				elAnteriorFue0 = true;
 			} else {
 				elAnteriorFue0 = false;
 				
@@ -514,26 +519,24 @@ void truncar_fs(char* nombre, int tamaño){
 }
 
 bool escribir_fs(char* nombreArchivo, char* cadena, int offset){
-	printf("Escribiendo en archivo %s: %s\n", archivo, cadena);
+	printf("Escribiendo en archivo %s: %s\n", nombreArchivo, cadena);
 
 	//Inner function para buscar la entrada del archivo en la fat
 	bool esEntrada (void* elem) {
 		entradaFat* entrada = (entradaFat*)elem;
-		return (entrada->nombreArchivo == nombreArchivo);
+		return (entrada->nombre == nombreArchivo);
 	}
 
 	entradaFat* entrada = list_find(FAT, esEntrada);
-	int base = entradaFat->base;
-	int largoArchivo = entradaFat->largo;
+	int bloqueBase = entrada->bloqueInicial;
+	int largoArchivo = entrada->largo;
 
 	//Si la cadena no entra en el archivo retorno error
 	if (string_length(cadena) > largoArchivo-offset){
 		return 0;
 	}
 
-	memcpy(BLOQUES+base*TAM_BLOQUE+offset, cadena, string_length(cadena));
-
-	log_escritura(pid, archivo, strlen(cadena), offset);
+	memcpy(BLOQUES+bloqueBase*TAM_BLOQUE+offset, cadena, string_length(cadena));
 	return 1;
 }
 
@@ -542,12 +545,12 @@ char* leer_fs(char *nombreArchivo, int offset, int cantALeer){
 	//Inner function para buscar la entrada del archivo en la fat
 	bool esEntrada (void* elem) {
 		entradaFat* entrada = (entradaFat*)elem;
-		return (entrada->nombreArchivo == nombreArchivo);
+		return (entrada->nombre == nombreArchivo);
 	}
 
 	entradaFat* entrada = list_find(FAT, esEntrada);
-	int base = entradaFat->base;
-	int largoArchivo = entradaFat->largo;
+	int bloqueBase = entrada->bloqueInicial;
+	int largoArchivo = entrada->largo;
 
 	if (cantALeer > largoArchivo){
 		log_error(logger, "Tamaño a leer mayor que tamaño de archivo");
@@ -556,7 +559,7 @@ char* leer_fs(char *nombreArchivo, int offset, int cantALeer){
 
 	//leo del archivo de bloques cantALeer bytes desde el offset dentro del bloque
 	char* leidoDeArchivo = malloc(cantALeer);
-	memcpy(leidoDeArchivo, BLOQUES+base*TAM_BLOQUE+offset, cantALeer);
+	memcpy(leidoDeArchivo, BLOQUES+bloqueBase*TAM_BLOQUE+offset, cantALeer);
 	
 	log_info(logger, "archivo leido");
 	return leidoDeArchivo;
@@ -610,11 +613,11 @@ void compactar (){
 			//Inner function para buscar la entrada del archivo en la fat
 			bool esEntrada (void* elem) {
 				entradaFat* entrada = (entradaFat*)elem;
-				return (entrada->base == inicioArchivo);
+				return (entrada->bloqueInicial == inicioArchivo);
 			}
 
 			entrada = list_find(FAT, esEntrada);
-			entrada->base = inicioHueco;
+			entrada->bloqueInicial = inicioHueco;
 			largoArchivo = entrada->largo;
 			bufferBloques = malloc(largoArchivo);
 

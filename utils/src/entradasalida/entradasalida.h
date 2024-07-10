@@ -27,7 +27,7 @@ extern int tam_pagina;
 bool crear_fs(char* nombre);
 void eliminar_fs(char* nombre);
 void truncar_fs(char* nombre, int tamaño);
-void escribir_fs(char* archivo, char* cadena, int offset);
+bool escribir_fs(char* archivo, char* cadena, int offset);
 char* leer_fs(char *nombre, int offset, int cantALeer);
 
 // UTILS
