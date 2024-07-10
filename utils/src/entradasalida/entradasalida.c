@@ -7,6 +7,12 @@ char* DIR;
 char* DIR_METADATA;
 t_bitarray* bitmap;
 void* BLOQUES;
+typedef struct {
+	char* nombre;
+	int base;
+	int largo;
+} entradaFat;
+t_list* FAT = list_create();
 
 void crear_interfaz_generica(char* nombre) {
     
@@ -293,6 +299,7 @@ bool crear_fs(char* nombre){
 	if (direccion == -1)
 		return false;
 	
+	//Creamos el archivo de metadata
 	t_dictionary* parametros = dictionary_create();
 
 	char buffer1[100];
@@ -310,6 +317,15 @@ bool crear_fs(char* nombre){
 
 	config_save(metadata);
 
+	//Agregamos su entrada en la tabla fat
+	entradaFat* entrada = malloc(sizeof(entradaFat));
+	char* nombreDeArchivo = malloc(255); //max tamaño de nombre de archivo en unix
+	strcpy(nombreDeArchivo, nombre);
+	entrada->nombre = nombreDeArchivo;
+	entrada->base = direccion;
+	entrada->largo = 0;
+	list_add(FAT, entrada);
+
 	return true;
 }
 
@@ -322,6 +338,14 @@ void eliminar_fs(char* nombre){
 	// usamos las commons de config para sacar la metadata del archivo
 	t_config* archivo = config_create(path);
 
+	//Inner function para buscar la entrada del archivo en la fat
+	bool esArchivo (void* elem) {
+    	entradaFat* entrada = (entradaFat*)elem;
+    	return !strcmp(entrada->nombre, nombre);
+	}
+
+	entradaFat* entrada = list_find(FAT, esArchivo);
+
 	int base = config_get_int_value(archivo, "BLOQUE_INICIAL");
 	int tamanio = config_get_int_value(archivo, "TAMANIO_ARCHIVO");
 	
@@ -331,6 +355,11 @@ void eliminar_fs(char* nombre){
 	for (int i = 0; i < bloques_ocupados; i++) {
 		bitarray_clean_bit(bitmap, base + i);
 	}
+
+	//Eliminamos la entrada del archivo en la fat
+	list_remove_element(FAT, entrada);
+	free (entrada->nombre);
+	free (entrada)
 
 	// eliminamos el archivo
 	remove(path);
@@ -382,6 +411,27 @@ int conectar_memoria (char* nombre){
 	enviar_operacion(socket, NUEVA_IO);
 
 	return socket;
+}
+
+void compactar (){
+	for(int incioArchivo = 0; incioArchivo < CANT_BLOQUES; incioArchivo++){
+		static int inicioHueco = 0
+
+		if(bitarray_test_bit(bitmap, incioArchivo)){
+			//busco entrada del archivo en FAT
+			//base en FAT = inicioHueco
+			//base en metadata = inicioHueco
+			//limpio largo/TAM_BLOQUE bits desde inicioArchivo en bitmap
+			//seteo largo/TAM_BLOQUE bits desde inicioHueco en bitmap
+			//copio a buffer largo bytes desde inicioArchivo de bloques.dat
+			//copio de buffer largo bytes desde inicioHueco a bloques.dat
+			//inicioHueco += largo
+			//inicioArchivo = inicioHueco
+		}
+	}
+		
+	
+
 }
 
 void iniciar_fs(){
