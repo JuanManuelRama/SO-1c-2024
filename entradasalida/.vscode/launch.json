@@ -3,12 +3,13 @@
   // for the documentation about the launch.json format
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "run",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["disco", "dialfs.config"],
+      "args": ["disco", "FS.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

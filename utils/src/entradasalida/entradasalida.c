@@ -220,17 +220,21 @@ void crear_interfaz_fs(char* nombre){
 			pid = recibir_operacion(socket_kernel);
 			log_operacion(pid, instruccion[0]);
 
+			// CASO CREAR
 			if(!strcmp(instruccion[0], "IO_FS_CREATE")){
 				if(!crear_fs(instruccion[2])){
 					log_info(logger, "No hay espacio libre en disco para crear archivo");
 					enviar_operacion(socket_kernel, IO_FAILURE);
 				}
 			}
-
+			// CASO DELETE
 			else if(!strcmp(instruccion[0], "IO_FS_DELETE"))
 				eliminar_fs(instruccion[2]);
-			else if(!strcmp(instruccion[0], "IO_FS_TRUNCATE"))
+			// CASO TRUNCAR
+			else if(!strcmp(instruccion[0], "IO_FS_TRUNCATE")) {
 				truncar_fs(instruccion[2], atoi(instruccion[3]));
+			}
+			// CASO ESCRIBIR EN ARCHIVO
 			else if(!strcmp(instruccion[0], "IO_FS_WRITE")){
 				int tamaño = atoi(instruccion[3]);
 				int tamañoVector = atoi(instruccion[4]);
@@ -256,8 +260,8 @@ void crear_interfaz_fs(char* nombre){
 						enviar_operacion(socket_memoria, vectorDirecciones[i]);
 					}
 					if((tamaño-espacioEnPag)%tam_pagina){
-					enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
-					enviar_operacion(socket_memoria, vectorDirecciones[i]);
+						enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
 					}
 					else{
 						enviar_operacion(socket_memoria, tam_pagina);
@@ -270,15 +274,65 @@ void crear_interfaz_fs(char* nombre){
 				free(cadena);
 				free(vectorDirecciones);
 			}
-			else if(!strcmp(instruccion[0], "IO_FS_READ"))
-				leer_fs(instruccion);
+			// CASO LEER DE ARCHIVO
+			else if(!strcmp(instruccion[0], "IO_FS_READ")) {
+				int tamaño = atoi(instruccion[3]);
+				int tamañoVector = atoi(instruccion[4]);
+				int* vectorDirecciones = recibir_vector(socket_kernel, tamañoVector);
+				int desplazamiento = vectorDirecciones[0]%tam_pagina;
+				int espacioEnPag = tam_pagina-(desplazamiento);
+
+				// para leer del archivo necesitamos los datos: nombre de archivo, 
+				// posicion de donde empezar a leer y cant de bytes a leer
+				char *nombreArchivo = instruccion[2];
+				int posicionEnArchivo = atoi(instruccion[5]);
+
+				char *leidoDeArchivo = leer_fs(nombreArchivo, posicionEnArchivo, tamaño);
+
+				if(tamaño<=espacioEnPag){
+					enviar_string(leidoDeArchivo, socket_memoria, ESCRITURA_STRING);
+
+					enviar_operacion(socket_memoria, pid);
+					enviar_operacion(socket_memoria, 1);
+					enviar_operacion(socket_memoria, tamaño);
+					enviar_operacion(socket_memoria, vectorDirecciones[0]);
+				}
+				else{
+					int i;
+					enviar_string(leidoDeArchivo, socket_memoria, ESCRITURA_STRING);
+
+					enviar_operacion(socket_memoria, pid);
+					enviar_operacion(socket_memoria, tamañoVector);
+					enviar_operacion(socket_memoria, espacioEnPag);
+					enviar_operacion(socket_memoria, vectorDirecciones[0]);
+					for(i = 1; i < tamañoVector-1; i++){
+						enviar_operacion(socket_memoria, tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+					if((tamaño-espacioEnPag)%tam_pagina){
+						enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+					else{
+						enviar_operacion(socket_memoria, tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+				}
+				free(vectorDirecciones);
+				free(leidoDeArchivo); // puesto que leer_fs hizo el malloc
+			}
+			// CASO DE OPERACION NO SOPORTADA POR FS
 			else{
 				log_info(logger, "Resultado de %s: io_failure", nombre);
 				enviar_operacion(socket_kernel, IO_FAILURE);
+				free(buffer);
 				string_array_destroy(instruccion);
 				continue;
 			}
+
+			// SALIO TODO BIEN, DEVOLVEMOS SUCCESS Y LIBERAMOS ESTRUCTURAS
 			enviar_operacion(socket_kernel, IO_SUCCESS);
+			free(buffer);
 			string_array_destroy(instruccion);
 		}
 		else
@@ -373,6 +427,34 @@ void eliminar_fs(char* nombre){
 }
 
 void truncar_fs(char* nombre, int tamaño){
+	//Inner function para buscar la entrada del archivo en la fat
+	bool esArchivo (void* elem) {
+    	entradaFat* entrada = (entradaFat*)elem;
+    	return !strcmp(entrada->nombre, nombre);
+	}
+
+	entradaFat* entrada = list_find(FAT, esArchivo);
+
+	//limpiamos los bits que ocupaba
+	for(int i = 0; i <= (entrada->largo/TAM_BLOQUE); i++)
+		bitarray_clean_bit(bitmap, entrada->base + i);
+	
+	entrada->largo = tamaño; // actualizamos al nuevo tamaño en la tabla
+
+	//seteamos los nuevos bits que ocupa
+	for(int i = 0; i <= (entrada->largo/TAM_BLOQUE); i++)
+		bitarray_set_bit(bitmap, entrada->base + i);
+
+	
+	// persistimos a disco (o sea digamos, archivo de metadata)
+	char *path = armarPathMetadata(entrada->nombre);
+	t_config *metadata = config_create(path);
+
+	char bufferString[100];
+    sprintf(bufferString, "%d", tamaño);
+	config_set_value(metadata, "TAMANIO_ARCHIVO", bufferString);
+	config_save(metadata);
+
 	log_truncamiento(pid, nombre, tamaño);
 }
 
@@ -381,7 +463,7 @@ void escribir_fs(char* archivo, char* cadena, int DF){
 	log_escritura(pid, archivo, strlen(cadena), DF);
 }
 
-void leer_fs(char** instruccion){
+void leer_fs(char *nombre, int offset, int cantALeer){
 	log_info(logger, "archivo leido (en realidad no)");
 }
 
@@ -419,51 +501,56 @@ void compactar (){
 	entradaFat* entrada;
 	char* path;
 	t_config* metadata;
-	void* buffer;
+	void* bufferBloques;
 	int largoArchivo;
+	char bufferString[100];
+	int inicioHueco;
+
+	for (inicioHueco = 0; bitarray_test_bit(bitmap, inicioHueco); inicioHueco++) {
+		; // buscamos el primer hueco libre
+	}
 
 	for(int inicioArchivo = 0; inicioArchivo < CANT_BLOQUES; inicioArchivo++){
-		static int inicioHueco = 0;
-
 		if(bitarray_test_bit(bitmap, inicioArchivo)){
 			//Inner function para buscar la entrada del archivo en la fat
 			bool esEntrada (void* elem) {
 				entradaFat* entrada = (entradaFat*)elem;
-				return entrada->base == inicioArchivo;
+				return (entrada->base == inicioArchivo);
 			}
 
 			entrada = list_find(FAT, esEntrada);
 			entrada->base = inicioHueco;
 			largoArchivo = entrada->largo;
-			buffer = malloc(largoArchivo);
+			bufferBloques = malloc(largoArchivo);
 
 			//base en metadata = inicioHueco
 			path = armarPathMetadata(entrada->nombre);
 			metadata = config_create(path);
-			config_set_value(metadata, "BLOQUE_INICIAL", inicioHueco);
+
+			sprintf(bufferString, "%d", inicioHueco); // convertimos a string el numero 
+
+			config_set_value(metadata, "BLOQUE_INICIAL", bufferString);
+			config_save(metadata); // guardamos en archivo metadata
 
 			//limpio largo/TAM_BLOQUE bits desde inicioArchivo en bitmap
-			for(int i = inicioArchivo; i < (inicioArchivo + largoArchivo/TAM_BLOQUE); i++)
+			for(int i = inicioArchivo; i <= (inicioArchivo + largoArchivo/TAM_BLOQUE); i++)
 				bitarray_clean_bit(bitmap, i);
 			
 			//seteo largo/TAM_BLOQUE bits desde inicioHueco en bitmap
-			for(int i = inicioHueco; i < (inicioHueco + largoArchivo/TAM_BLOQUE); i++)
+			for(int i = inicioHueco; i <= (inicioHueco + largoArchivo/TAM_BLOQUE); i++)
 				bitarray_set_bit(bitmap, i);
 
 			//copio a buffer largo bytes desde inicioArchivo de bloques.dat
-			memcpy(buffer, BLOQUES + inicioArchivo*TAM_BLOQUE, largoArchivo);
+			memcpy(bufferBloques, BLOQUES + inicioArchivo*TAM_BLOQUE, largoArchivo);
 
 			//copio de buffer largo bytes desde inicioHueco a bloques.dat
-			memcpy(BLOQUES + inicioHueco*TAM_BLOQUE, buffer, largoArchivo);
+			memcpy(BLOQUES + inicioHueco*TAM_BLOQUE, bufferBloques, largoArchivo);
 
 			inicioHueco += largoArchivo;
 			inicioArchivo = inicioHueco;
-			free(buffer);
+			free(bufferBloques);
 		}
 	}
-		
-	
-
 }
 
 void iniciar_fs(){
@@ -487,7 +574,7 @@ void iniciar_fs(){
 
     truncate(path, CANT_BLOQUES/8);	// un bit por bloque
 
-    bitmap = bitarray_create_with_mode(mmap(0 , CANT_BLOQUES/8, PROT_WRITE, MAP_SHARED, archivo_bitmap->_fileno, 0), CANT_BLOQUES/8, MSB_FIRST);
+    bitmap = bitarray_create_with_mode(mmap(NULL , CANT_BLOQUES/8, PROT_WRITE | PROT_READ, MAP_SHARED, archivo_bitmap->_fileno, 0), CANT_BLOQUES/8, MSB_FIRST);
 	
 	for(int i = 0; i < CANT_BLOQUES; i++)
 		bitarray_clean_bit(bitmap, i);
@@ -512,7 +599,7 @@ void iniciar_fs(){
 	archivo_bloques = fopen(path, "w+b");
 	truncate(path, CANT_BLOQUES*TAM_BLOQUE);
 
-	BLOQUES = mmap(0 , CANT_BLOQUES*TAM_BLOQUE, PROT_WRITE, MAP_SHARED, archivo_bloques->_fileno, 0);
+	BLOQUES = mmap(NULL , CANT_BLOQUES*TAM_BLOQUE, PROT_WRITE | PROT_READ, MAP_SHARED, archivo_bloques->_fileno, 0);
 
 	//Inicializo tabla FAT
 	FAT = list_create();

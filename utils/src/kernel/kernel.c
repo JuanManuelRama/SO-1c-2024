@@ -898,6 +898,7 @@ void atender_solicitud_IO(sProceso* proceso){
 	enviar_string(proceso->multifuncion, IO_seleccionada->socket, OPERACION_IO);
 	enviar_operacion(IO_seleccionada->socket, proceso->pcb.pid);
 
+	// si es una de estas operaciones, usan vectores de numeritos, por lo tanto lo enviamos
 	if(!strcmp(instruccionIO[0], "IO_STDIN_READ") || !strcmp(instruccionIO[0], "IO_STDOUT_WRITE") || !strcmp(instruccionIO[0], "IO_FS_WRITE") || !strcmp(instruccionIO[0], "IO_FS_READ")){
 		enviar_vector(vectorDirecciones, tamañoVector, IO_seleccionada->socket);
 		free(vectorDirecciones);

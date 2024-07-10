@@ -32,6 +32,7 @@ void leer_fs(char** instruccion);
 // UTILS
 char* armarPathMetadata (char* nombre);
 void iniciar_fs();
+void compactar ();
 
 //LOGS OBLIGATORIOS
 void log_operacion(int, char*);

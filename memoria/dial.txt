@@ -1,19 +1,12 @@
 RESIZE 64
-IO_FS_CREATE disco prueba1
-IO_FS_CREATE disco prueba2
-IO_FS_CREATE disco prueba3
-IO_FS_CREATE disco prueba4
-IO_FS_CREATE disco prueba5
-IO_FS_DELETE disco prueba1
-IO_FS_DELETE disco prueba2
-IO_FS_DELETE disco prueba3
-IO_FS_DELETE disco prueba4
-IO_FS_DELETE disco prueba5
-IO_FS_CREATE disco prueba6
-IO_FS_CREATE disco prueba7
-IO_FS_CREATE disco prueba8
-IO_FS_CREATE disco prueba9
-IO_FS_CREATE disco prueba10
+IO_FS_CREATE disco notas.txt
+SET ECX 3000
+IO_FS_TRUNCATE disco notas.txt ECX
+IO_FS_CREATE disco notas2.txt
+SET ECX 3000
+IO_FS_TRUNCATE disco notas2.txt ECX
+SET ECX 2000
+IO_FS_TRUNCATE disco notas.txt ECX
 SET AX 3
 SET BX 72
 SET EAX 31
