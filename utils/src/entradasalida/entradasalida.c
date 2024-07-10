@@ -274,7 +274,7 @@ void crear_interfaz_fs(char* nombre){
 				if (!escribir_fs(instruccion[2], cadena, atoi(instruccion[5]))){
 					log_error(logger, "La cadena a escribir no entra en el archivo")
 				}
-				
+
 				free(cadena);
 				free(vectorDirecciones);
 			}
@@ -407,9 +407,9 @@ void eliminar_fs(char* nombre){
 	entradaFat* entrada = list_find(FAT, esArchivo);
 
 	int base = config_get_int_value(archivo, "BLOQUE_INICIAL");
-	int tamanio = config_get_int_value(archivo, "TAMANIO_ARCHIVO");
-	
-	int bloques_ocupados = tamanio / TAM_BLOQUE + 1;
+	float tamanio = config_get_float_value(archivo, "TAMANIO_ARCHIVO");
+
+	int bloques_ocupados = ceil(tamanio / TAM_BLOQUE);
 
 	// liberamos los bloques que ocupaba
 	for (int i = 0; i < bloques_ocupados; i++) {
@@ -439,27 +439,78 @@ void truncar_fs(char* nombre, int tamaño){
 
 	entradaFat* entrada = list_find(FAT, esArchivo);
 
-	//limpiamos los bits que ocupaba
-	for(int i = 0; i <= (entrada->largo/TAM_BLOQUE); i++)
-		bitarray_clean_bit(bitmap, entrada->base + i);
-	
-	entrada->largo = tamaño; // actualizamos al nuevo tamaño en la tabla
+	if (entrada == NULL) {
+		log_error(logger, "Archivo %s no existe (o no fue creado por este FS)", nombre);
+		return;
+	}
 
-	//seteamos los nuevos bits que ocupa
-	for(int i = 0; i <= (entrada->largo/TAM_BLOQUE); i++)
-		bitarray_set_bit(bitmap, entrada->base + i);
+	int bloquesActuales, bloquesFinales;
 
-	
-	// persistimos a disco (o sea digamos, archivo de metadata)
-	char *path = armarPathMetadata(entrada->nombre);
-	t_config *metadata = config_create(path);
+	bloquesActuales = ceil(entrada->largo / TAM_BLOQUE);
+	bloquesFinales = ceil(tamaño / TAM_BLOQUE);
 
-	char bufferString[100];
-    sprintf(bufferString, "%d", tamaño);
-	config_set_value(metadata, "TAMANIO_ARCHIVO", bufferString);
-	config_save(metadata);
+	// si me piden achicar el archivo (siempre se puede)
+	if (bloquesActuales >= bloquesFinales) {
+		// marcamos libres los bloques que le truncamos
+		int bloquesDeAchicamiento = bloquesActuales - bloquesFinales;
+		for(int i = 0; i < bloquesDeAchicamiento; i++) {
+			bitarray_clean_bit(bitmap, entrada->base + bloquesFinales + i);
+		}
 
-	log_truncamiento(pid, nombre, tamaño);
+		entrada->largo = tamaño; // actualizamos al nuevo tamaño en la tabla
+		
+		// persistimos a disco (o sea digamos, archivo de metadata)
+		char *path = armarPathMetadata(entrada->nombre);
+		t_config *metadata = config_create(path);
+
+		char bufferString[100];
+		sprintf(bufferString, "%d", tamaño);
+		config_set_value(metadata, "TAMANIO_ARCHIVO", bufferString);
+		config_save(metadata);
+
+		log_truncamiento(pid, nombre, tamaño);
+	// si me piden agrandarlo (hay que ver si me da el espacio)
+	} else {
+		// para facilitar la busqueda de hueco libre primero "me salgo" del bitmap y despues busco
+		for (int i = 0; i < bloquesActuales; i++) {
+			bitarray_clean_bit(bitmap, entrada->base + i);
+		}
+
+		int espacioTotalLibre;
+		int huecoLibreActual;
+		int inicioHuecoLibre;
+		bool elAnteriorFue0 = false;
+
+		// recorremos el bitmap
+		for (int i = 0; i < CANT_BLOQUES; i++) {
+			// si me encuentro un bloque libre
+			if (!bitarray_test_bit(bitmap, i)) {
+				espacioTotalLibre++;
+
+				if (elAnteriorFue0) {
+					huecoLibreActual++;
+				} else {
+					huecoLibreActual = 1;
+					inicioHuecoLibre = i;
+				}
+
+				// encontre un huequito (FIRST FIT)
+				if (huecoLibreActual >= bloquesFinales) {
+					for (j = 0; j < bloquesFinales; j++) {
+						bitarray_set_bit(bitmap, inicioHuecoLibre + j);
+					}
+
+					
+					break;
+				}
+
+				alAnteriorFue0 = true;
+			} else {
+				elAnteriorFue0 = false;
+				
+			}
+		}
+	}
 }
 
 bool escribir_fs(char* nombreArchivo, char* cadena, int offset){
@@ -576,13 +627,16 @@ void compactar (){
 			config_set_value(metadata, "BLOQUE_INICIAL", bufferString);
 			config_save(metadata); // guardamos en archivo metadata
 
-			//limpio largo/TAM_BLOQUE bits desde inicioArchivo en bitmap
-			for(int i = inicioArchivo; i <= (inicioArchivo + largoArchivo/TAM_BLOQUE); i++)
-				bitarray_clean_bit(bitmap, i);
+			float largoArchivoFloat = largoArchivo; // transformar a float para poder dividir y meter ceil
+			int cantBloques = ceil(largoArchivoFloat/TAM_BLOQUE); // calculamos cantBloques
 			
-			//seteo largo/TAM_BLOQUE bits desde inicioHueco en bitmap
-			for(int i = inicioHueco; i <= (inicioHueco + largoArchivo/TAM_BLOQUE); i++)
-				bitarray_set_bit(bitmap, i);
+			//limpio cantBloques bits desde inicioArchivo en bitmap
+			for(int i = 0; i < cantBloques; i++)
+				bitarray_clean_bit(bitmap, inicioArchivo + i);
+			
+			//seteo cantBloques bits desde inicioHueco en bitmap
+			for(int i = 0; i < cantBloques; i++)
+				bitarray_set_bit(bitmap, inicioHueco + i);
 
 			//copio a buffer largo bytes desde inicioArchivo de bloques.dat
 			memcpy(bufferBloques, BLOQUES + inicioArchivo*TAM_BLOQUE, largoArchivo);
