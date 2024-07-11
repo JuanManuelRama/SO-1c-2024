@@ -49,7 +49,6 @@ void crear_interfaz_generica(char* nombre) {
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
-			config_destroy(config);
 			liberar_conexion(socket_kernel);
 			return;
 		}
@@ -129,7 +128,6 @@ void crear_interfaz_stdin (char* nombre){
 			// RUTINA DE SALIDA, LIBERAMOS MEMORIA
 			liberar_conexion(socket_kernel);
 			liberar_conexion(socket_memoria);
-			config_destroy(config);
 			return;
 		}
 	}
@@ -205,7 +203,6 @@ void crear_interfaz_stdout (char* nombre){
 			// RUTINA DE SALIDA, LIBERAMOS MEMORIA
 			liberar_conexion(socket_kernel);
 			liberar_conexion(socket_memoria);
-			config_destroy(config);
 			return;
 		}
 	}
