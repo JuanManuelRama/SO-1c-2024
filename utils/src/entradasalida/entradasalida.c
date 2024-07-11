@@ -79,7 +79,7 @@ void crear_interfaz_stdin (char* nombre){
 			int* vectorDirecciones = recibir_vector(socket_kernel, tamañoVector);
 			if (!strcmp(instruccion[0], "IO_STDIN_READ")){
 				char valor[tamaño];
-				//printf("Ingrese hasta %i caracteres \n", tamaño);
+				printf("Ingrese hasta %i caracteres \n", tamaño);
 				for(int i=0; i<tamaño; i++){
 					valor[i] = getchar();
 				}
@@ -189,7 +189,7 @@ void crear_interfaz_stdout (char* nombre){
 				}
 				recibir_operacion(socket_memoria);
 				char* cadena = recibir_buffer(&size,socket_memoria);
-				//printf("%s \n", cadena);
+				printf("%s \n", cadena);
 				free(cadena);
 				enviar_operacion(socket_kernel, IO_SUCCESS);
 
