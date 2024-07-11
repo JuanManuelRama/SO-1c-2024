@@ -126,6 +126,10 @@ void crear_interfaz_stdin (char* nombre){
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
+			// RUTINA DE SALIDA, LIBERAMOS MEMORIA
+			liberar_conexion(socket_kernel);
+			liberar_conexion(socket_memoria);
+			config_destroy(config);
 			return;
 		}
 	}
@@ -198,6 +202,10 @@ void crear_interfaz_stdout (char* nombre){
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
+			// RUTINA DE SALIDA, LIBERAMOS MEMORIA
+			liberar_conexion(socket_kernel);
+			liberar_conexion(socket_memoria);
+			config_destroy(config);
 			return;
 		}
 	}
@@ -498,6 +506,8 @@ void truncar_fs(char* nombre, int tamaño){
 		config_set_value(metadata, "TAMANIO_ARCHIVO", bufferString);
 		config_save(metadata);
 
+		config_destroy(metadata);
+		free(path);
 		return;
 	}
 
@@ -556,6 +566,8 @@ void truncar_fs(char* nombre, int tamaño){
 
 				config_save(metadata);
 
+				config_destroy(metadata);
+				free(path);
 				return;
 			}
 
@@ -625,6 +637,8 @@ void truncar_fs(char* nombre, int tamaño){
 
 	config_save(metadata);
 
+	config_destroy(metadata);
+	free(path);
 	return;
 }
 
@@ -766,6 +780,7 @@ void compactar (){
 
 			config_destroy(metadata);
 			free(bufferBloques);
+			free(path);
 		}
 	}
 }
