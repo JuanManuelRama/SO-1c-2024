@@ -1,8 +1,11 @@
 #include "entradasalida.h"
 
 int pid;
+
 int CANT_BLOQUES;
 int TAM_BLOQUE;
+int TIEMPO_UNIDAD_TRABAJO; 
+int RETRASO_COMPACTACION;
 char* DIR_BASE;
 char* DIR_METADATA;
 t_bitarray* bitmap;
@@ -17,8 +20,7 @@ typedef struct
 t_list* FAT;
 
 void crear_interfaz_generica(char* nombre) {
-    
-	int unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
+	TIEMPO_UNIDAD_TRABAJO = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
 	int socket_kernel = conectar_kernel(nombre);
 
 	// una vez conectado y avisado que me conecte, me quedo esperando solicitudes
@@ -34,8 +36,8 @@ void crear_interfaz_generica(char* nombre) {
 			if (!strcmp(instruccion[0], "IO_GEN_SLEEP")){
 				
 				int cant_unidades_trabajo = atoi(instruccion[2]);
-				usleep(cant_unidades_trabajo*unidad_trabajo * 1000);
-				log_info(logger, "Me dormi %d milisegs", cant_unidades_trabajo*unidad_trabajo);
+				usleep(cant_unidades_trabajo * TIEMPO_UNIDAD_TRABAJO * 1000);
+				log_info(logger, "Me dormi %d milisegs", cant_unidades_trabajo * TIEMPO_UNIDAD_TRABAJO);
 				// multiplicamos x mil para pasar de milisec a microsec (q es lo q toma usleep)
 
 				log_info(logger, "Resultado de %s: io_success", nombre);
@@ -219,11 +221,16 @@ void crear_interfaz_fs(char* nombre){
 	while(1){
 		op_code cod_op = recibir_operacion(socket_kernel);
 		if(cod_op == OPERACION_IO){
+			// CUALQUIER OPERACION CONSUME 1 (UNA) UNIDAD DE TIEMPO UNIDAD TRABAJO
+			usleep(TIEMPO_UNIDAD_TRABAJO * 1000); // multiplicamos por mil para pasar de milisegs a microsegs (eso toma usleep)
+			
 			int size;
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_split(buffer, " ");
 			pid = recibir_operacion(socket_kernel);
 			log_operacion(pid, instruccion[0]);
+
+			usleep(TIEMPO_UNIDAD_TRABAJO* 1000);
 
 			// CASO CREAR
 			if(!strcmp(instruccion[0], "IO_FS_CREATE")){
@@ -233,8 +240,9 @@ void crear_interfaz_fs(char* nombre){
 				}
 			}
 			// CASO DELETE
-			else if(!strcmp(instruccion[0], "IO_FS_DELETE"))
+			else if(!strcmp(instruccion[0], "IO_FS_DELETE")) {
 				eliminar_fs(instruccion[2]);
+			}
 			// CASO TRUNCAR
 			else if(!strcmp(instruccion[0], "IO_FS_TRUNCATE")) {
 				truncar_fs(instruccion[2], atoi(instruccion[3]));
@@ -742,6 +750,9 @@ int conectar_memoria (char* nombre){
 }
 
 void compactar (){
+	// RETRASAMOS COMPACTACION 
+	usleep(RETRASO_COMPACTACION * 1000); // * 1000 para pasar de milisegs a microsegs
+
 	entradaFat* entrada;
 	char* path;
 	t_config* metadata;
@@ -821,6 +832,8 @@ void iniciar_fs(){
 	CANT_BLOQUES = config_get_int_value(config, "BLOCK_COUNT");
 	TAM_BLOQUE = config_get_int_value(config, "BLOCK_SIZE");
 	DIR_BASE = config_get_string_value(config, "PATH_BASE_DIALFS");
+	TIEMPO_UNIDAD_TRABAJO = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
+	RETRASO_COMPACTACION = config_get_int_value(config, "RETRASO_COMPACTACION");
 
 	FILE *archivo_bitmap;
 	FILE *archivo_bloques;
