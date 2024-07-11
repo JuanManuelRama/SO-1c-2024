@@ -366,7 +366,6 @@ void crear_interfaz_fs(char* nombre){
 			munmap(BLOQUES, TAM_BLOQUE*CANT_BLOQUES);
 
 			bitarray_destroy(bitmap);
-			free(BLOQUES);
 
 			list_destroy_and_destroy_elements(FAT, liberarEntradaFat);
 			return;	
