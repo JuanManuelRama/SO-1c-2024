@@ -10,6 +10,7 @@
 #include <commons/bitarray.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <dirent.h> 
 
 //extern t_log* logger;
 //extern t_config* config;

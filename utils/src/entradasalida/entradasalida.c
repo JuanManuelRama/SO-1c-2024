@@ -3,7 +3,7 @@
 int pid;
 int CANT_BLOQUES;
 int TAM_BLOQUE;
-char* DIR;
+char* DIR_BASE;
 char* DIR_METADATA;
 t_bitarray* bitmap;
 void* BLOQUES;
@@ -391,6 +391,10 @@ bool crear_fs(char* nombre){
 	entrada->largo = 0;
 	list_add(FAT, entrada);
 
+	dictionary_destroy(parametros);
+	free(metadata->path);
+	free(metadata);
+
 	return true;
 }
 
@@ -757,6 +761,10 @@ void compactar (){
 
 			inicioHueco += largoArchivo;
 			inicioArchivo = inicioHueco;
+
+			log_info(logger, "Compactando ando");
+
+			config_destroy(metadata);
 			free(bufferBloques);
 		}
 	}
@@ -770,60 +778,136 @@ void iniciar_fs(){
 
 	//logs obligatorios
 
+	// Sleeps en las interfaces
+
 	//rutinas de liberacion de recursos de todas las interfaces
 
 	//VARIABLES DEL CONFIG
 	CANT_BLOQUES = config_get_int_value(config, "BLOCK_COUNT");
 	TAM_BLOQUE = config_get_int_value(config, "BLOCK_SIZE");
-	DIR = config_get_string_value(config, "PATH_BASE_DIALFS");
+	DIR_BASE = config_get_string_value(config, "PATH_BASE_DIALFS");
 
 	FILE *archivo_bitmap;
 	FILE *archivo_bloques;
 
-	//CREO BITMAP
-	char* path = malloc(strlen(DIR) + strlen("bitmap.dat") + 2);
 
-	mkdir(DIR, 0777);
-	strcpy(path, DIR);
+	//BITMAP
+	char* path = malloc(strlen(DIR_BASE) + strlen("bitmap.dat") + 2);
+
+	mkdir(DIR_BASE, 0777);
+	strcpy(path, DIR_BASE);
 	strcat(path, "/");
 	strcat(path, "bitmap.dat");
 
-	archivo_bitmap = fopen(path, "w+b");
+	bool existeBitmap = access(path, F_OK) != -1;
 
-    truncate(path, CANT_BLOQUES/8);	// un bit por bloque
+	// Chequeo existencia del archivo de bitmap
+	if (!existeBitmap){
+
+		// Si no existe, lo creo y le doy el tamaño
+		archivo_bitmap = fopen(path, "w+b");
+		truncate(path, CANT_BLOQUES/8);	// un bit por bloque
+
+	} else{
+
+		// Si existe, lo abro
+		archivo_bitmap = fopen(path, "r+b");
+
+	}
 
     bitmap = bitarray_create_with_mode(mmap(NULL , CANT_BLOQUES/8, PROT_WRITE | PROT_READ, MAP_SHARED, archivo_bitmap->_fileno, 0), CANT_BLOQUES/8, MSB_FIRST);
 	
-	for(int i = 0; i < CANT_BLOQUES; i++)
-		bitarray_clean_bit(bitmap, i);
+	// Si no existia lo inicializo en 0
+	if (!existeBitmap){
+		for(int i = 0; i < CANT_BLOQUES; i++){
+			bitarray_clean_bit(bitmap, i);
+		}
+	}
 
 	free(path);
 
 	fclose(archivo_bitmap);
 
-	// Creamos carpeta de metadata
-	DIR_METADATA = malloc(strlen(DIR) + strlen("metadata") + 2);
-
-	strcpy(DIR_METADATA, DIR);
-	strcat(DIR_METADATA, "/metadata");
-
-	mkdir(DIR_METADATA, 0777);
-	
-	//CREO ARCHIVO DE BLOQUES
-	path = malloc(strlen(DIR) + strlen("bloques.dat") + 2);
-	strcpy(path, DIR);
-	strcat(path, "/");
-	strcat(path, "bloques.dat");
-	archivo_bloques = fopen(path, "w+b");
-	truncate(path, CANT_BLOQUES*TAM_BLOQUE);
-
-	BLOQUES = mmap(NULL , CANT_BLOQUES*TAM_BLOQUE, PROT_WRITE | PROT_READ, MAP_SHARED, archivo_bloques->_fileno, 0);
 
 	//Inicializo tabla FAT
 	FAT = list_create();
-	
-	fclose(archivo_bloques);
 
+
+	// METADATA
+	DIR_METADATA = malloc(strlen(DIR_BASE) + strlen("metadata") + 2);
+
+	strcpy(DIR_METADATA, DIR_BASE);
+	strcat(DIR_METADATA, "/metadata");
+
+	// Chequeo existencia del directorio de metadata
+	if (access(DIR_METADATA, F_OK) == -1){
+
+		// Si no existe, lo creo
+		mkdir(DIR_METADATA, 0777);
+
+	} else{
+
+		// Si existe, armo la FAT recorriendo los archivos de la carpeta metadata
+		DIR* directorio = opendir(DIR_METADATA);
+		struct dirent *subdirectorio;
+
+		while ((subdirectorio = readdir(directorio)) != NULL) {
+
+			char* nombreArchivo = malloc(256);
+			strcpy (nombreArchivo, subdirectorio->d_name);
+
+			// No mapea si es cualquiera de estos 4 archivos
+			if (!strcmp(nombreArchivo, ".") || !strcmp(nombreArchivo, "..") || !strcmp(nombreArchivo, "bloques.dat") || !strcmp(nombreArchivo, "bitmap.dat")){
+				free (nombreArchivo);
+				continue;
+			}
+
+			char* path = armarPathMetadata(nombreArchivo);
+
+			t_config* metadata = config_create(path);
+
+			//Agregamos su entrada en la tabla fat
+			entradaFat* entrada = malloc(sizeof(entradaFat));
+			entrada->nombre = nombreArchivo;
+			entrada->bloqueInicial = config_get_int_value(metadata, "BLOQUE_INICIAL");
+			entrada->largo = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
+			list_add(FAT, entrada);
+
+			free (path);
+			config_destroy (metadata);
+
+		}
+  
+    	closedir(directorio); 
+		
+
+	}
+	
+
+	//ARCHIVO DE BLOQUES
+	path = malloc(strlen(DIR_BASE) + strlen("bloques.dat") + 2);
+	strcpy(path, DIR_BASE);
+	strcat(path, "/");
+	strcat(path, "bloques.dat");
+
+	// Chequeo existencia del archivo de bloques
+	if (access(path, F_OK) == -1){
+
+		// Si no existe, lo creo y le doy el tamaño
+		archivo_bloques = fopen(path, "w+b");
+		truncate(path, CANT_BLOQUES*TAM_BLOQUE);
+
+	} else{
+
+		// Si existe, lo abro
+		archivo_bloques = fopen(path, "r+b");
+
+	}
+
+	BLOQUES = mmap(NULL , CANT_BLOQUES*TAM_BLOQUE, PROT_WRITE | PROT_READ, MAP_SHARED, archivo_bloques->_fileno, 0);
+
+
+	fclose(archivo_bloques);
 	free(path);
 }
 
