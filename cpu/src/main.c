@@ -20,7 +20,8 @@ int entradas_actuales_tlb;
 t_entradaTLB *entrada_TLB;
 
 int main() {
-	int socket_servidor;
+	int socket_servidor_dispatch;
+	int socket_servidor_interrupt;
 	int socket_dispatch;
 	int socket_interrupcion;
 	char* ip;
@@ -54,13 +55,15 @@ int main() {
 
 	//tambien sera servidor, con el kernel como cliente
 	puerto = buscar("PUERTO_ESCUCHA_DISPATCH");
-	socket_servidor = iniciar_servidor(puerto, "CPU");
-	socket_dispatch = esperar_cliente("Kernel", socket_servidor);
+	socket_servidor_dispatch = iniciar_servidor(puerto, "CPU");
+
 	puerto = buscar("PUERTO_ESCUCHA_INTERRUPT");
-	socket_servidor = iniciar_servidor(puerto, "CPU");
+	socket_servidor_interrupt = iniciar_servidor(puerto, "CPU");
+
+	socket_dispatch = esperar_cliente("Kernel", socket_servidor);
 	socket_interrupcion = esperar_cliente("Interrupciones", socket_servidor);
+
 	pthread_create(&hilo_kernel, NULL, interrupciones, (void*)socket_interrupcion);
-	
 
 	while(1){
 		if(recibir_operacion(socket_dispatch)!=PCB)
