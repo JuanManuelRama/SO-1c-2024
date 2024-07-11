@@ -60,8 +60,8 @@ int main() {
 	puerto = buscar("PUERTO_ESCUCHA_INTERRUPT");
 	socket_servidor_interrupt = iniciar_servidor(puerto, "CPU");
 
-	socket_dispatch = esperar_cliente("Kernel", socket_servidor);
-	socket_interrupcion = esperar_cliente("Interrupciones", socket_servidor);
+	socket_dispatch = esperar_cliente("Kernel", socket_servidor_dispatch);
+	socket_interrupcion = esperar_cliente("Interrupciones", socket_servidor_interrupt);
 
 	pthread_create(&hilo_kernel, NULL, interrupciones, (void*)socket_interrupcion);
 
