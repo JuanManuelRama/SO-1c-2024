@@ -439,7 +439,7 @@ void eliminar_fs(char* nombre){
 
 void truncar_fs(char* nombre, int tamaño){
 	// HAY CUATRO CASOS POSIBLES:
-	// - Truncar a menos tamaño (achicar): siempre se puede, facilito
+	// - Truncar al mismo o menos tamaño (achicar o mantener): siempre se puede, facilito
 	// - Truncar a mas: - me alcanza el espacio libre contiguo, no hace falta compactar
 	// 					- me alcanza el espacio pero no esta contiguo -> compactar
 	// no me alcanza el espacio, tiro error y a otra cosa
@@ -459,10 +459,23 @@ void truncar_fs(char* nombre, int tamaño){
 
 	int bloquesActuales, bloquesFinales;
 
-	bloquesActuales = ceil(entrada->largo / TAM_BLOQUE);
-	bloquesFinales = ceil(tamaño / TAM_BLOQUE);
+	float largoArchivo = entrada->largo;
+	float tamañoDeseado = tamaño;
 
-	// CASO 1: ACHICAR
+	bloquesActuales = ceil(largoArchivo / TAM_BLOQUE);
+	// si el tamaño es 0 igualmente se le asigna un bloque
+	if (!bloquesActuales){
+		bloquesActuales=1;
+	}
+
+	bloquesFinales = ceil(tamañoDeseado / TAM_BLOQUE);
+	// si el tamaño es 0 igualmente se le asigna un bloque
+	if (!bloquesFinales){
+		bloquesFinales=1;
+	}
+
+
+	// CASO 1: ACHICAR O MANTENER
 	if (bloquesActuales >= bloquesFinales) {
 		// marcamos libres los bloques que le truncamos
 		int bloquesDeAchicamiento = bloquesActuales - bloquesFinales;
@@ -617,10 +630,13 @@ bool escribir_fs(char* nombreArchivo, char* cadena, int offset){
 	//Inner function para buscar la entrada del archivo en la fat
 	bool esEntrada (void* elem) {
 		entradaFat* entrada = (entradaFat*)elem;
-		return (entrada->nombre == nombreArchivo);
+		return !strcmp(entrada->nombre, nombreArchivo);
 	}
 
 	entradaFat* entrada = list_find(FAT, esEntrada);
+	if(entrada==NULL){
+		log_error(logger, "No se encontro archivo %s", nombreArchivo);
+	}
 	int bloqueBase = entrada->bloqueInicial;
 	int largoArchivo = entrada->largo;
 
@@ -637,7 +653,7 @@ char* leer_fs(char *nombreArchivo, int offset, int cantALeer){
 	//Inner function para buscar la entrada del archivo en la fat
 	bool esEntrada (void* elem) {
 		entradaFat* entrada = (entradaFat*)elem;
-		return (entrada->nombre == nombreArchivo);
+		return !strcmp(entrada->nombre, nombreArchivo);
 	}
 
 	entradaFat* entrada = list_find(FAT, esEntrada);
@@ -747,6 +763,15 @@ void compactar (){
 }
 
 void iniciar_fs(){
+
+	//TODO chequear si existe carpeta dialfs.
+	//si existe: no creamos los archivos, los leemos para recuperar la informacion (tablaFAT y bitmap y mapeo de memoria de bloques)
+	//si no: se crean los archivos
+
+	//logs obligatorios
+
+	//rutinas de liberacion de recursos de todas las interfaces
+
 	//VARIABLES DEL CONFIG
 	CANT_BLOQUES = config_get_int_value(config, "BLOCK_COUNT");
 	TAM_BLOQUE = config_get_int_value(config, "BLOCK_SIZE");
