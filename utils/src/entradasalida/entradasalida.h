@@ -42,3 +42,7 @@ void log_operacion(int, char*);
 void log_creacion(int, char*);
 void log_eliminacion(int, char*);
 void log_truncamiento(int, char*, int);
+void log_escritura(int, char*, int, int);
+void log_lectura(int, char*, int, int);
+void log_inicio_compactación(int);
+void log_fin_compactación(int);

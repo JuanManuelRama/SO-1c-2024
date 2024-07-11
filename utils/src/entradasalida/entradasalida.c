@@ -31,20 +31,20 @@ void crear_interfaz_generica(char* nombre) {
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_n_split(buffer, 3, " ");
 			pid = recibir_operacion(socket_kernel);
+
+			//LOG OBLIGATORIO
 			log_operacion(pid, instruccion[0]);
 
 			if (!strcmp(instruccion[0], "IO_GEN_SLEEP")){
 				
 				int cant_unidades_trabajo = atoi(instruccion[2]);
 				usleep(cant_unidades_trabajo * TIEMPO_UNIDAD_TRABAJO * 1000);
-				log_info(logger, "Me dormi %d milisegs", cant_unidades_trabajo * TIEMPO_UNIDAD_TRABAJO);
 				// multiplicamos x mil para pasar de milisec a microsec (q es lo q toma usleep)
 
-				log_info(logger, "Resultado de %s: io_success", nombre);
 				enviar_operacion(socket_kernel, IO_SUCCESS);
 
 			} else {
-				log_info(logger, "Resultado de %s: io_failure", nombre);
+				log_error(logger, "Resultado de %s: io_failure", nombre);
 				enviar_operacion(socket_kernel, IO_FAILURE);
 			}
 
@@ -70,57 +70,55 @@ void crear_interfaz_stdin (char* nombre){
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_split(buffer, " ");
 			pid = recibir_operacion(socket_kernel);
-			log_operacion(pid, instruccion[0]);
 			int tamaño = atoi(instruccion[2]);
 			int tamañoVector = atoi(instruccion[3]);
+
+			//LOG OBLIGATORIO
+			log_operacion(pid, instruccion[0]);
 			
 			int* vectorDirecciones = recibir_vector(socket_kernel, tamañoVector);
-			log_info(logger, "Operacion: %s", instruccion[0]);
 			if (!strcmp(instruccion[0], "IO_STDIN_READ")){
 				char valor[tamaño];
 				printf("Ingrese hasta %i caracteres \n", tamaño);
-				for(int i=0; i<tamaño; i++)
+				for(int i=0; i<tamaño; i++){
 					valor[i] = getchar();
+				}
 				valor[tamaño]='\0';
 				getchar();
+				int espacioEnPag = tam_pagina-vectorDirecciones[0]%tam_pagina;
+				float tam = tamaño;
+				if(tamaño<=espacioEnPag){
+					enviar_string(valor, socket_memoria, ESCRITURA_STRING);
+					enviar_operacion(socket_memoria, pid);
+					enviar_operacion(socket_memoria, 1);
+					enviar_operacion(socket_memoria, tamaño);
+					enviar_operacion(socket_memoria, vectorDirecciones[0]);
+				}
+				else{
+					int i;
+					enviar_string(valor, socket_memoria, ESCRITURA_STRING);
+					enviar_operacion(socket_memoria, pid);
+					enviar_operacion(socket_memoria, tamañoVector);
+					enviar_operacion(socket_memoria, espacioEnPag);
+					enviar_operacion(socket_memoria, vectorDirecciones[0]);
+					for(i=1; i<tamañoVector-1; i++){
+						enviar_operacion(socket_memoria, tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+					if((tamaño-espacioEnPag)%tam_pagina){
+						enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+					
+					else{
+						enviar_operacion(socket_memoria, tam_pagina);
+						enviar_operacion(socket_memoria, vectorDirecciones[i]);
+					}
+				}
 
-				log_info(logger, "Valor ingresado: %s", valor);
-		int espacioEnPag = tam_pagina-vectorDirecciones[0]%tam_pagina;
-		float tam = tamaño;
-		if(tamaño<=espacioEnPag){
-        enviar_string(valor, socket_memoria, ESCRITURA_STRING);
-		enviar_operacion(socket_memoria, pid);
-        enviar_operacion(socket_memoria, 1);
-        enviar_operacion(socket_memoria, tamaño);
-        enviar_operacion(socket_memoria, vectorDirecciones[0]);
-    }
-    else{
-        int i;
-        enviar_string(valor, socket_memoria, ESCRITURA_STRING);
-		enviar_operacion(socket_memoria, pid);
-        enviar_operacion(socket_memoria, tamañoVector);
-        enviar_operacion(socket_memoria, espacioEnPag);
-        enviar_operacion(socket_memoria, vectorDirecciones[0]);
-        for(i=1; i<tamañoVector-1; i++){
-            enviar_operacion(socket_memoria, tam_pagina);
-            enviar_operacion(socket_memoria, vectorDirecciones[i]);
-        }
-		if((tamaño-espacioEnPag)%tam_pagina){
-			enviar_operacion(socket_memoria, (tamaño-espacioEnPag)%tam_pagina);
-			enviar_operacion(socket_memoria, vectorDirecciones[i]);
-		}
-		
-		else{
-        	enviar_operacion(socket_memoria, tam_pagina);
-        	enviar_operacion(socket_memoria, vectorDirecciones[i]);
-		}
-    }
-
-				log_info(logger, "Resultado de %s: io_success", nombre);
 				enviar_operacion(socket_kernel, IO_SUCCESS);
 
 			} else {
-				log_info(logger, "Resultado de %s: io_failure", nombre);
 				enviar_operacion(socket_kernel, IO_FAILURE);
 			}
 
@@ -149,12 +147,14 @@ void crear_interfaz_stdout (char* nombre){
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_split(buffer, " ");
 			pid = recibir_operacion(socket_kernel);
+
+			//LOG OBLIGATORIO
 			log_operacion(pid, instruccion[0]);
+
 			int tamaño = atoi(instruccion[2]);
 			int tamañoVector = atoi(instruccion[3]);
 			
 			int* vectorDirecciones = recibir_vector(socket_kernel, tamañoVector);
-			log_info(logger, "Operacion: %s", instruccion[0]);
 			if (!strcmp(instruccion[0], "IO_STDOUT_WRITE")){
 				float tam = tamaño;
 				int size;
@@ -191,11 +191,9 @@ void crear_interfaz_stdout (char* nombre){
 				char* cadena = recibir_buffer(&size,socket_memoria);
 				printf("%s \n", cadena);
 				free(cadena);
-				log_info(logger, "Resultado de %s: io_success", nombre);
 				enviar_operacion(socket_kernel, IO_SUCCESS);
 
 			} else {
-				log_info(logger, "Resultado de %s: io_failure", nombre);
 				enviar_operacion(socket_kernel, IO_FAILURE);
 			}
 
@@ -228,27 +226,43 @@ void crear_interfaz_fs(char* nombre){
 			char* buffer = recibir_buffer(&size, socket_kernel);
 			char** instruccion = string_split(buffer, " ");
 			pid = recibir_operacion(socket_kernel);
+
+			//LOG OBLIGATORIO
 			log_operacion(pid, instruccion[0]);
 
 			usleep(TIEMPO_UNIDAD_TRABAJO* 1000);
 
 			// CASO CREAR
 			if(!strcmp(instruccion[0], "IO_FS_CREATE")){
+
+				//LOG OBLIGATORIO
+				log_creacion(pid, instruccion[2]);
+
 				if(!crear_fs(instruccion[2])){
-					log_info(logger, "No hay espacio libre en disco para crear archivo");
+					log_error(logger, "No hay espacio libre en disco para crear archivo");
 					enviar_operacion(socket_kernel, IO_FAILURE);
+					free(buffer);
+					string_array_destroy(instruccion);
+					continue;
 				}
 			}
 			// CASO DELETE
 			else if(!strcmp(instruccion[0], "IO_FS_DELETE")) {
+
+				//LOG OBLIGATORIO
+				log_eliminacion(pid, instruccion[2]);
+
 				eliminar_fs(instruccion[2]);
 			}
 			// CASO TRUNCAR
 			else if(!strcmp(instruccion[0], "IO_FS_TRUNCATE")) {
-				truncar_fs(instruccion[2], atoi(instruccion[3]));
 				// instruccion[2] = nombre, [3] = tamaño a truncar
+				truncar_fs(instruccion[2], atoi(instruccion[3]));
+				
+				//LOG OBLIGATORIO
 				log_truncamiento(pid, instruccion[2], atoi(instruccion[3]));
 			}
+
 			// CASO ESCRIBIR EN ARCHIVO
 			else if(!strcmp(instruccion[0], "IO_FS_WRITE")){
 				int tamaño = atoi(instruccion[3]);
@@ -256,6 +270,10 @@ void crear_interfaz_fs(char* nombre){
 				int* vectorDirecciones = recibir_vector(socket_kernel, tamañoVector);
 				int desplazamiento = vectorDirecciones[0]%tam_pagina;
 				int espacioEnPag = tam_pagina-(desplazamiento);
+
+				//LOG OBLIGATORIO
+				log_escritura(pid, instruccion[2], tamaño, atoi(instruccion[5]));
+
 				if(tamaño<=espacioEnPag){
 					enviar_operacion(socket_memoria, LECTURA_STRING);
 					enviar_operacion(socket_memoria, pid);
@@ -290,12 +308,14 @@ void crear_interfaz_fs(char* nombre){
 					log_error(logger, "La cadena a escribir no entra en el archivo");
 				}
 
+				//LOG OBLIGATORIO
 				//instruccion[2] = nombre, [5] = offset a parter del cual escribir dentro del archivo
 				log_escritura(pid, instruccion[2], strlen(cadena), atoi(instruccion[5]));
 
 				free(cadena);
 				free(vectorDirecciones);
 			}
+
 			// CASO LEER DE ARCHIVO
 			else if(!strcmp(instruccion[0], "IO_FS_READ")) {
 				int tamaño = atoi(instruccion[3]);
@@ -303,6 +323,9 @@ void crear_interfaz_fs(char* nombre){
 				int* vectorDirecciones = recibir_vector(socket_kernel, tamañoVector);
 				int desplazamiento = vectorDirecciones[0]%tam_pagina;
 				int espacioEnPag = tam_pagina-(desplazamiento);
+
+				//LOG OBLIGATORIO
+				log_lectura(pid, instruccion[2], tamaño, atoi(instruccion[5]));
 
 				// para leer del archivo necesitamos los datos: nombre de archivo, 
 				// posicion de donde empezar a leer y cant de bytes a leer
@@ -343,9 +366,9 @@ void crear_interfaz_fs(char* nombre){
 				free(vectorDirecciones);
 				free(leidoDeArchivo); // puesto que leer_fs hizo el malloc
 			}
+
 			// CASO DE OPERACION NO SOPORTADA POR FS
 			else{
-				log_info(logger, "Resultado de %s: io_failure", nombre);
 				enviar_operacion(socket_kernel, IO_FAILURE);
 				free(buffer);
 				string_array_destroy(instruccion);
@@ -387,7 +410,6 @@ void liberarEntradaFat(void *elem) {
 
 bool crear_fs(char* nombre){
 	int direccion = -1;
-	log_creacion(pid, nombre);
 
 	for(int i = 0; i < CANT_BLOQUES; i++){
 		if (!bitarray_test_bit(bitmap, i)){
@@ -435,7 +457,6 @@ bool crear_fs(char* nombre){
 }
 
 void eliminar_fs(char* nombre){
-	log_eliminacion(pid, nombre);
 	
 	// armamos el path absoluto (siempre deben estar en la carpeta de metadata)
 	char* path = armarPathMetadata(nombre);
@@ -715,7 +736,6 @@ char* leer_fs(char *nombreArchivo, int offset, int cantALeer){
 	char* leidoDeArchivo = malloc(cantALeer);
 	memcpy(leidoDeArchivo, BLOQUES+bloqueBase*TAM_BLOQUE+offset, cantALeer);
 
-	log_info(logger, "Archivo %s leido", nombreArchivo);
 	return leidoDeArchivo;  // devolvemos el puntero mallocado, se libera despues de ser usado por quien llama a la funcion
 }
 
@@ -750,6 +770,11 @@ int conectar_memoria (char* nombre){
 }
 
 void compactar (){
+
+	//LOG OBLIGATORIO
+	log_inicio_compactación(pid);
+
+
 	// RETRASAMOS COMPACTACION 
 	usleep(RETRASO_COMPACTACION * 1000); // * 1000 para pasar de milisegs a microsegs
 
@@ -804,29 +829,21 @@ void compactar (){
 			//copio de buffer largo bytes desde inicioHueco a bloques.dat
 			memcpy(BLOQUES + inicioHueco*TAM_BLOQUE, bufferBloques, largoArchivo);
 
-			inicioHueco += largoArchivo;
-			inicioArchivo = inicioHueco;
-
-			log_info(logger, "Compactando ando");
+			inicioHueco += cantBloques;
+			inicioArchivo = inicioHueco - 1;
 
 			config_destroy(metadata);
 			free(bufferBloques);
 			free(path);
 		}
 	}
+
+	//LOG OBLIGATORIO
+	log_fin_compactación(pid);
+
 }
 
 void iniciar_fs(){
-
-	//TODO chequear si existe carpeta dialfs.
-	//si existe: no creamos los archivos, los leemos para recuperar la informacion (tablaFAT y bitmap y mapeo de memoria de bloques)
-	//si no: se crean los archivos
-
-	//logs obligatorios
-
-	// Sleeps en las interfaces
-
-	//rutinas de liberacion de recursos de todas las interfaces
 
 	//VARIABLES DEL CONFIG
 	CANT_BLOQUES = config_get_int_value(config, "BLOCK_COUNT");
@@ -986,6 +1003,18 @@ void log_truncamiento(int pid, char* nombre, int tamaño){
 	log_info(logger, "PID: %d - Truncar Archivo: %s - Tamaño: %d", pid, nombre, tamaño);
 }
 
-void log_escritura(int pid, char* archivo, int tamaño, int DF){
-	log_info(logger, "PID: %d - Escribir en Archivo: %s - Tamaño: %d - Puntero Archivo: %d", pid, archivo, tamaño, DF);
+void log_escritura(int pid, char* nombre, int tamaño, int offsetArchivo){
+	log_info(logger, "PID: %d - Escribir Archivo: %s - Tamaño a Escribir: %d - Puntero Archivo: %d", pid, nombre, tamaño, offsetArchivo);
+}
+
+void log_lectura(int pid, char* nombre, int tamaño, int offsetArchivo){
+	log_info(logger, "PID: %d - Leer Archivo: %s - Tamaño a Leer: %d - Puntero Archivo: %d", pid, nombre, tamaño, offsetArchivo);
+}
+
+void log_inicio_compactación (int pid){
+	log_info(logger, "PID: %d - Inicio Compactación.", pid);
+}
+
+void log_fin_compactación (int pid){
+	log_info(logger, "PID: %d - Fin Compactación.", pid);
 }
