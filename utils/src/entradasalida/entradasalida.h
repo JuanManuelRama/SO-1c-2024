@@ -35,6 +35,7 @@ char* leer_fs(char *nombre, int offset, int cantALeer);
 char* armarPathMetadata (char* nombre);
 void iniciar_fs();
 void compactar ();
+void liberarEntradaFat(void *elem);
 
 //LOGS OBLIGATORIOS
 void log_operacion(int, char*);

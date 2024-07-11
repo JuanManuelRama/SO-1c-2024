@@ -49,11 +49,11 @@ void crear_interfaz_generica(char* nombre) {
 			free(buffer);
 			string_array_destroy(instruccion);
 		} else {
+			config_destroy(config);
+			liberar_conexion(socket_kernel);
 			return;
 		}
 	}
-
-	liberar_conexion(socket_kernel);
 }
 
 void crear_interfaz_stdin (char* nombre){
@@ -352,9 +352,33 @@ void crear_interfaz_fs(char* nombre){
 			free(buffer);
 			string_array_destroy(instruccion);
 		}
-		else
-			return;
+		else {
+			// RUTINA DE SALIDA, LIBERAMOS MEMORIA
+			liberar_conexion(socket_kernel);
+			liberar_conexion(socket_memoria);
+			free(DIR_BASE);
+			free(DIR_METADATA);
+			
+			// el puntero de inicio de mapeo se guardo en el campo bitarray cuando 
+			// llamamos bitarray_create_with_mode(mmap(...), ...)
+			munmap(bitmap->bitarray, bitmap->size);
+
+			munmap(BLOQUES, TAM_BLOQUE*CANT_BLOQUES);
+
+			bitarray_destroy(bitmap);
+			free(BLOQUES);
+
+			list_destroy_and_destroy_elements(FAT, liberarEntradaFat);
+			return;	
+		}
 	}
+}
+
+// util para destruir entrada fat
+void liberarEntradaFat(void *elem) {
+	entradaFat* entrada = (entradaFat*)elem;
+	free(entrada->nombre);
+	free(entrada);
 }
 
 bool crear_fs(char* nombre){
@@ -688,7 +712,7 @@ char* leer_fs(char *nombreArchivo, int offset, int cantALeer){
 	memcpy(leidoDeArchivo, BLOQUES+bloqueBase*TAM_BLOQUE+offset, cantALeer);
 
 	log_info(logger, "Archivo %s leido", nombreArchivo);
-	return leidoDeArchivo;
+	return leidoDeArchivo;  // devolvemos el puntero mallocado, se libera despues de ser usado por quien llama a la funcion
 }
 
 
