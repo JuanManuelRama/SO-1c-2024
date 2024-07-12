@@ -33,10 +33,10 @@ void interactuar_Kernel(int kernel){
 			liberar_proceso(kernel);
 			break;
 		case -1:
-			log_error(logger, "el cliente se desconecto");
+			printf("el cliente se desconecto \n");
 			return EXIT_FAILURE;
 		default:
-			log_warning(logger,"Operacion no esperada por parte del Kernel");
+			printf("Operacion no esperada por parte del Kernel \n");
 			break;
 		}
 	}
@@ -81,10 +81,10 @@ void interactuar_cpu(int cpu){
 			escribir_string(cpu, recibir_buffer(&size, cpu), proceso->pid);
 			break;
 		case -1:
-			log_error(logger, "el cliente se desconecto");
+			printf("el cliente se desconecto \n");
 			return EXIT_FAILURE;
 		default:
-			log_warning(logger,"Operacion no esperada por parte de este cliente");
+			printf("Operacion no esperada por parte de este cliente \n");
 			break;
 		}
 	}
@@ -104,10 +104,10 @@ void interactuar_IO (int IO){
 			leer_string(IO, recibir_operacion(IO));
 			break;
 		case -1:
-			log_error(logger, "el cliente se desconecto");
+			printf("el cliente se desconecto \n");
 			return EXIT_FAILURE;
 		default:
-			log_warning(logger,"Operacion no esperada por parte de este cliente");
+			printf("Operacion no esperada por parte de este cliente \n" );
 			break;
 		}
 	}
@@ -122,7 +122,7 @@ void escuchar_nuevas_IO (int socket_server){
 		if (recibir_operacion(socket) == NUEVA_IO) {
 			enviar_operacion(socket, TAM_PAG);
 			pthread_create(&hilo_IO, NULL, interactuar_IO, (void*)socket);
-			log_info(logger, "Se conecto nueva IO");
+			printf("Se conecto nueva IO \n");
 		}
 	}
 }
@@ -147,7 +147,7 @@ void inicializar_memoria(){
 	//PATH_INSTRUCCIONES = buscar("PATH_INSTRUCCIONES");
 
 	if (TAM_MEMORIA % TAM_PAG) {
-		log_error(logger, "Tamaño de memoria no multiplo de cantidad de paginas");
+		printf("Tamaño de memoria no multiplo de cantidad de paginas \n" );
 		exit(-1);
 	}
 
@@ -166,7 +166,7 @@ char** cargar_proceso(char* nombreArchivo){
 	// aca se deberá agregar el uso de PATH_INSTRUCCIONES
 	FILE* archivoProceso = fopen(nombreArchivo, "r");
 	if(archivoProceso == NULL){
-		log_error(logger, "No se pudo abrir el archivo: %s", nombreArchivo);
+		printf("No se pudo abrir el archivo: %s \n", nombreArchivo);
 		return NULL;
 	}
 	t_queue* qProceso = queue_create();

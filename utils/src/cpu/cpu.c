@@ -1,7 +1,7 @@
 #include "cpu.h"
 
 void finalizar_cpu(){
-    log_info(logger, "Kernel desconectado, finalizando CPU");
+    printf("Kernel desconectado, finalizando CPU \n" );
     liberar_conexion(memoria);
     log_destroy(logger);
     config_destroy(config);
@@ -25,7 +25,7 @@ int MMU(int DL){
         enviar_int(pag, memoria, PAGINA);
 
         if(recibir_operacion(memoria)!=PAGINA){
-            log_error(logger, "La memoria me envió cualquier cosa...");
+            printf("La memoria me envió cualquier cosa... \n");
             return -1;
         }
 
@@ -62,7 +62,7 @@ int MMU(int DL){
             enviar_int(pag, memoria, PAGINA);
 
             if(recibir_operacion(memoria)!=PAGINA){
-                log_error(logger, "La memoria me envió cualquier cosa...");
+                printf("La memoria me envió cualquier cosa... \n");
                 return -1;
             }
 
@@ -123,7 +123,7 @@ void interrupciones(int socket_interrupciones){
     while(1){
        cod_op = recibir_operacion(socket_interrupciones);       
         if(cod_op == -1){
-            log_error(logger, "Se desconectaron las interrupciones");
+            printf("Se desconectaron las interrupciones \n");
             return;
         }
         interrupcion = malloc(sizeof(sInterrupcion));
@@ -208,7 +208,7 @@ char* fetch(){
     int size;
     log_fetch(pcb.pid, pcb.registros.PC);
     if(recibir_operacion(memoria)!=FETCH)
-        log_error(logger, "La memoria me envío cualquier cosa...");
+        printf("La memoria me envío cualquier cosa... \n");
     return recibir_buffer(&size, memoria);
 }
 

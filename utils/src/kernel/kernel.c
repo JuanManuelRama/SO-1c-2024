@@ -146,7 +146,7 @@ void interactuar_consola(char* buffer){
 			string_array_destroy(mensaje);
 			break;
 		default:
-			log_info(logger, "Código invalido");
+			printf("Código invalido \n");
 			string_array_destroy(mensaje);
 			break;
 	}
@@ -190,7 +190,7 @@ void finalizar_proceso(int pid){
 			return;
 	}
 	iniciar_planificacion();
-	log_warning(logger, "No se encontro el proceso");
+	printf("No se encontro el proceso \n");
 }
 
 sProceso* buscar_proceso_en_lista(t_list* lista, int pid){
@@ -243,7 +243,7 @@ void iniciar_planificacion(){
 void ejecutar_script(char* path){
 	FILE* script = fopen(path, "r");
 	if(script == NULL){
-		log_info(logger, "No se pudo abrir el archivo");
+		printf("No se pudo abrir el archivo \n");
 		return;
 	}
 	char* buffer = malloc(50);
@@ -837,7 +837,7 @@ void escuchar_conexiones_IO(int socket_server) {
 				list_add(lista_conexiones_IO, conexion);
 				pthread_mutex_unlock(&mCONEXIONES);
 				
-				log_info(logger, "Se conecto la IO: %s", nombre);
+				printf("Se conecto la IO: %s \n", nombre);
 			// case STDIN, etc.
 		}
 	}

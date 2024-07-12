@@ -27,7 +27,7 @@ int iniciar_servidor(char* puerto, char* modulo)
 
 	freeaddrinfo(servinfo);
 
-	log_info(logger, "%s inicializado como servidor", modulo);
+	printf("%s inicializado como servidor \n", modulo);
 
 	return socket_servidor;
 }
@@ -35,11 +35,11 @@ int iniciar_servidor(char* puerto, char* modulo)
 int esperar_cliente(char* cliente, int socket_servidor)
 {
     // Aceptamos un nuevo cliente
-	log_info(logger, "Esperando a %s", cliente);
+	printf("Esperando a %s \n", cliente);
 	int socket_cliente;
 	setsockopt(socket_servidor, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 	socket_cliente = accept(socket_servidor, NULL, NULL);
-	log_info(logger, "Se conecto %s", cliente);
+	printf("Se conecto %s \n", cliente);
 
 	return socket_cliente;
 }
@@ -71,7 +71,7 @@ void recibir_mensaje(int socket_cliente)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje: %s", buffer);
+	printf("Me llego el mensaje: %s \n", buffer);
 	free(buffer);
 }
 
@@ -146,7 +146,7 @@ int crear_conexion(char *ip, char* puerto, char* servidor)
 	connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
 
 	freeaddrinfo(server_info);
-	log_info(logger, "Conexión establecida con %s", servidor);
+	printf("Conexión establecida con %s \n", servidor);
 
 	return socket_cliente;
 }
