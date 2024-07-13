@@ -123,6 +123,7 @@ void crear_interfaz_stdin (char* nombre){
 			}
 
 			free(buffer);
+			free(vectorDirecciones);
 			string_array_destroy(instruccion);
 		} else {
 			// RUTINA DE SALIDA, LIBERAMOS MEMORIA
@@ -198,6 +199,7 @@ void crear_interfaz_stdout (char* nombre){
 			}
 
 			free(buffer);
+			free(vectorDirecciones);
 			string_array_destroy(instruccion);
 		} else {
 			// RUTINA DE SALIDA, LIBERAMOS MEMORIA
@@ -230,7 +232,7 @@ void crear_interfaz_fs(char* nombre){
 			//LOG OBLIGATORIO
 			log_operacion(pid, instruccion[0]);
 
-			usleep(TIEMPO_UNIDAD_TRABAJO* 1000);
+			//usleep(TIEMPO_UNIDAD_TRABAJO* 1000);
 
 			// CASO CREAR
 			if(!strcmp(instruccion[0], "IO_FS_CREATE")){
@@ -310,7 +312,7 @@ void crear_interfaz_fs(char* nombre){
 
 				//LOG OBLIGATORIO
 				//instruccion[2] = nombre, [5] = offset a parter del cual escribir dentro del archivo
-				log_escritura(pid, instruccion[2], strlen(cadena), atoi(instruccion[5]));
+				//log_escritura(pid, instruccion[2], strlen(cadena), atoi(instruccion[5]));
 
 				free(cadena);
 				free(vectorDirecciones);
@@ -629,7 +631,7 @@ void truncar_fs(char* nombre, int tamaño){
 	// si termino de recorrer el bitmap y sigo aca es pq no retorne, ergo, no encontre hueco libre contiguo
 
 	// CASO 4: NO ME ENTRA
-	if (bloquesFinales > bloquesActuales + bloquesLibres) {
+	if (bloquesFinales > bloquesLibres) {
 		log_error("No se puede truncar a %d: no hay espacio", tamaño);
 		return;
 	}
@@ -790,7 +792,7 @@ void compactar (){
 		; // buscamos el primer hueco libre
 	}
 
-	for(int inicioArchivo = 0; inicioArchivo < CANT_BLOQUES; inicioArchivo++){
+	for(int inicioArchivo = inicioHueco; inicioArchivo < CANT_BLOQUES; inicioArchivo++){
 		if(bitarray_test_bit(bitmap, inicioArchivo)){
 			//Inner function para buscar la entrada del archivo en la fat
 			bool esEntrada (void* elem) {

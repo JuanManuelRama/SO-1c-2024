@@ -8,7 +8,7 @@ void finalizar_cpu(){
     pthread_mutex_destroy(&mIntr);
     queue_destroy(cIntr);
     free(aEnviar);
-    free(vectorDirecciones);
+    //free(vectorDirecciones);
 	exit(0);
 }
 
