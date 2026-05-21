@@ -1,12 +1,39 @@
-# tp-scaffold
+# Operating System Simulator 🐧
 
-Esta es una plantilla de proyecto diseñada para generar un TP de Sistemas
-Operativos de la UTN FRBA.
+This repository contains the implementation of a distributed operating system simulator, developed for the Operating Systems course (1C2024). The system models the interaction between core OS components, managing processes, memory paging, CPU scheduling, and file systems.
 
-## Dependencias
+## System Architecture
+The simulator is divided into four standalone, communicating modules:
 
-Para poder compilar y ejecutar el proyecto, es necesario tener instalada la
-biblioteca [so-commons-library] de la cátedra:
+### Kernel
+The Kernel module manages the lifecycle and scheduling of processes through an interactive console.
+* Implements a 5-state process lifecycle: NEW, READY, EXEC, BLOCKED, and EXIT.
+* Utilizes Process Control Blocks (PCB) to track execution context, including the process PID, Program Counter, and CPU registers.
+* Features a Short-Term Scheduler supporting FIFO, Round Robin (RR), and Virtual Round Robin (VRR) algorithms.
+* Manages shared system resources, handling WAIT and SIGNAL synchronization requests.
+
+### CPU
+The CPU module interprets and executes instructions from the processes dispatched by the Kernel.
+* Simulates a simplified instruction cycle consisting of Fetch, Decode, Execute, and Check Interrupt phases.
+* Simulates a Memory Management Unit (MMU) to translate logical addresses to physical addresses using a paging scheme.
+* Includes a Translation Lookaside Buffer (TLB) to optimize memory translations, utilizing either FIFO or LRU replacement algorithms.
+* Processes a custom instruction set, including arithmetic operations, memory I/O, and system calls.
+
+### Memory
+The Memory module manages both the instruction sets for processes and the simulated physical RAM.
+* Implements a simple paging scheme utilizing a contiguous user space and page tables.
+* Handles dynamic memory requests, allowing processes to resize by expanding or reducing their allocated frames.
+* Introduces artificial response delays, configured via parameter files, to simulate real hardware latency.
+
+### I/O Interfaces
+This module handles external peripheral simulation, processing requests sequentially. It supports four types of interfaces:
+* **Generic:** Simulates basic devices by waiting for a specified number of work units before completing a request.
+* **STDIN:** Reads text input from the keyboard and stores it directly into memory.
+* **STDOUT:** Reads data from memory and outputs it to the console screen.
+* **DialFS:** A custom file system implementing contiguous block allocation. It manages block files, a free-space bitmap, and metadata files. It also supports dynamic file truncation and file system compaction to resolve fragmentation.
+
+## Deployment & Configuration
+This project relies on the [so-commons-library](https://github.com/sisoputnfrba/so-commons-library) for core utilities, logging, and configuration management.
 
 ```bash
 git clone https://github.com/sisoputnfrba/so-commons-library
@@ -15,62 +42,4 @@ make debug
 make install
 ```
 
-## Compilación
-
-Cada módulo del proyecto se compila de forma independiente a través de un
-archivo `makefile`. Para compilar un módulo, es necesario ejecutar el comando
-`make` desde la carpeta correspondiente.
-
-El ejecutable resultante se guardará en la carpeta `bin` del módulo.
-
-## Importar desde Visual Studio Code
-
-Para importar el workspace, debemos abrir el archivo `tp.code-workspace` desde
-la interfaz o ejecutando el siguiente comando desde la carpeta raíz del
-repositorio:
-
-```bash
-code tp.code-workspace
-```
-
-## Checkpoint
-
-Para cada checkpoint de control obligatorio, se debe crear un tag en el
-repositorio con el siguiente formato:
-
-```
-checkpoint-{número}
-```
-
-Donde `{número}` es el número del checkpoint.
-
-Para crear un tag y subirlo al repositorio, podemos utilizar los siguientes
-comandos:
-
-```bash
-git tag -a checkpoint-{número} -m "Checkpoint {número}"
-git push origin checkpoint-{número}
-```
-
-Asegúrense de que el código compila y cumple con los requisitos del checkpoint
-antes de subir el tag.
-
-## Entrega
-
-Para desplegar el proyecto en una máquina Ubuntu Server, podemos utilizar el
-script [so-deploy] de la cátedra:
-
-```bash
-git clone https://github.com/sisoputnfrba/so-deploy.git
-cd so-deploy
-./deploy.sh -r=release -p=utils -p=kernel -p=cpu -p=memoria -p=entradasalida "tp-{año}-{cuatri}-{grupo}"
-```
-
-El mismo se encargará de instalar las Commons, clonar el repositorio del grupo
-y compilar el proyecto en la máquina remota.
-
-Ante cualquier duda, podés consultar la documentación en el repositorio de
-[so-deploy], o utilizar el comando `./deploy.sh -h`.
-
-[so-commons-library]: https://github.com/sisoputnfrba/so-commons-library
-[so-deploy]: https://github.com/sisoputnfrba/so-deploy
+The system is designed as a distributed platform, meaning the distinct processes can be executed across multiple different computers. Connections between the Kernel, CPU, Memory, and I/O modules are established using IP addresses and ports defined in specific configuration files for each component. Each module is compiled through a makefile, by using the make command on the module folder
